@@ -1,0 +1,8 @@
+{
+  "version": "fixture-manifest/1",
+  "entries": [
+    {"name": "increment", "capabilities": ["stateful_command"]},
+    {"name": "async_increment", "capabilities": ["stateful_command", "async_function"]},
+    {"name": "read", "capabilities": ["stateful_command"]}
+  ]
+}

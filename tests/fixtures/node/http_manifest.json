@@ -1,0 +1,7 @@
+{
+  "version": "fixture-manifest/1",
+  "entries": [
+    {"name": "http.session", "capabilities": ["http", "stateful_command"]},
+    {"name": "http.import", "capabilities": ["http", "stateful_command"]}
+  ]
+}

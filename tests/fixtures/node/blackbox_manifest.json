@@ -1,0 +1,6 @@
+{
+  "version": "fixture-manifest/1",
+  "entries": [
+    {"name": "submit", "capabilities": ["stateful_command"]}
+  ]
+}

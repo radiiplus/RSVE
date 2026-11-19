@@ -1,0 +1,29 @@
+# RSVE Roadmap
+
+This roadmap is grounded in the current paths. Planned paths are named explicitly; they do not exist yet.
+
+## Dependency order
+
+`typed evidence contract` -> `solver/residual contract` -> `layered execution profile` -> `Linux environment boundary` -> `Node concrete adapter` -> `trace/replay harness` -> `objective/planner` -> `differential refinement` -> `cross-runtime adapters` -> `QEMU Linux substrate` -> `realization optimization` -> durable artifacts/release.
+
+## Batches
+
+| Batch | Scope | Actual paths | New dependencies | Exit gate |
+| --- | --- | --- | --- | --- |
+| 0 | Repository reconnaissance and feasibility audit | `docs/rsve/audit.md`, `docs/rsve/decisions.md`, `docs/rsve/roadmap.md`, `docs/rsve/dependencies.md` | None | Facts, gaps, risks, and unknowns are evidenced; no engine/dependency changes |
+| 1 | Library/dependency architecture | `docs/rsve/dependencies.md`, `pyproject.toml`, `requirements.lock` | `z3-solver==4.12.6.0` only | Every adopted dependency has a role, pin, license/maintenance decision, and adapter boundary |
+| 2 | Typed Transform/Transition IR | `src/rsve/schema.py`, `ir.py`, `constraints.py`, `registry.py`, `tests/test_core.py` | None | Versioned records, execution/fidelity separation, objective AST, and evidence-backed surfaces round-trip and reject invalid input |
+| 3 | Solver-aided bounded residuals | `src/rsve/constraints.py`, `src/rsve/solver.py`, `src/rsve/residuals.py`, `tests/test_core.py` | `z3-solver==4.12.6.0` | SAT/model, bounded UNSAT/core, UNKNOWN, incremental scopes, residual queries, and bounded scope are tested |
+| 4 | Node target adapter | `src/rsve/adapters.py`, `src/rsve/node_adapter.py`, `tests/test_node_adapter.py`, `tests/fixtures/node/` | Node built-ins `node:diagnostics_channel`, `node:async_hooks` | Declared/observed entries, authorization, traces, Linux environment evidence, state checkpoints, reset/replay limits, phantom evidence, and semantic replay work on an owned fixture |
+| 5 | Trace schema and deterministic harness | `src/rsve/model.py`, `src/rsve/ir.py`, `src/rsve/trace.py`, `src/rsve/node_adapter.py`, `tests/test_node_adapter.py` | No OpenTelemetry dependency | Stable IDs/causal links, environment facts/unknowns, bounded redacted artifacts, k-of-n runs, partial replay, and OTel-shaped import/export are tested |
+| 6 | Objective language and hybrid witness planner | `src/rsve/objectives.py`, `src/rsve/planner.py`, `src/rsve/domain_search.py`, `src/rsve/results.py`, `tests/test_planner.py`, `tests/test_domain_search.py`, `tests/test_http_open_domain.py` | Reuse existing model and adapter contracts | Authorized extensional objectives, bounded preimage/forward search, deterministic open interaction-domain expansion, single and multi-entry candidates, replay validation, and truthful candidate/UNSAT/budget semantics pass |
+| 7 | Differential refinement and result semantics | `src/rsve/differential.py`, `src/rsve/model.py`, `src/rsve/results.py`, `tests/test_planner.py` | None | First divergence classification, immutable deltas/experiments, counterexample exclusions, stale-query invalidation, and model/reality scope are evidenced |
+| 8 | Cross-runtime adapter design and portability proof | `src/rsve/runtime_contracts.py`, `src/rsve/evm_adapter.py`, `src/rsve/environment.py`, `src/rsve/profile.py`, `tests/fixtures/evm/`, `tests/test_evm_adapter.py`, `tests/test_environment.py`, `tests/test_profile.py`, `docs/rsve/adapters.md` | Foundry v1.9.0 (`anvil`, `forge`, `cast`) installed outside the Python package; JDK APIs remain optional roadmap contracts | The same objective/planner/trace/result workflow validates Node and EVM fixtures under the explicit Linux environment profile; layered profile pins scope the result and runtime limits remain adapter-local |
+| 9 | Minimal QEMU Linux substrate and native gate | `src/rsve/adapters.py`, `src/rsve/qemu_adapter.py`, `src/rsve/environment.py`, `tests/test_qemu_adapter.py`, `docs/rsve/adapters.md` | System QEMU 8.2.2 and `qemu-img`; official Ubuntu Server 26.04 amd64 cloud image pinned by SHA256 | Boot, capture serial evidence, snapshot/reset, and report guest environment scope through a substrate adapter; guest command execution and native/S2E work remain evidence-gated |
+| 10 | Optional realization optimization | `src/rsve/optimizer.py`, `tests/test_optimizer.py`, `docs/rsve/objectives.md` | No new dependency; reuse adapter replay and existing objective semantics | Equivalent caller-supplied realizations replay successfully from the same clean snapshot, cost improvement is measured, and the original witness/equivalence evidence are preserved |
+| 11 | Consolidation and release readiness | `.github/workflows/ci.yml`, `scripts/check_dependencies.py`, `scripts/benchmark.py`, `NOTICE.md`, `docs/rsve/release-report.md`, `README.md` | CI-only `pip-audit==2.9.0`; no package dependency change | Clean build, lock/security checks, schema/tests, fixture replay, benchmark, notices, safety boundaries, and documented limitations pass |
+| 12 | Future artifact query/retention improvements | `src/rsve/artifacts_sqlite.py` and deployment-specific tooling | No dependency selected | Add retention, backup, richer query/reporting, and external snapshot lifecycle only when operational requirements are demonstrated |
+
+## Immediate next implementation gate
+
+The QEMU Linux substrate is implemented as the explicit OS/ISA boundary for controlled fixtures, realization optimization is replay-gated over finite candidates, and SQLite provides the durable artifact/query ledger. Native instrumentation, symbolic binaries, S2E, and whole-system selective symbolic execution remain gated on a reproducible divergence that requires them. The next work should improve artifact queries and adapter coverage without changing the canonical trace or objective contract.

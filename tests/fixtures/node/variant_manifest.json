@@ -1,0 +1,8 @@
+{
+  "version": "fixture-manifest/1",
+  "entries": [
+    {"name": "submit", "capabilities": ["stateful_command"]},
+    {"name": "prepare", "capabilities": ["stateful_command"]},
+    {"name": "commit", "capabilities": ["stateful_command"]}
+  ]
+}
