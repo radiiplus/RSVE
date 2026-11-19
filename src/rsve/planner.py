@@ -386,7 +386,7 @@ class Regressor:
 
         def precondition(state: State) -> bool:
             return any(
-                objective.evaluate(move.after.target, (move.event,))
+                objective.evaluate(move.after.view(), (move.event,))
                 for move in workspace.moves(
                     Frame(state, workspace.start().environment, regions=workspace.start().regions),
                     operation.entry_point.name,
@@ -505,7 +505,7 @@ class Planner:
                 budget_hit = True
                 break
             _, _, depth, frame, trace, uncertain = heapq.heappop(queue)
-            state = frame.target
+            state = frame.view()
             key = (
                 depth,
                 json.dumps(state.canonical(), sort_keys=True),
@@ -593,7 +593,7 @@ class Planner:
 
             if depth >= budget.max_trace_length:
                 continue
-            for operation in model.ops():
+            for operation in workspace.operations():
                 for request in input_candidates:
                     if explored_events >= budget.max_events:
                         budget_hit = True
@@ -643,7 +643,7 @@ class Planner:
 
     @staticmethod
     def distance(model: Model, objective: Objective, frame: Frame, trace: Sequence[Event]) -> Distance:
-        unmet = sum(not predicate.evaluate(frame.target, trace) for predicate in objective.postconditions)
+        unmet = sum(not predicate.evaluate(frame.view(), trace) for predicate in objective.postconditions)
         keys = Regressor._keys(objective.postconditions)
         writers = len(Index.build(model).chain(keys)) if keys else 0
         return Distance(unmet, writers, int(frame.uncertain), len(trace))
@@ -805,7 +805,7 @@ class Planner:
             return Reach.UNKNOWN
         if all(
             not uncertain
-            and objective.evaluate(frame.target, events)
+            and objective.evaluate(frame.view(), events)
             and objective.satisfy(workspace.model.initial_state, events)
             for frame, events, uncertain in alternatives
         ):
@@ -828,7 +828,7 @@ class Planner:
         for index, interaction in enumerate(interactions):
             entry = str(interaction["entry_point"])
             request = dict(interaction.get("request", {}))
-            operations = tuple(item for item in model.ops() if item.entry_point.name == entry)
+            operations = workspace.operations(entry)
             if not operations or not model.allows(entry, request):
                 return ()
             next_frontier: list[tuple[Frame, tuple[Event, ...], bool]] = []

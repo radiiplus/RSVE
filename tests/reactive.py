@@ -50,6 +50,13 @@ class Suite(unittest.TestCase):
         self.assertEqual(len(world.options("roll", state, {})), 2)
         self.assertEqual(world.predict("roll", state, {}).status, Signal.UNKNOWN)
 
+    def test_empty_relation_requires_completeness_evidence(self):
+        state = Context(State({}), State({}))
+        incomplete = World(state, {"empty": lambda _state, _request: ()})
+        self.assertEqual(incomplete.options("empty", state, {})[0].status, Signal.UNKNOWN)
+        complete = World(state, {"empty": lambda _state, _request: ()}, complete=frozenset({"empty"}))
+        self.assertEqual(complete.options("empty", state, {}), ())
+
 
 if __name__ == "__main__":
     unittest.main()

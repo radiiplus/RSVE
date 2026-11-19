@@ -162,6 +162,36 @@ Solver results are valid only within their recorded model revision and execution
 
 **Reason:** Forward and concrete backward checks must evaluate the same composed semantics. Full graph-level symbolic regression remains an explicit limitation until those relations have symbolic contracts.
 
+## ADR-0024: Missing graph effects preserve uncertainty
+
+**Decision:** A declared graph effect without a registered evaluator produces an `UNKNOWN` semantic branch. Recognizers preserve that uncertainty and cannot turn it into `REJECT`; effect metadata is not treated as an identity operation.
+
+**Reason:** Skipping an effect can make later state and objective conclusions unsound. Effect execution is only modeled when its evaluator is explicitly registered.
+
+## ADR-0025: Use owner-aware region state
+
+**Decision:** `Frame.regions` is an optional map of independently owned states. An operation with a matching component executes against its owner state and updates that region; global state remains a separate projection. Predicate views expose qualified keys such as `region.key`.
+
+**Reason:** A region map is useful only if it affects execution, not merely visited-state identity. Full aliasing, cross-region read/write declarations, and resource ownership remain future semantic extensions.
+
+## ADR-0026: Traverse bounded verified graph routes
+
+**Decision:** `Workspace` follows compatible graph connections lazily, applies connection transforms, evaluates destination transitions, and exposes graph-only declared entries as synthetic operations. Traversal is cycle-safe and bounded by graph depth. Entry allowlists can restrict which graph entries are planner-visible.
+
+**Reason:** Typed topology must influence reachability. Structural graph connectivity is not treated as execution evidence, and unsupported or uncorrelated seams remain explicit uncertainty.
+
+## ADR-0027: Require explicit scalar request mapping
+
+**Decision:** A scalar graph output requires a registered workspace mapper before it can become an operation request. Mapping outputs that are already mappings remain directly representable; there is no multi-field heuristic fallback.
+
+**Reason:** Representation conversion does not determine operation request shape by itself. Explicit mapping preserves semantics and provenance across a seam.
+
+## ADR-0028: Declare environment relation completeness
+
+**Decision:** An empty environment relation is `UNKNOWN` unless its transition ID is declared complete. A complete empty relation is an exhaustive no-successor result. Declared uncontrolled transitions remain UNKNOWN even when alternatives are enumerated.
+
+**Reason:** Empty enumeration and proven absence are different evidence states.
+
 ## Unresolved items
 
 - Exact target/runtime identity and build-hash source are not defined.

@@ -592,6 +592,13 @@ class Graph(Schema):
             if representation_ids and (transform.input_representation not in representation_ids or transform.output_representation not in representation_ids):
                 errors.append(f"transform {transform.transform_id} references an unknown representation")
         for transition in self.transitions:
+            if transition.region_id and transition.region_id not in region_ids:
+                errors.append(f"transition {transition.transition_id} references an unknown region")
+            if representation_ids and (
+                transition.input_representation not in representation_ids
+                or transition.output_representation not in representation_ids
+            ):
+                errors.append(f"transition {transition.transition_id} references an unknown representation")
             missing = set(transition.transform_ids) - transform_ids | set(transition.recognizer_ids) - recognizer_ids | set(transition.effect_ids) - effect_ids
             if missing:
                 errors.append(f"transition {transition.transition_id} references unknown semantics: {sorted(missing)}")

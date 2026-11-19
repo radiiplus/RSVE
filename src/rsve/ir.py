@@ -187,6 +187,7 @@ class Transition(Schema):
     relation: Relation = Relation.UNKNOWN
     state_effects: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
+    region_id: str | None = None
 
 
 @dataclass(frozen=True)

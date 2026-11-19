@@ -31,6 +31,8 @@ from rsve import (
     Transform,
     Transition,
     Effect,
+    Direction,
+    Port,
 )
 from rsve.result import Status
 from rsve.planner import Regressor
@@ -133,6 +135,35 @@ class Suite(unittest.TestCase):
         self.assertFalse(moves[0].event.guard_result)
         self.assertFalse(moves[0].after.target.get("done"))
 
+    def test_unknown_transform_stays_unknown_through_recognizer(self):
+        operation = Operation("check", Entry("check"), apply=lambda state, _request: state.update(done=True))
+        model = Model("unknown-fixture", State({"done": False}), ({"ok": False},), (operation,))
+        profile = Persona("fixture", "test", "target", "graph", "1")
+        graph = Graph("unknown-workspace").persona(profile).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("raw", "mapping"))
+        graph = graph.value(Representation("out", "mapping"))
+        graph = graph.transform(Transform("opaque", "raw", "out", "fixture.opaque", "1", Partiality.UNKNOWN, Relation.UNKNOWN, Invertibility.UNKNOWN, Loss.UNKNOWN))
+        graph = graph.guard(Recognizer("check", "out", "fixture.check", None, "region"))
+        graph = graph.transition(Transition("check", "check", "raw", "out", ("opaque",), ("check",)))
+        workspace = Workspace.flat(model, graph=graph, recognizers={"check": lambda _value, _state: False})
+        moves = workspace.moves(workspace.start(), "check", {"ok": False}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.UNKNOWN)
+
+    def test_missing_graph_effect_is_unknown(self):
+        operation = Operation("check", Entry("check"), apply=lambda state, _request: state.update(done=True))
+        model = Model("effect-fixture", State({"done": False}), ({"ok": True},), (operation,))
+        profile = Persona("fixture", "test", "target", "graph", "1")
+        graph = Graph("effect-workspace").persona(profile).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("raw", "mapping"))
+        graph = graph.value(Representation("out", "mapping"))
+        graph = graph.effect(Effect("required", "state", ("reserved",)))
+        graph = graph.transition(Transition("check", "check", "raw", "out", effect_ids=("required",)))
+        workspace = Workspace.flat(model, graph=graph)
+        moves = workspace.moves(workspace.start(), "check", {"ok": True}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.UNKNOWN)
+
     def test_graph_transform_feeds_operation_and_effect_state(self):
         operation = Operation(
             "check",
@@ -166,6 +197,7 @@ class Suite(unittest.TestCase):
             transforms={"parse": lambda value, _state: int(value["amount"])},
             recognizers={"positive": lambda value, _state: value == 10},
             effects={"parsed": lambda state, _value: state.update(parsed=True)},
+            mappers={"check": lambda value, _original: {"amount": value}},
         )
         moves = workspace.moves(workspace.start(), "check", {"amount": "10"}, operation=operation)
         self.assertEqual(len(moves), 1)
@@ -226,6 +258,73 @@ class Suite(unittest.TestCase):
         model = Model("reach-fixture", State({"done": False}), ({},), (nondeterministic,))
         report = Planner().plan(model, objective, auth)
         self.assertEqual(report.reachability, Reach.POSSIBLE)
+
+    def test_verified_connections_compose_graph_only_route(self):
+        model = Model("route-fixture", State({"done": False}), ({"value": "ok"},), ())
+        left = Persona("left", "test", "target", "graph", "1")
+        right = Persona("right", "test", "target", "graph", "1")
+        graph = Graph("route-workspace").persona(left).persona(right)
+        graph = graph.zone(Zone("a", "left", "a")).zone(Zone("b", "right", "b"))
+        graph = graph.value(Representation("raw", "mapping"))
+        graph = graph.value(Representation("mid", "text"))
+        graph = graph.value(Representation("final", "mapping"))
+        graph = graph.transform(Transform("parse", "raw", "mid", "fixture.parse", "1", Partiality.TOTAL, Relation.FUNCTION, Invertibility.UNKNOWN, Loss.NONE))
+        graph = graph.transform(Transform("bridge", "mid", "final", "fixture.bridge", "1", Partiality.TOTAL, Relation.FUNCTION, Invertibility.UNKNOWN, Loss.NONE))
+        graph = graph.guard(Recognizer("accept", "final", "fixture.accept", None, "b"))
+        graph = graph.effect(Effect("finish", "state", ("done",)))
+        graph = graph.transition(Transition("start", "route", "raw", "mid", ("parse",), region_id="a"))
+        graph = graph.transition(Transition("finish", "internal", "final", "final", (), ("accept",), ("finish",), region_id="b"))
+        graph = graph.port(Port("a-out", "a", "out", Direction.OUTPUT, "mid", "text"))
+        graph = graph.port(Port("b-in", "b", "in", Direction.INPUT, "final", "mapping"))
+        graph = graph.connect("a-out", "b-in", connection_id="a-to-b", transform_id="bridge")
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"parse": lambda value, _state: value["value"], "bridge": lambda value, _state: {"value": value}},
+            recognizers={"accept": lambda value, _state: value.get("value") == "ok"},
+            effects={"finish": lambda state, _value: state.update(done=True)},
+            entries={"route"},
+        )
+        self.assertTrue(workspace.validate().ready)
+        moves = workspace.moves(workspace.start(), "route", {"value": "ok"})
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.ACCEPT)
+        self.assertTrue(moves[0].after.target.get("done"))
+        self.assertIn("finish", moves[0].event.effects)
+        objective = Objective("done", "route-fixture", "lab", (Same("done", True),), budget=Limits(max_trace_length=1))
+        report = Planner().plan(
+            model,
+            objective,
+            Authorization("test", frozenset({"lab"}), frozenset({"route-fixture"})),
+            workspace=workspace,
+        )
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+
+    def test_operations_use_owned_region_state(self):
+        operation = Operation(
+            "use",
+            Entry("use"),
+            component="region-b",
+            guard=lambda state, _request: state.get("ready") is True,
+            apply=lambda state, _request: state.update(done=True),
+        )
+        model = Model("region-fixture", State({"ready": False}), ({},), (operation,))
+        workspace = Workspace.flat(
+            model,
+            regions={"region-b": State({"ready": True, "done": False})},
+        )
+        moves = workspace.moves(workspace.start(), "use", {}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertTrue(moves[0].after.regions["region-b"].get("done"))
+        self.assertFalse(moves[0].after.target.get("done"))
+        objective = Objective("region-done", "region-fixture", "lab", (Same("region-b.done", True),), budget=Limits(max_trace_length=1))
+        report = Planner().plan(
+            model,
+            objective,
+            Authorization("test", frozenset({"lab"}), frozenset({"region-fixture"})),
+            workspace=workspace,
+        )
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
 
 
 if __name__ == "__main__":

@@ -54,10 +54,12 @@ class World:
         transitions: Mapping[str, Reaction],
         *,
         nondeterministic: frozenset[str] = frozenset(),
+        complete: frozenset[str] = frozenset(),
     ) -> None:
         self.initial = initial
         self.transitions = dict(transitions)
         self.nondeterministic = nondeterministic
+        self.complete = complete
 
     def predict(self, transition_id: str, state: Context, request: Mapping[str, Any]) -> Step:
         options = self.options(transition_id, state, request)
@@ -84,6 +86,14 @@ class World:
             values = _reactions(result)
         except Exception as exc:
             return (Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=(f"environment transition failed: {type(exc).__name__}",)),)
+        if not values and transition_id not in self.complete:
+            return (Step(
+                transition_id,
+                state,
+                state,
+                status=Signal.UNKNOWN,
+                reasons=("environment relation returned no successors without completeness evidence",),
+            ),)
         status = Signal.UNKNOWN if transition_id in self.nondeterministic else Signal.PREDICTED
         reasons = (
             ("environment transition has uncontrolled outcomes",)

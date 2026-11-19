@@ -95,13 +95,29 @@ class Interpreter:
             for branch in branches:
                 try:
                     accepted = bool(evaluator(branch.value, branch.state))
-                    checked.append(Branch(branch.value, branch.status if accepted else Meaning.REJECTED, branch.representations, branch.recognizer_results + ((recognizer_id, accepted),), branch.state, branch.reasons))
+                    status = (
+                        branch.status
+                        if branch.status is Meaning.UNKNOWN
+                        else branch.status if accepted else Meaning.REJECTED
+                    )
+                    checked.append(Branch(branch.value, status, branch.representations, branch.recognizer_results + ((recognizer_id, accepted),), branch.state, branch.reasons))
                 except Exception as exc:
                     checked.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations, branch.recognizer_results + ((recognizer_id, None),), branch.state, branch.reasons + (f"recognizer {recognizer_id} failed: {type(exc).__name__}",)))
             branches = tuple(checked)
         for effect_id in transition.effect_ids:
             evaluator = self.effects.get(effect_id)
             if evaluator is None:
+                branches = tuple(
+                    Branch(
+                        item.value,
+                        Meaning.UNKNOWN,
+                        item.representations,
+                        item.recognizer_results,
+                        item.state,
+                        item.reasons + (f"opaque effect: {effect_id}",),
+                    )
+                    for item in branches
+                )
                 continue
             applied: list[Branch] = []
             for branch in branches:
