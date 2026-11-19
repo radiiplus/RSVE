@@ -11,21 +11,21 @@ from enum import Enum
 from statistics import mean
 from typing import Any, Mapping, Sequence
 
-from .adapter import TargetAdapter
-from .model import Authorization, Decision, State, TraceEvent, TransitionModel
-from .objective import ObjectiveDefinition
+from .adapter import Target
+from .model import Authorization, Decision, State, Event, Model
+from .objective import Objective
 from .result import Witness
-from .planner import BackwardRegressor
+from .planner import Regressor
 
 
-class OptimizationStatus(str, Enum):
+class Phase(str, Enum):
     OPTIMIZED = "OPTIMIZED"
     UNCHANGED = "UNCHANGED"
     NO_EQUIVALENT = "NO_EQUIVALENT"
 
 
 @dataclass(frozen=True)
-class CostWeights:
+class Weights:
     interaction_count: float = 10.0
     trace_length: float = 5.0
     execution_time_ms: float = 0.01
@@ -38,7 +38,7 @@ class CostWeights:
 
 
 @dataclass(frozen=True)
-class RealizationCost:
+class Cost:
     interaction_count: int
     trace_length: int
     execution_time_ms: float | None
@@ -49,7 +49,7 @@ class RealizationCost:
     reproducibility: float
     unknown_metrics: tuple[str, ...] = ()
 
-    def score(self, weights: CostWeights = CostWeights()) -> float:
+    def score(self, weights: Weights = Weights()) -> float:
         values = {
             "interaction_count": self.interaction_count,
             "trace_length": self.trace_length,
@@ -77,12 +77,12 @@ class RealizationCost:
 
 
 @dataclass(frozen=True)
-class OptimizationResult:
-    status: OptimizationStatus
+class Choice:
+    status: Phase
     original: Witness
     selected: Witness
-    original_cost: RealizationCost
-    selected_cost: RealizationCost
+    original_cost: Cost
+    selected_cost: Cost
     equivalence_evidence: tuple[str, ...] = ()
     rejected_candidates: tuple[str, ...] = ()
 
@@ -92,40 +92,40 @@ class OptimizationResult:
 
 
 @dataclass(frozen=True)
-class _ReplayCandidate:
+class Trial:
     interactions: tuple[Mapping[str, Any], ...]
-    events: tuple[TraceEvent, ...]
-    cost: RealizationCost
+    events: tuple[Event, ...]
+    cost: Cost
     outcome: Mapping[str, Any]
     signatures: tuple[str, ...]
 
 
-class RealizationOptimizer:
+class Optimizer:
     """Compare finite caller-supplied realizations after clean replay.
 
     The optimizer does not invent commands or alter objectives. Candidates must
     already be supported by the model/adapter boundary supplied by the caller.
     """
 
-    def optimize(
+    def choose(
         self,
         original: Witness,
         alternatives: Sequence[Sequence[Mapping[str, Any]]],
-        objective: ObjectiveDefinition,
+        objective: Objective,
         authorization: Authorization,
         *,
-        adapter: TargetAdapter,
-        weights: CostWeights = CostWeights(),
+        adapter: Target,
+        weights: Weights = Weights(),
         replay_runs: int | None = None,
-    ) -> OptimizationResult:
+    ) -> Choice:
         if not original.validated:
             raise ValueError("realization optimization requires a validated original witness")
         if not authorization.permits(original.target_id, objective.authorization_scope):
             raise PermissionError("authorization does not permit realization optimization")
         objective.validate(
             authorization,
-            environment=dict(getattr(adapter.environment_observation(), "facts", {})),
-            execution_profile=getattr(adapter, "analysis_profile", lambda: None)(),
+            environment=dict(getattr(adapter.observe(), "facts", {})),
+            execution_profile=getattr(adapter, "profile", lambda: None)(),
         )
         runs = replay_runs or objective.budget.replay_runs
         if runs <= 0:
@@ -133,9 +133,9 @@ class RealizationOptimizer:
         adapter.prepare()
         baseline = adapter.snapshot()
         candidates = [tuple(original.interactions), *(tuple(item) for item in alternatives)]
-        replayed: list[_ReplayCandidate] = []
+        replayed: list[Trial] = []
         rejected: list[str] = []
-        original_candidate: _ReplayCandidate | None = None
+        original_candidate: Trial | None = None
         try:
             for interactions in candidates:
                 try:
@@ -157,8 +157,8 @@ class RealizationOptimizer:
         selected_witness = self._witness(original, selected, objective)
         original_witness = self._witness(original, original_candidate, objective)
         selected_is_different = selected.interactions != original_candidate.interactions
-        status = OptimizationStatus.OPTIMIZED if selected_is_different and selected.cost.score(weights) < original_candidate.cost.score(weights) else OptimizationStatus.UNCHANGED
-        return OptimizationResult(
+        status = Phase.OPTIMIZED if selected_is_different and selected.cost.score(weights) < original_candidate.cost.score(weights) else Phase.UNCHANGED
+        return Choice(
             status=status,
             original=original_witness,
             selected=selected_witness,
@@ -172,10 +172,10 @@ class RealizationOptimizer:
             rejected_candidates=tuple(rejected),
         )
 
-    def synthesize_alternatives(
+    def synthesize(
         self,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
+        model: Model,
+        objective: Objective,
         authorization: Authorization,
         *,
         max_candidates: int = 64,
@@ -184,12 +184,12 @@ class RealizationOptimizer:
         objective.validate(authorization)
         if max_candidates <= 0:
             raise ValueError("max_candidates must be positive")
-        backward = BackwardRegressor().regress(
+        backward = Regressor().regress(
             model,
             objective,
             solver_timeout_ms=objective.budget.solver_timeout_ms,
         )
-        inputs = list(model.ordered_inputs())
+        inputs = list(model.args())
         known_inputs = {self._key(item) for item in inputs}
         for _entry, request in backward.required_actions:
             if self._key(request) not in known_inputs:
@@ -205,11 +205,11 @@ class RealizationOptimizer:
             if key in seen:
                 continue
             seen.add(key)
-            if interactions and objective.evaluate(state, self._events_for(model, interactions)) and objective.checkpoints_satisfied(model.initial_state, self._events_for(model, interactions)):
+            if interactions and objective.evaluate(state, self._events_for(model, interactions)) and objective.satisfy(model.initial_state, self._events_for(model, interactions)):
                 candidates.append(interactions)
             if len(interactions) >= objective.budget.max_trace_length:
                 continue
-            for operation in model.ordered_operations():
+            for operation in model.ops():
                 for request in inputs:
                     if not model.allows(operation.entry_point.name, request):
                         continue
@@ -221,25 +221,24 @@ class RealizationOptimizer:
                     queue.append((outcome.after, interactions + ({"entry_point": operation.entry_point.name, "request": dict(request)},)))
         return tuple(candidates)
 
-    def optimize_synthesized(
+    def optimize(
         self,
         original: Witness,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
+        source: Model | Sequence[Sequence[Mapping[str, Any]]],
+        objective: Objective,
         authorization: Authorization,
         *,
-        adapter: TargetAdapter,
-        weights: CostWeights = CostWeights(),
+        adapter: Target,
+        weights: Weights = Weights(),
         replay_runs: int | None = None,
         max_candidates: int = 64,
-    ) -> OptimizationResult:
-        alternatives = self.synthesize_alternatives(
-            model,
-            objective,
-            authorization,
-            max_candidates=max_candidates,
+    ) -> Choice:
+        alternatives = (
+            self.synthesize(source, objective, authorization, max_candidates=max_candidates)
+            if isinstance(source, Model)
+            else source
         )
-        return self.optimize(
+        return self.choose(
             original,
             alternatives,
             objective,
@@ -250,10 +249,10 @@ class RealizationOptimizer:
         )
 
     @staticmethod
-    def _events_for(model: TransitionModel, interactions: Sequence[Mapping[str, Any]]) -> tuple[TraceEvent, ...]:
+    def _events_for(model: Model, interactions: Sequence[Mapping[str, Any]]) -> tuple[Event, ...]:
         state = model.initial_state
-        operations = {operation.entry_point.name: operation for operation in model.ordered_operations()}
-        events: list[TraceEvent] = []
+        operations = {operation.entry_point.name: operation for operation in model.ops()}
+        events: list[Event] = []
         for interaction in interactions:
             operation = operations.get(str(interaction["entry_point"]))
             request = dict(interaction.get("request", {}))
@@ -282,26 +281,26 @@ class RealizationOptimizer:
 
     def _replay(
         self,
-        adapter: TargetAdapter,
+        adapter: Target,
         baseline: Any,
         interactions: tuple[Mapping[str, Any], ...],
-        objective: ObjectiveDefinition,
+        objective: Objective,
         authorization: Authorization,
         runs: int,
-    ) -> _ReplayCandidate | None:
-        runs_events: list[tuple[TraceEvent, ...]] = []
+    ) -> Trial | None:
+        runs_events: list[tuple[Event, ...]] = []
         signatures: list[str] = []
         durations: list[float] = []
         output: Mapping[str, Any] = {}
         for _ in range(runs):
             adapter.reset(baseline)
             started = time.perf_counter()
-            events = tuple(adapter.execute_trace(interactions, authorization))
+            events = tuple(adapter.trace(interactions, authorization))
             durations.append((time.perf_counter() - started) * 1000)
-            output = dict(getattr(adapter, "collect_output", lambda: {})())
+            output = dict(getattr(adapter, "output", lambda: {})())
             final_state = events[-1].after if events else State()
             initial_state = events[0].before if events else State()
-            if not objective.evaluate(final_state, events) or not objective.checkpoints_satisfied(initial_state, events):
+            if not objective.evaluate(final_state, events) or not objective.satisfy(initial_state, events):
                 return None
             runs_events.append(events)
             signatures.append(self._signature(events, output))
@@ -312,7 +311,7 @@ class RealizationOptimizer:
         resource = output.get("resource_use")
         resource_use = float(resource) if isinstance(resource, (int, float)) else None
         dependencies = {event.component or event.operation or event.entry_point for event in events}
-        cost = RealizationCost(
+        cost = Cost(
             interaction_count=len(interactions),
             trace_length=len(events),
             execution_time_ms=mean(durations),
@@ -323,10 +322,10 @@ class RealizationOptimizer:
             reproducibility=1.0,
             unknown_metrics=("resource_use",) if resource_use is None else (),
         )
-        return _ReplayCandidate(interactions, events, cost, output, tuple(signatures))
+        return Trial(interactions, events, cost, output, tuple(signatures))
 
     @staticmethod
-    def _witness(original: Witness, candidate: _ReplayCandidate, objective: ObjectiveDefinition) -> Witness:
+    def _witness(original: Witness, candidate: Trial, objective: Objective) -> Witness:
         final_state = candidate.events[-1].after if candidate.events else original.final_state
         return Witness(
             objective=objective.objective_id,
@@ -344,7 +343,7 @@ class RealizationOptimizer:
         )
 
     @staticmethod
-    def _signature(events: Sequence[TraceEvent], output: Mapping[str, Any]) -> str:
+    def _signature(events: Sequence[Event], output: Mapping[str, Any]) -> str:
         payload = {
             "events": [
                 {

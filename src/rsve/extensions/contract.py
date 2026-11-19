@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence
 
-from ..adapter import TargetAdapter
+from ..adapter import Target
 
 
 @dataclass(frozen=True)
-class JvmCapabilities:
+class Java:
     agent_instrumentation: bool = False
     bytecode_transformation: bool = False
     jfr_events: bool = False
@@ -20,7 +20,7 @@ class JvmCapabilities:
 
 
 @dataclass(frozen=True)
-class EvmCapabilities:
+class Fork:
     local_chain: bool = False
     transaction_entries: bool = False
     call_entries: bool = False
@@ -35,7 +35,7 @@ class EvmCapabilities:
 
 
 @dataclass(frozen=True)
-class NativeCapabilities:
+class Memory:
     architecture: str = "unknown"
     abi: str = "unknown"
     process_control: bool = False
@@ -46,7 +46,7 @@ class NativeCapabilities:
 
 
 @dataclass(frozen=True)
-class EvmExecutionContext:
+class Context:
     chain_id: str
     block_number: int
     timestamp: int | None = None
@@ -56,7 +56,7 @@ class EvmExecutionContext:
 
 
 @dataclass(frozen=True)
-class NativeTargetIdentity:
+class Identity:
     binary_hash: str
     architecture: str
     abi: str
@@ -64,20 +64,20 @@ class NativeTargetIdentity:
     loader: str = "unknown"
 
 
-class JvmAdapterContract(TargetAdapter, Protocol):
+class Jvm(Target, Protocol):
     @property
-    def jvm_capabilities(self) -> JvmCapabilities: ...
+    def caps(self) -> Java: ...
 
 
-class EvmAdapterContract(TargetAdapter, Protocol):
+class Chain(Target, Protocol):
     @property
-    def evm_capabilities(self) -> EvmCapabilities: ...
+    def caps(self) -> Fork: ...
 
-    def chain_context(self) -> EvmExecutionContext: ...
+    def context(self) -> Context: ...
 
 
-class NativeAdapterContract(TargetAdapter, Protocol):
+class Native(Target, Protocol):
     @property
-    def native_capabilities(self) -> NativeCapabilities: ...
+    def caps(self) -> Memory: ...
 
-    def native_identity(self) -> NativeTargetIdentity: ...
+    def identity(self) -> Identity: ...

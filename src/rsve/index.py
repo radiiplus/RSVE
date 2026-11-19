@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .model import Operation, TransitionModel
+from .model import Operation, Model
 
 
 @dataclass(frozen=True)
-class Entry:
+class Item:
     """A transition's declared dependency summary."""
 
     operation: Operation
@@ -24,13 +24,13 @@ class Entry:
 class Index:
     """Find possible causal predecessors without assuming layer adjacency."""
 
-    def __init__(self, entries: Iterable[Entry], revision: str = "unknown") -> None:
+    def __init__(self, entries: Iterable[Item], revision: str = "unknown") -> None:
         self.revision = revision
         self.entries = tuple(entries)
-        self.read: dict[str, tuple[Entry, ...]] = {}
-        self.write: dict[str, tuple[Entry, ...]] = {}
-        self.effect: dict[str, tuple[Entry, ...]] = {}
-        self.entry: dict[str, tuple[Entry, ...]] = {}
+        self.read: dict[str, tuple[Item, ...]] = {}
+        self.write: dict[str, tuple[Item, ...]] = {}
+        self.effect: dict[str, tuple[Item, ...]] = {}
+        self.entry: dict[str, tuple[Item, ...]] = {}
         for item in self.entries:
             self.add(self.read, item.reads, item)
             self.add(self.write, item.writes, item)
@@ -38,7 +38,7 @@ class Index:
             self.add(self.entry, (item.entry,), item)
 
     @classmethod
-    def build(cls, model: TransitionModel) -> "Index":
+    def build(cls, model: Model) -> "Index":
         entries = []
         for operation in model.operations:
             reads = frozenset(operation.reads)
@@ -47,7 +47,7 @@ class Index:
             if symbolic is not None:
                 writes |= frozenset(getattr(symbolic, "assignments", {}).keys())
             unknown = bool(operation.unknown)
-            entries.append(Entry(
+            entries.append(Item(
                 operation=operation,
                 reads=reads,
                 writes=writes,
@@ -58,37 +58,37 @@ class Index:
             ))
         return cls(entries, model.model_version)
 
-    def predecessors(self, keys: Iterable[str]) -> tuple[Entry, ...]:
-        found: dict[tuple[str, str], Entry] = {}
+    def predecessors(self, keys: Iterable[str]) -> tuple[Item, ...]:
+        found: dict[tuple[str, str], Item] = {}
         for key in keys:
             for item in self.write.get(key, ()):
                 found[(item.entry, item.operation.name)] = item
         return tuple(found[key] for key in sorted(found))
 
-    def readers(self, keys: Iterable[str]) -> tuple[Entry, ...]:
+    def readers(self, keys: Iterable[str]) -> tuple[Item, ...]:
         return self.collect(self.read, keys)
 
-    def effects(self, names: Iterable[str]) -> tuple[Entry, ...]:
+    def effects(self, names: Iterable[str]) -> tuple[Item, ...]:
         return self.collect(self.effect, names)
 
-    def lookup(self, names: Iterable[str]) -> tuple[Entry, ...]:
+    def lookup(self, names: Iterable[str]) -> tuple[Item, ...]:
         return self.collect(self.entry, names)
 
-    def refresh(self, model: TransitionModel) -> "Index":
+    def refresh(self, model: Model) -> "Index":
         if model.model_version == self.revision:
             return self
         return self.build(model)
 
     @staticmethod
-    def add(target: dict[str, list[Entry] | tuple[Entry, ...]], keys: Iterable[str], item: Entry) -> None:
+    def add(target: dict[str, list[Item] | tuple[Item, ...]], keys: Iterable[str], item: Item) -> None:
         for key in keys:
             current = list(target.get(key, ()))
             current.append(item)
             target[key] = tuple(current)
 
     @staticmethod
-    def collect(source: dict[str, tuple[Entry, ...]], keys: Iterable[str]) -> tuple[Entry, ...]:
-        found: dict[tuple[str, str], Entry] = {}
+    def collect(source: dict[str, tuple[Item, ...]], keys: Iterable[str]) -> tuple[Item, ...]:
+        found: dict[tuple[str, str], Item] = {}
         for key in keys:
             for item in source.get(key, ()):
                 found[(item.entry, item.operation.name)] = item

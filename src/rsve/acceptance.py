@@ -7,7 +7,7 @@ from typing import Any, Callable, Iterable
 
 
 @dataclass(frozen=True)
-class AcceptanceResidual:
+class Residual:
     """Finite-domain evidence for the two acceptance residual directions."""
 
     domain: tuple[Any, ...]
@@ -17,15 +17,15 @@ class AcceptanceResidual:
     under_acceptance: frozenset[Any]
 
 
-def compare_acceptance(
+def compare(
     actual: Callable[[Any], bool],
     intended: Callable[[Any], bool],
     domain: Iterable[Any],
-) -> AcceptanceResidual:
+) -> Residual:
     values = tuple(domain)
     actual_set = frozenset(value for value in values if actual(value))
     intended_set = frozenset(value for value in values if intended(value))
-    return AcceptanceResidual(
+    return Residual(
         domain=values,
         accepted_actual=actual_set,
         accepted_intended=intended_set,
@@ -34,7 +34,7 @@ def compare_acceptance(
     )
 
 
-def transform_domain_mismatch(
+def gap(
     transform: Callable[[Any], Any],
     source_domain: Iterable[Any],
     downstream_domain: Iterable[Any],

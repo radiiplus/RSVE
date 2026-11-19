@@ -27,41 +27,41 @@ Status meanings: EXISTS is implemented and tested; PARTIAL is an explicit contra
 
 | RSVE component or milestone capability | Status | File/test evidence and gap |
 | --- | --- | --- |
-| Typed state and transition model | PARTIAL | `src/rsve/model.py`: `State`, `Operation`, `TransitionModel`, `TraceEvent`; graph is implicit in operations and not a persisted component graph |
-| Entry-point registry/discovery | PARTIAL | `EntryPoint`, `SurfaceRegistry`, and `NodeTargetAdapter.discover_entries()` exist; framework-wide discovery is intentionally unsupported |
-| Transducers and representation semantics | EXISTS within supported semantics | `ir.Transform` is canonical; `SemanticInterpreter` composes supported transforms and recognizers, preserves representation lineage, and returns UNKNOWN for opaque semantics. General runtime semantics remain extension-provided |
-| Recognizers and intended contracts | PARTIAL | Canonical `ir.Recognizer`, `SemanticInterpreter`, and `acceptance.py` finite-domain residual helpers exist; enforcement trace, dominance analysis, and independent contract source remain partial |
-| Transform/domain mismatch | PARTIAL | `transform_domain_mismatch()` computes finite `Image(T) - D`; reachable-image evidence is not connected to runtime traces |
-| Over- and under-acceptance | PARTIAL | `compare_acceptance()` names both directions; only finite supplied domains are supported |
-| Effect lemmas/checkpoints | PARTIAL | `EffectLemma` is checked against trace prefixes by `Engine`; no backward derivation or persisted checkpoint evidence |
+| Typed state and transition model | PARTIAL | `src/rsve/model.py`: `State`, `Operation`, `Model`, `Event`; graph is implicit in operations and not a persisted component graph |
+| Entry-point registry/discovery | PARTIAL | `Entry`, `Surface`, and `Node.discover()` exist; framework-wide discovery is intentionally unsupported |
+| Transducers and representation semantics | EXISTS within supported semantics | `ir.Transform` is canonical; `Interpreter` composes supported transforms and recognizers, preserves representation lineage, and returns UNKNOWN for opaque semantics. General runtime semantics remain extension-provided |
+| Recognizers and intended contracts | PARTIAL | Canonical `ir.Recognizer`, `Interpreter`, and `acceptance.py` finite-domain residual helpers exist; enforcement trace, dominance analysis, and independent contract source remain partial |
+| Transform/domain mismatch | PARTIAL | `gap()` computes finite `Image(T) - D`; reachable-image evidence is not connected to runtime traces |
+| Over- and under-acceptance | PARTIAL | `compare()` names both directions; only finite supplied domains are supported |
+| Effect lemmas/checkpoints | PARTIAL | `Lemma` is checked against trace prefixes by `Engine`; no backward derivation or persisted checkpoint evidence |
 | Target extension | PARTIAL | `src/rsve/extensions/node.py` and `src/rsve/extensions/node.py` launch explicit local fixtures; JVM/native adapters remain contracts or roadmap work |
 | Instrumentation adapter | PARTIAL | Node fixture uses `diagnostics_channel` and `AsyncLocalStorage`; generic runtime instrumentation remains a protocol |
 | Semantic model adapter | PARTIAL | Versioned `Transform`/`Transition` records and exact supported symbolic transitions exist; no complete runtime semantics registry |
 | Solver adapter | EXISTS within supported subset | `src/rsve/solver.py` translates the typed constraint subset to Z3; unsupported theories return UNKNOWN; proof capture remains optional |
 | Reactive environment model | EXISTS within core scope | `src/rsve/environment.py` models target/environment state together, predicts reactions, and reconciles observed reactions; concrete Linux facts remain extension-provided |
 | Composable workspace graph | EXISTS within tested graph scope | `src/rsve/graph.py` provides profiles, extension instances, bindings, typed regions/ports/connections, nested graphs, capability resolution, correlation evidence, composite snapshots, budgets, and cycle-safe traversal |
-| Layer/profile identity | EXISTS within graph scope | `ProfileInstance` and `ProfileRequirement` in `src/rsve/graph.py` support multiple implementations, versions, configurations, execution scopes, and shared-dependency comparisons |
+| Layer/profile identity | EXISTS within graph scope | `Profile` and `Need` in `src/rsve/graph.py` support multiple implementations, versions, configurations, execution scopes, and shared-dependency comparisons |
 | Realization optimization | EXISTS within bounded candidate scope | `src/rsve/optimize.py` replays caller-supplied alternatives from one clean snapshot and compares explicit costs; it does not synthesize new primitives or replace the planner |
 | Black-box vulnerability-style detection | EXISTS in synthetic lab scope | `tests/blackbox.py`, `tests/variants.py`, and `tests/http.py` observe canary-only controlled sinks, compute actual-minus-intended acceptance, expand an HTTP interaction domain, and replay-validate objectives without relying on source-location disclosure |
 | Black-box variant coverage | EXISTS in bounded fixture scope | `tests/variants.py` covers decoding, coercion, duplicate-field parsing, and stateful sequence boundaries; variants remain synthetic, local-only, finite, and independently specified |
 | QEMU OS/ISA substrate | EXISTS within controlled guest scope | `src/rsve/extensions/node.py` boots the SHA256-pinned Ubuntu Server 26.04 amd64 image with QEMU TCG, captures serial boot evidence, and recreates qcow2 overlays for reset; guest command execution requires a separate guest-agent extension, while host hardware, scheduler, entropy, clock, external services, and exact whole-system replay remain unknown |
 | Artifact store | EXISTS within local SQLite scope | `src/rsve/sqlite.py` adds content-addressed redacted artifacts, WAL-backed transactions, schema versioning, solver-result indexes, snapshot metadata, and model/profile-aware stale-query invalidation; JSONL remains the lightweight export/debug store |
 | Deterministic bounded planning | EXISTS | `Engine.analyze()` performs canonical-order breadth-first search with depth, state, and event budgets; `src/rsve/search.py` expands an open interaction frontier under explicit candidate/time/trace budgets and reports budget exhaustion |
-| Backward planning | PARTIAL | `src/rsve/wp.py` is exact for deterministic guarded assignments and `HybridPlanner` now consumes supported WP/Z3 assignments; multi-step symbolic sequence regression and runtime-specific relations remain incomplete |
+| Backward planning | PARTIAL | `src/rsve/wp.py` is exact for deterministic guarded assignments and `Planner` now consumes supported WP/Z3 assignments; multi-step symbolic sequence regression and runtime-specific relations remain incomplete |
 | Forward/concolic execution | PARTIAL | Forward model execution exists; no concrete target execution, symbolic values, or concolic feedback |
-| Validated witness | PARTIAL | `HybridPlanner` requires adapter replay and objective observation before `VALIDATED_WITNESS`; the legacy `Engine` now returns `MODEL_SAT` with `Witness.validated=False` |
+| Validated witness | PARTIAL | `Planner` requires adapter replay and objective observation before `VALIDATED_WITNESS`; the legacy `Engine` now returns `MODEL_SAT` with `Witness.validated=False` |
 | Bounded proof result | PARTIAL | `UNSAT_BOUNDED`, `UNKNOWN`, models, and cores are explicit and tested; solver proof bytes are optional and there is no fidelity proof |
-| Model/reality divergence | PARTIAL | `DifferentialAnalyzer` aligns semantic events, classifies first divergence, and emits immutable refinement deltas; broader correlation and model mutation remain limited |
+| Model/reality divergence | PARTIAL | `Analyzer` aligns semantic events, classifies first divergence, and emits immutable refinement deltas; broader correlation and model mutation remain limited |
 | Authorization and lab scope | PARTIAL | `Authorization` is enforced at Node/EVM invoke, replay, and ordered execution boundaries; target isolation, policy store, and deployment audit identity remain unavailable |
 | Phantom entry detection | EXISTS within registry | `src/rsve/registry.py` requires observed evidence and retains conditions; no runtime discovery implementation |
 | Replay and snapshot/reset | PARTIAL | Node and EVM fixtures support clean reset, ordered replay, k-of-n semantic stability, and authorization; exact host/environment replay is explicitly unavailable |
-| Standard trace interchange | PARTIAL | `TraceEvent` has IDs, causal links, representations, states, environment, ordering, and evidence; `OpenTelemetryAdapter` maps these without an OTel dependency |
+| Standard trace interchange | PARTIAL | `Event` has IDs, causal links, representations, states, environment, ordering, and evidence; `Otel` maps these without an OTel dependency |
 | Cross-runtime portability | EXISTS within two fixtures | `tests/node.py` and `tests/evm.py` run the same planner/objective/result workflow; JVM/native capability contracts are documented without claiming implementation |
 | Security/redaction | PARTIAL | JSONL redacts a small key set by default; no structured secret classification, trace redaction policy, or sink isolation |
 
 ## Architectural risks
 
-1. **Execution versus fidelity.** `Operation.fidelity` separates a modeled event from an observed one, `HybridPlanner` requires replay evidence for `VALIDATED_WITNESS`, and `Engine` reports model-only success as `MODEL_SAT`; neither model execution nor replay alone proves full runtime fidelity.
+1. **Execution versus fidelity.** `Operation.fidelity` separates a modeled event from an observed one, `Planner` requires replay evidence for `VALIDATED_WITNESS`, and `Engine` reports model-only success as `MODEL_SAT`; neither model execution nor replay alone proves full runtime fidelity.
 
 2. **Residual-set scope.** The helpers operate over caller-supplied finite domains. They must never be presented as global accepted sets. `Image(T) - D`, over-acceptance, and under-acceptance must remain separate report fields and carry domain/provenance evidence.
 

@@ -2,7 +2,7 @@
 
 ## ADR-0001: Keep the current Python core and add only documented adapters
 
-**Decision:** Keep `src/rsve` as the engine-owned, platform-neutral package. Add runtime-specific code under explicit adapter modules and keep the existing `TargetAdapter`, `InstrumentationAdapter`, `SolverAdapter`, `EnvironmentAdapter`, and `ArtifactStore` boundaries.
+**Decision:** Keep `src/rsve` as the engine-owned, platform-neutral package. Add runtime-specific code under explicit adapter modules and keep the existing `Target`, `Probe`, `Solve`, `Env`, and `Vault` boundaries.
 
 **Reason:** The repository has one coherent Python package and no evidence supporting a language/runtime migration. Renaming or restructuring would add risk without improving the next milestone.
 
@@ -44,13 +44,13 @@
 
 ## ADR-0007: Use Z3 behind a solver-neutral query boundary
 
-**Decision:** Keep `SolverAdapter` abstract and implement `Z3SolverAdapter` in `src/rsve/solver.py`. Translate only the supported constraint subset. Preserve SMT-like query text, backend/version/options, model, named unsat core, unknown reason, and optional proof bytes. Keep cvc5 as a conformance alternative, not a second dependency.
+**Decision:** Keep `Solve` abstract and implement `Zed` in `src/rsve/solver.py`. Translate only the supported constraint subset. Preserve SMT-like query text, backend/version/options, model, named unsat core, unknown reason, and optional proof bytes. Keep cvc5 as a conformance alternative, not a second dependency.
 
 **Reason:** Batch 2 now provides a typed constraint AST and result scope. Z3 satisfies the first real backend gate with a thin adapter; unsupported theories return UNKNOWN. A core is stored separately and is never relabeled as a proof.
 
 ## ADR-0008: Keep objectives extensional and replay-gated
 
-**Decision:** Represent the first objective language with `ObjectiveDefinition` and small predicates for state equality, canary flow, allowed state changes, entry sequences, and guard invariants. Require target/scope authorization, controlled sinks, environment boundaries, and explicit budgets. A model candidate is `SAT_CANDIDATE` until the adapter observes the postcondition after clean replay; only then is it `VALIDATED_WITNESS`.
+**Decision:** Represent the first objective language with `Objective` and small predicates for state equality, canary flow, allowed state changes, entry sequences, and guard invariants. Require target/scope authorization, controlled sinks, environment boundaries, and explicit budgets. A model candidate is `SAT_CANDIDATE` until the adapter observes the postcondition after clean replay; only then is it `VALIDATED_WITNESS`.
 
 **Reason:** The planner needs observable postconditions without encoding a prescribed command or exploit sequence. Keeping predicates extensional makes the language small, serializable, and runtime-independent.
 
@@ -58,7 +58,7 @@
 
 ## ADR-0009: Refine through immutable counterexample deltas
 
-**Decision:** `DifferentialAnalyzer` aligns semantic events while preserving adapter-only events as correlation context. Runtime rejection can add an explicit interaction exclusion to a new model revision; every delta records its parent, evidence, and invalidated query IDs.
+**Decision:** `Analyzer` aligns semantic events while preserving adapter-only events as correlation context. Runtime rejection can add an explicit interaction exclusion to a new model revision; every delta records its parent, evidence, and invalidated query IDs.
 
 **Reason:** Counterexamples must change the model/query scope without mutating prior experiment records or turning instrumentation gaps into safety claims.
 
@@ -66,7 +66,7 @@
 
 ## ADR-0010: Make symbolic weakest preconditions explicit and bounded by semantics
 
-**Decision:** Add `SymbolicTransition` and `WeakestPreconditionEngine` for deterministic guarded assignments over booleans, bounded integers/bit-vectors, equality, ranges, finite enums, boolean connectives, state relations, named assumptions, and `+`, `-`, `*` expressions. Compose transitions backwards by substitution. Nondeterministic, relational, opaque, or unsupported nodes return `UNKNOWN`.
+**Decision:** Add `Symbolic` and `WP` for deterministic guarded assignments over booleans, bounded integers/bit-vectors, equality, ranges, finite enums, boolean connectives, state relations, named assumptions, and `+`, `-`, `*` expressions. Compose transitions backwards by substitution. Nondeterministic, relational, opaque, or unsupported nodes return `UNKNOWN`.
 
 **Reason:** This provides a genuinely exact weakest-precondition result relative to an explicit semantic relation without pretending that Python callables or arbitrary runtime behavior are symbolically understood.
 
@@ -74,7 +74,7 @@
 
 ## ADR-0011: Use Foundry as the controlled EVM adapter substrate
 
-**Decision:** Install and pin Foundry v1.9.0 outside the Python dependency graph. Use Anvil for local chain state and snapshots, Forge for fixture compilation, and Cast for ABI encoding. Keep the EVM integration behind `EvmTargetAdapter` and preserve canonical RSVE events/results.
+**Decision:** Install and pin Foundry v1.9.0 outside the Python dependency graph. Use Anvil for local chain state and snapshots, Forge for fixture compilation, and Cast for ABI encoding. Keep the EVM integration behind `Evm` and preserve canonical RSVE events/results.
 
 **Reason:** The environment lacked a local EVM runtime, while the official toolchain supplies the distinct execution, state, receipt, revert, log, and replay capabilities required by BATCH 8. The fixture is local and synthetic.
 
@@ -82,7 +82,7 @@
 
 ## ADR-0012: Use QEMU as the Linux substrate boundary
 
-**Decision:** Use the installed QEMU 8.2.2 and implement `QemuLinuxSubstrate` as an optional adapter. Boot the official Ubuntu Server 26.04 amd64 cloud image with TCG, a q35 machine, and a temporary qcow2 overlay while capturing serial evidence. Keep cloud-init, SSH, guest agents, S2E, and native symbolic backends outside this minimal substrate.
+**Decision:** Use the installed QEMU 8.2.2 and implement `Qemu` as an optional adapter. Boot the official Ubuntu Server 26.04 amd64 cloud image with TCG, a q35 machine, and a temporary qcow2 overlay while capturing serial evidence. Keep cloud-init, SSH, guest agents, S2E, and native symbolic backends outside this minimal substrate.
 
 **Reason:** Higher runtime stacks depend on an explicit Linux kernel, syscall, ABI, filesystem, virtual-memory, network, and scheduler boundary. QEMU supplies a portable guest boundary using an existing emulator without making those observations look like exact host replay or a target-level proof.
 
@@ -92,7 +92,7 @@
 
 ## ADR-0013: Use an explicit Linux environment profile by default
 
-**Decision:** Host-local Unix fixtures use `LinuxEnvironmentAdapter` as the default environment boundary. It records observed Linux/kernel/ABI facts and labels scheduler, entropy, hardware memory ordering, network, external services, and exact snapshot scope as unknown or limited. QEMU can provide a guest profile later through the same boundary.
+**Decision:** Host-local Unix fixtures use `LinuxEnv` as the default environment boundary. It records observed Linux/kernel/ABI facts and labels scheduler, entropy, hardware memory ordering, network, external services, and exact snapshot scope as unknown or limited. QEMU can provide a guest profile later through the same boundary.
 
 **Reason:** Node and EVM fixtures already execute on Linux and higher runtime behavior can depend on syscalls, ABI, virtual memory, filesystem, clocks, scheduling, and resource limits. Omitting that context would make the evidence scope ambiguous.
 
@@ -106,7 +106,7 @@
 
 ## ADR-0015: Scope solver evidence with a layered execution profile
 
-**Decision:** Use graph-owned `ProfileInstance` and `ProfileRequirement` records for independently scoped target, runtime, platform, OS, ISA, adapter, tool, image, configuration, and execution-context identities. Multiple profiles may coexist. `ProfileVerification` reports `MATCH`, `DRIFT`, or `UNKNOWN`; missing or unobserved fields never match by assumption. Runtime implementations are optional extensions and contribute profiles through workspace bindings.
+**Decision:** Use graph-owned `Profile` and `Need` records for independently scoped target, runtime, platform, OS, ISA, adapter, tool, image, configuration, and execution-context identities. Multiple profiles may coexist. `Check` reports `MATCH`, `DRIFT`, or `UNKNOWN`; missing or unobserved fields never match by assumption. Runtime implementations are optional extensions and contribute profiles through workspace bindings.
 
 **Reason:** A target build hash alone does not identify the runtime stack that produced an observation. The solver and planner need a stable scope identifier so a bounded result is not reused across Node, kernel, ABI, emulator, toolchain, or image drift.
 
@@ -114,13 +114,13 @@
 
 ## ADR-0016: Optimize only replay-validated equivalent realizations
 
-**Decision:** `RealizationOptimizer` accepts a validated original witness and a finite caller/model-supplied candidate set. It replays every candidate from one clean snapshot, applies the unchanged objective/checkpoints/stability policy, computes explicit costs, and retains the original witness plus equivalence evidence.
+**Decision:** `Optimizer` accepts a validated original witness and a finite caller/model-supplied candidate set. It replays every candidate from one clean snapshot, applies the unchanged objective/checkpoints/stability policy, computes explicit costs, and retains the original witness plus equivalence evidence.
 
 **Rejected:** Optimizing before correctness, inventing runtime primitives, dropping guards or authorization, treating missing resource metrics as zero, or replacing the bounded planner with a general optimizer.
 
 ## ADR-0017: Use SQLite for the local transactional evidence ledger
 
-**Decision:** Add `SqliteArtifactStore` using Python `sqlite3`, WAL mode, content-addressed redacted payloads, schema version `1`, solver-result indexes, snapshot metadata, and explicit query invalidation records. Keep `JsonlArtifactStore` for small append-only export/debug use.
+**Decision:** Add `Sqlite` using Python `sqlite3`, WAL mode, content-addressed redacted payloads, schema version `1`, solver-result indexes, snapshot metadata, and explicit query invalidation records. Keep `Jsonl` for small append-only export/debug use.
 
 Solver results are valid only within their recorded model revision and execution profile. A refinement delta can invalidate dependent query IDs in the same transaction as its artifact record; callers may retrieve stale records only by explicitly requesting them.
 

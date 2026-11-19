@@ -15,19 +15,19 @@ The core deliberately does not claim global completeness. Every result carries i
 
 ```python
 from rsve import (
-    AnalysisStatus, Authorization, Budget, Engine, EntryPoint, Objective, Operation,
-    State, TransitionModel,
+    Status, Authorization, Budget, Engine, Entry, Goal, Operation,
+    State, Model,
 )
 
-model = TransitionModel(
+model = Model(
     target_id="fixture",
     initial_state=State({"count": 0}),
     inputs=({"amount": 1}, {"amount": 2}),
     operations=(Operation(
         name="increment",
-        entry_point=EntryPoint("lab.increment", declared=True),
+        entry_point=Entry("lab.increment", declared=True),
         guard=lambda state, request: request["amount"] > 0,
-        apply=lambda state, request: state.with_updates(
+        apply=lambda state, request: state.update(
             count=state["count"] + request["amount"]
         ),
     ),),
@@ -44,10 +44,10 @@ report = Engine().analyze(
     Budget(max_depth=2),
 )
 assert report.witness is not None
-assert report.status is AnalysisStatus.MODEL_SAT
+assert report.status is Status.MODEL_SAT
 ```
 
-`Engine` evaluates only the supplied transition model, so `MODEL_SAT` is not a runtime validation claim. Use `HybridPlanner` with a target adapter when the result must be replay-confirmed against a real controlled fixture.
+`Engine` evaluates only the supplied transition model, so `MODEL_SAT` is not a runtime validation claim. Use `Planner` with a target adapter when the result must be replay-confirmed against a real controlled fixture.
 
 Run the tests with:
 

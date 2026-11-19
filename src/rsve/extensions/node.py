@@ -13,36 +13,36 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from ..adapter import ArtifactStore, CapabilityReport, Capabilities
-from .linux import LinuxEnvironmentAdapter
-from ..ir import EnvironmentObservation, Evidence, TargetIdentity
-from ..model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
-from ..registry import ObservedEntry, SurfaceRegistry
-from ..graph import AnalysisGraph, CapabilityManifest, PortDirection, ProfileInstance, Provenance as GraphProvenance, TypedPort
+from ..adapter import Vault, Offer, Caps
+from .linux import Linux
+from ..ir import Fact, Evidence, Identity
+from ..model import Authorization, Entry, Mode, Fidelity, Provenance, State, Event
+from ..registry import Seen, Surface
+from ..graph import Graph, Manifest, Direction, Persona, Provenance as GraphProvenance, Port
 
 
 @dataclass(frozen=True)
-class ReplayRun:
+class Run:
     run_id: str
-    events: tuple[TraceEvent, ...]
+    events: tuple[Event, ...]
     outcome: Mapping[str, Any]
     outcome_hash: str
     environment: Mapping[str, str]
 
 
 @dataclass(frozen=True)
-class ReplayReport:
-    runs: tuple[ReplayRun, ...]
+class Report:
+    runs: tuple[Run, ...]
     stable: bool
     replayability: str = "partially_replayable"
     limitations: tuple[str, ...] = ()
 
 
-class NodeTargetAdapter:
+class Node:
     """Launch and observe an explicitly supplied local Node target fixture.
 
     The target speaks a private line protocol only for the controlled fixture;
-    analysis receives normalized ``TraceEvent`` objects and never depends on
+    analysis receives normalized ``Event`` objects and never depends on
     Node types. Inspector/diagnostics hooks remain target-side evidence.
     """
 
@@ -53,7 +53,7 @@ class NodeTargetAdapter:
         target_id: str = "node-target",
         scope: str = "node-lab",
         manifest: str | Path | None = None,
-        artifact_store: ArtifactStore | None = None,
+        artifact_store: Vault | None = None,
         timeout_s: float = 5.0,
         node_command: str = "node",
         preserve_raw_payloads: bool = False,
@@ -75,9 +75,9 @@ class NodeTargetAdapter:
         self._runtime_version = "unknown"
 
     @property
-    def capabilities(self) -> Capabilities:
-        return Capabilities(
-            discover_entries=True,
+    def capabilities(self) -> Caps:
+        return Caps(
+            discover=True,
             invoke=True,
             replay=True,
             capture_state=True,
@@ -85,8 +85,8 @@ class NodeTargetAdapter:
             snapshot=True,
         )
 
-    def capability_report(self) -> CapabilityReport:
-        return CapabilityReport(
+    def offer(self) -> Offer:
+        return Offer(
             supported_entry_types=frozenset({"module_function", "stateful_command", "async_function"}),
             supported_event_hooks=frozenset({"entry.invocation", "operation", "async.correlation", "outcome"}),
             state_capture=True,
@@ -101,9 +101,9 @@ class NodeTargetAdapter:
             side_effects=("target-local diagnostics_channel subscribers",),
         )
 
-    def capability_manifest(self) -> CapabilityManifest:
-        report = self.capability_report()
-        return CapabilityManifest(
+    def manifest(self) -> Manifest:
+        report = self.offer()
+        return Manifest(
             extension_id="rsve.node",
             namespace="rsve.node/runtime-observation",
             version="1",
@@ -113,12 +113,12 @@ class NodeTargetAdapter:
             provenance=GraphProvenance("node-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
 
-    def analysis_profile(self) -> ProfileInstance:
+    def profile(self) -> Persona:
         identity = self.identity()
-        observation = self.environment_observation()
+        observation = self.observe()
         scope = dict(observation.facts)
         scope["target_id"] = identity["target_id"]
-        return ProfileInstance(
+        return Persona(
             profile_id=f"{identity['target_id']}:{identity['build_hash']}",
             family="runtime",
             component="node.js",
@@ -127,24 +127,24 @@ class NodeTargetAdapter:
             build_digest=identity["build_hash"],
             configuration_digest="",
             execution_scope=scope,
-            feature_set=frozenset(self.capability_report().supported_event_hooks),
+            feature_set=frozenset(self.offer().supported_event_hooks),
             provenance=GraphProvenance("node-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
 
-    def analysis_graph(self) -> AnalysisGraph:
+    def graph(self) -> Graph:
         identity = self.identity()
-        profile = self.analysis_profile()
-        graph = AnalysisGraph.for_profile(
+        profile = self.profile()
+        graph = Graph.for_profile(
             profile,
             graph_id=f"node:{identity['target_id']}",
             region_id="node.target",
             region_name="Node target",
-            capabilities=(self.capability_manifest(),),
+            capabilities=(self.manifest(),),
         )
-        entries = self.discover_entries()
+        entries = self.discover()
         for entry in entries:
-            graph = graph.add_port(TypedPort(f"entry:{entry.name}:input", "node.target", entry.name, PortDirection.INPUT, "request", "EntryRequest"))
-            graph = graph.add_port(TypedPort(f"entry:{entry.name}:output", "node.target", entry.name, PortDirection.OUTPUT, "outcome", "EntryOutcome"))
+            graph = graph.port(Port(f"entry:{entry.name}:input", "node.target", entry.name, Direction.INPUT, "request", "EntryRequest"))
+            graph = graph.port(Port(f"entry:{entry.name}:output", "node.target", entry.name, Direction.OUTPUT, "outcome", "EntryOutcome"))
         return graph
 
     def identity(self) -> Mapping[str, str]:
@@ -160,9 +160,9 @@ class NodeTargetAdapter:
             "adapter_version": "1",
         }
 
-    def target_identity(self) -> TargetIdentity:
+    def target(self) -> Identity:
         identity = self.identity()
-        return TargetIdentity(
+        return Identity(
             target_id=identity["target_id"],
             runtime=identity["runtime"],
             runtime_version=identity["runtime_version"],
@@ -171,13 +171,13 @@ class NodeTargetAdapter:
             build_hash=identity["build_hash"],
             adapter=identity["adapter"],
             adapter_version=identity["adapter_version"],
-            capabilities=frozenset(self.capability_report().supported_event_hooks),
+            capabilities=frozenset(self.offer().supported_event_hooks),
             provenance=Provenance("node-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
 
-    def environment_observation(self) -> EnvironmentObservation:
+    def observe(self) -> Fact:
         self._detect_runtime()
-        profile = LinuxEnvironmentAdapter(self.fixture.parent).observe() if platform.system().lower() == "linux" else EnvironmentObservation(
+        profile = Linux(self.fixture.parent).observe() if platform.system().lower() == "linux" else Fact(
             facts={"os": platform.system().lower(), "kernel": platform.release()},
             unknown=("environment_profile", "memory_model", "scheduler", "snapshot_scope"),
         )
@@ -192,7 +192,7 @@ class NodeTargetAdapter:
             "node_clock_source": "node.process.hrtime.bigint",
             "randomness_seed": "unknown",
         })
-        return EnvironmentObservation(
+        return Fact(
             facts=facts,
             unknown=tuple(sorted(set(profile.unknown) | {"runtime_flags", "randomness_seed"})),
             redacted_keys=profile.redacted_keys + ("secret-looking environment variables",),
@@ -235,10 +235,10 @@ class NodeTargetAdapter:
                 if stream is not None:
                     stream.close()
 
-    def declared_entries(self) -> tuple[EntryPoint, ...]:
+    def declared_entries(self) -> tuple[Entry, ...]:
         payload = json.loads(self.manifest.read_text(encoding="utf-8"))
         return tuple(
-            EntryPoint(
+            Entry(
                 name=item["name"],
                 declared=True,
                 capabilities=frozenset(item.get("capabilities", ())),
@@ -247,11 +247,11 @@ class NodeTargetAdapter:
             for item in payload.get("entries", ())
         )
 
-    def discover_entries(self) -> tuple[EntryPoint, ...]:
+    def discover(self) -> tuple[Entry, ...]:
         self.prepare()
         response = self._request("discover")
         return tuple(
-            EntryPoint(
+            Entry(
                 name=item["name"],
                 declared=bool(item.get("declared", False)),
                 capabilities=frozenset(item.get("capabilities", ())),
@@ -260,11 +260,11 @@ class NodeTargetAdapter:
             for item in response.get("entries", ())
         )
 
-    def surface_registry(self) -> SurfaceRegistry:
+    def surface(self) -> Surface:
         declared = self.declared_entries()
-        observed = self.discover_entries()
+        observed = self.discover()
         evidence = tuple(
-            ObservedEntry(
+            Seen(
                 entry_point=entry,
                 evidence=(Evidence(
                     evidence_id=f"discover-{entry.name}",
@@ -277,7 +277,7 @@ class NodeTargetAdapter:
             )
             for entry in observed
         )
-        return SurfaceRegistry.from_iterables(self.target_identity(), declared, evidence)
+        return Surface.build(self.target(), declared, evidence)
 
     def snapshot(self) -> dict[str, Any]:
         return self._request("snapshot")["snapshot"]
@@ -285,7 +285,7 @@ class NodeTargetAdapter:
     def reset(self, snapshot: Any) -> None:
         self._request("restore", snapshot=snapshot)
 
-    def invoke(self, entry_point: str, request: Mapping[str, Any], authorization: Authorization) -> tuple[TraceEvent, ...]:
+    def invoke(self, entry_point: str, request: Mapping[str, Any], authorization: Authorization) -> tuple[Event, ...]:
         if not authorization.permits(self.target_id, self.scope):
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
@@ -296,14 +296,14 @@ class NodeTargetAdapter:
         self._last_output = response
         return events
 
-    def execute_trace(self, interactions: Sequence[Mapping[str, Any]], authorization: Authorization) -> tuple[TraceEvent, ...]:
+    def trace(self, interactions: Sequence[Mapping[str, Any]], authorization: Authorization) -> tuple[Event, ...]:
         if not authorization.permits(self.target_id, self.scope):
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
         self._run_counter += 1
         run_id = f"run-{self._run_counter:06d}"
         trace_id = "trace-" + self._digest(list(interactions))[:20]
-        events: list[TraceEvent] = []
+        events: list[Event] = []
         for interaction in interactions:
             normalized, response = self._invoke_one(
                 interaction["entry_point"],
@@ -323,7 +323,7 @@ class NodeTargetAdapter:
         run_id: str,
         trace_id: str,
         order_offset: int,
-    ) -> tuple[tuple[TraceEvent, ...], dict[str, Any]]:
+    ) -> tuple[tuple[Event, ...], dict[str, Any]]:
         payload_ref = self._record_payload(request)
         response = self._request("invoke", entry=entry_point, request=dict(request), run_id=run_id)
         return self._normalize_events(response.get("events", ()), run_id, trace_id, payload_ref, order_offset), response
@@ -334,7 +334,7 @@ class NodeTargetAdapter:
         *,
         runs: int = 1,
         authorization: Authorization | None = None,
-    ) -> ReplayReport:
+    ) -> Report:
         if runs <= 0:
             raise ValueError("runs must be positive")
         authorization = authorization or Authorization("node-replay", frozenset({self.scope}), frozenset({self.target_id}))
@@ -342,18 +342,18 @@ class NodeTargetAdapter:
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
         baseline = self._initial_snapshot or self.snapshot()
-        reports: list[ReplayRun] = []
-        limitations = list(self.capability_report().limitations)
+        reports: list[Run] = []
+        limitations = list(self.offer().limitations)
         for _ in range(runs):
             self.reset(baseline)
-            events = self.execute_trace(interactions, authorization)
+            events = self.trace(interactions, authorization)
             outcome = dict(self._last_output.get("outcome", {}))
-            reports.append(ReplayRun(
+            reports.append(Run(
                 run_id=events[0].run_id if events else f"run-{self._run_counter:06d}",
                 events=events,
                 outcome=outcome,
                 outcome_hash=self._digest(outcome),
-                environment=dict(self.environment_observation().facts),
+                environment=dict(self.observe().facts),
             ))
         signatures = {
             self._digest({
@@ -362,9 +362,9 @@ class NodeTargetAdapter:
             })
             for run in reports
         }
-        return ReplayReport(tuple(reports), len(signatures) == 1, "partially_replayable", tuple(limitations))
+        return Report(tuple(reports), len(signatures) == 1, "partially_replayable", tuple(limitations))
 
-    def collect_output(self) -> Mapping[str, Any]:
+    def output(self) -> Mapping[str, Any]:
         return dict(self._last_output)
 
     def _normalize_events(
@@ -374,8 +374,8 @@ class NodeTargetAdapter:
         trace_id: str,
         payload_ref: str | None,
         order_offset: int = 0,
-    ) -> tuple[TraceEvent, ...]:
-        normalized: list[TraceEvent] = []
+    ) -> tuple[Event, ...]:
+        normalized: list[Event] = []
         event_ids: list[str] = []
         for order, raw in enumerate(raw_events):
             before = State(raw.get("before", {}))
@@ -394,7 +394,7 @@ class NodeTargetAdapter:
             parent_id = event_ids[parent_index] if isinstance(parent_index, int) and parent_index < len(event_ids) else None
             event_ids.append(event_id)
             refs = tuple(ref for ref in (payload_ref,) if ref)
-            normalized.append(TraceEvent(
+            normalized.append(Event(
                 operation=str(raw.get("operation", raw.get("kind", "unknown"))),
                 entry_point=str(raw.get("entry_point", "unknown")),
                 request=dict(raw.get("request", {})),
@@ -402,7 +402,7 @@ class NodeTargetAdapter:
                 after=after,
                 observation=dict(raw.get("observation", {})),
                 fidelity=Fidelity.OBSERVED,
-                mode=ExecutionMode.INSTRUMENTED,
+                mode=Mode.INSTRUMENTED,
                 event_id=event_id,
                 run_id=run_id,
                 trace_id=trace_id,
@@ -413,7 +413,7 @@ class NodeTargetAdapter:
                 state_before_id=self._state_id(before),
                 state_after_id=self._state_id(after),
                 guard_result=raw.get("guard_result"),
-                environment=dict(self.environment_observation().facts),
+                environment=dict(self.observe().facts),
                 evidence_source="node.diagnostics_channel",
                 evidence_refs=refs,
                 timestamp_ns=raw.get("timestamp_ns", time.time_ns()),
@@ -486,7 +486,7 @@ class NodeTargetAdapter:
             return [self._redact(item) for item in value]
         return value
 
-    def _semantic_event(self, event: TraceEvent) -> dict[str, Any]:
+    def _semantic_event(self, event: Event) -> dict[str, Any]:
         return {
             "operation": event.operation,
             "entry_point": event.entry_point,

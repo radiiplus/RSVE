@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from ..adapter import CapabilityReport, Capabilities
-from .linux import LinuxEnvironmentProfile
-from ..ir import EnvironmentObservation
-from ..graph import AnalysisGraph, CapabilityManifest, ProfileInstance, Provenance as GraphProvenance
+from ..adapter import Offer, Caps
+from .linux import Host
+from ..ir import Fact
+from ..graph import Graph, Manifest, Persona, Provenance as GraphProvenance
 from ..model import Fidelity
 
 
@@ -23,14 +23,14 @@ DEFAULT_IMAGE_SHA256 = "7b90593f5532b49b7e3fe3d2743f0d1f0d822e5b07cebcd8e00c0df8
 
 
 @dataclass(frozen=True)
-class QemuSnapshot:
+class Snapshot:
     snapshot_id: str
     base_image: str
     image_sha256: str
     scope: str = "qcow2-overlay-recreated"
 
 
-class QemuLinuxSubstrate:
+class Qemu:
     """Boot and observe an isolated Ubuntu Server guest through serial evidence.
 
     The adapter deliberately uses TCG rather than KVM so the guest execution
@@ -58,15 +58,15 @@ class QemuLinuxSubstrate:
         self._process: subprocess.Popen[Any] | None = None
         self._overlay: Path | None = None
         self._serial_log: Path | None = None
-        self._profile: LinuxEnvironmentProfile | None = None
+        self._profile: Persona | None = None
         self._verified_hash: str | None = None
 
     @property
-    def capabilities(self) -> Capabilities:
-        return Capabilities(replay=False, capture_state=True, capture_traces=True, snapshot=True)
+    def capabilities(self) -> Caps:
+        return Caps(replay=False, capture_state=True, capture_traces=True, snapshot=True)
 
-    def capability_report(self) -> CapabilityReport:
-        return CapabilityReport(
+    def offer(self) -> Offer:
+        return Offer(
             supported_entry_types=frozenset({"guest_machine"}),
             supported_event_hooks=frozenset({"guest.serial", "guest.machine"}),
             state_capture=True,
@@ -81,9 +81,9 @@ class QemuLinuxSubstrate:
             side_effects=("local QEMU process, temporary qcow2 overlay, and serial log",),
         )
 
-    def capability_manifest(self) -> CapabilityManifest:
-        report = self.capability_report()
-        return CapabilityManifest(
+    def manifest(self) -> Manifest:
+        report = self.offer()
+        return Manifest(
             extension_id="rsve.qemu-linux",
             namespace="rsve.qemu/linux-substrate",
             version="1",
@@ -93,14 +93,14 @@ class QemuLinuxSubstrate:
             provenance=GraphProvenance("qemu-adapter", "1", (str(self.image),), Fidelity.SUBSTRATE),
         )
 
-    def analysis_profile(self) -> ProfileInstance:
+    def profile(self) -> Persona:
         identity = self.identity()
-        observation = self.environment_observation()
+        observation = self.observe()
         scope = dict(observation.facts)
         scope["target_id"] = identity["target_id"]
         scope["image_version"] = "26.04"
         scope["emulator_version"] = self._qemu_version()
-        return ProfileInstance(
+        return Persona(
             profile_id=f"{identity['target_id']}:{identity['build_hash']}",
             family="substrate",
             component="linux.guest",
@@ -108,19 +108,19 @@ class QemuLinuxSubstrate:
             version=identity["runtime_version"],
             build_digest=identity["build_hash"],
             execution_scope=scope,
-            feature_set=frozenset(self.capability_report().supported_event_hooks),
+            feature_set=frozenset(self.offer().supported_event_hooks),
             provenance=GraphProvenance("qemu-adapter", "1", (str(self.image),), Fidelity.SUBSTRATE),
         )
 
-    def analysis_graph(self) -> AnalysisGraph:
+    def graph(self) -> Graph:
         identity = self.identity()
-        profile = self.analysis_profile()
-        return AnalysisGraph.for_profile(
+        profile = self.profile()
+        return Graph.for_profile(
             profile,
             graph_id=f"qemu:{identity['target_id']}",
             region_id="guest.machine",
             region_name="QEMU Linux guest",
-            capabilities=(self.capability_manifest(),),
+            capabilities=(self.manifest(),),
         )
 
     def prepare(self) -> None:
@@ -182,15 +182,15 @@ class QemuLinuxSubstrate:
         self._serial_log = None
         self._profile = None
 
-    def snapshot(self) -> QemuSnapshot:
+    def snapshot(self) -> Snapshot:
         self.prepare()
-        return QemuSnapshot(
+        return Snapshot(
             snapshot_id="qemu-" + (self._verified_hash or "unknown")[:16],
             base_image=str(self.image),
             image_sha256=self._verified_hash or "unknown",
         )
 
-    def reset(self, snapshot: QemuSnapshot | Mapping[str, Any]) -> None:
+    def reset(self, snapshot: Snapshot | Mapping[str, Any]) -> None:
         image_sha256 = (
             str(snapshot.get("image_sha256", ""))
             if isinstance(snapshot, Mapping)
@@ -207,7 +207,7 @@ class QemuLinuxSubstrate:
             "QEMU substrate has no guest command channel; attach a guest-agent extension before executing commands"
         )
 
-    def serial_output(self, *, max_bytes: int = 64 * 1024) -> str:
+    def serial(self, *, max_bytes: int = 64 * 1024) -> str:
         """Return bounded boot-console evidence from the current guest process."""
         if self._serial_log is None or not self._serial_log.exists():
             return ""
@@ -217,7 +217,7 @@ class QemuLinuxSubstrate:
             return handle.read(max_bytes).decode("utf-8", errors="replace")
 
     def identity(self) -> Mapping[str, str]:
-        observation = self.environment_observation()
+        observation = self.observe()
         return {
             "target_id": "qemu-ubuntu-26",
             "runtime": "linux-guest",
@@ -229,7 +229,7 @@ class QemuLinuxSubstrate:
             "adapter_version": "1",
         }
 
-    def environment_observation(self) -> EnvironmentObservation:
+    def observe(self) -> Fact:
         self.prepare()
         facts = {
             "substrate": "qemu-tcg",
@@ -250,11 +250,11 @@ class QemuLinuxSubstrate:
             "network_namespace": "disabled-by-default",
             "syscall_surface": "guest-kernel-unobserved",
         }
-        profile = LinuxEnvironmentProfile.from_observed(facts, assumptions=("Ubuntu Server 26.04 LTS guest image", "QEMU TCG q35 machine", "qcow2 overlay recreated for reset"))
+        profile = Host.observe(facts, assumptions=("Ubuntu Server 26.04 LTS guest image", "QEMU TCG q35 machine", "qcow2 overlay recreated for reset"))
         facts.update(profile.facts())
         facts["distribution"] = facts.get("distribution", "Ubuntu Server 26.04 LTS")
         self._profile = profile
-        return EnvironmentObservation(
+        return Fact(
             facts=facts,
             unknown=("guest_kernel", "guest_libc", "guest_abi", "host_hardware", "guest_entropy_seed", "external_services", "guest_scheduler", "guest_clock"),
             redacted_keys=("host_identifiers",),

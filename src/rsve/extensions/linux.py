@@ -10,13 +10,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
-from ..adapter import Capabilities
-from ..ir import EnvironmentObservation
-from ..schema import SCHEMA_VERSION, SchemaMixin
+from ..adapter import Caps
+from ..ir import Fact
+from ..schema import Version, Schema
 
 
 @dataclass(frozen=True)
-class LinuxEnvironmentProfile(SchemaMixin):
+class Host(Schema):
     os_name: str = "linux"
     kernel: str = "unknown"
     architecture: str = "unknown"
@@ -40,7 +40,7 @@ class LinuxEnvironmentProfile(SchemaMixin):
     )
 
     @classmethod
-    def collect(cls, filesystem_fixture: str | Path | None = None) -> "LinuxEnvironmentProfile":
+    def collect(cls, filesystem_fixture: str | Path | None = None) -> "Host":
         libc_name, libc_version = platform.libc_ver()
         libc = " ".join(item for item in (libc_name, libc_version) if item) or "unknown"
         namespace_path = Path("/proc/self/ns")
@@ -104,8 +104,8 @@ class LinuxEnvironmentProfile(SchemaMixin):
             "network_namespace": self.network_namespace,
         }
 
-    def observation(self) -> EnvironmentObservation:
-        return EnvironmentObservation(
+    def observation(self) -> Fact:
+        return Fact(
             facts=self.facts(),
             unknown=("randomness", "scheduler", "memory_ordering", "network_namespace", "external_services"),
             redacted_keys=("environment_values", "credentials", "host identifiers not needed for replay"),
@@ -114,7 +114,7 @@ class LinuxEnvironmentProfile(SchemaMixin):
         )
 
     @classmethod
-    def from_observed(cls, facts: Mapping[str, str], *, assumptions: tuple[str, ...] = ()) -> "LinuxEnvironmentProfile":
+    def observe(cls, facts: Mapping[str, str], *, assumptions: tuple[str, ...] = ()) -> "Host":
         """Build a guest profile from adapter-observed facts without host probing."""
         return cls(
             os_name=facts.get("os", "linux"),
@@ -137,27 +137,27 @@ class LinuxEnvironmentProfile(SchemaMixin):
         )
 
 
-class LinuxEnvironmentAdapter:
-    """EnvironmentAdapter implementation for a host-local Linux profile."""
+class Linux:
+    """Env implementation for a host-local Linux profile."""
 
     def __init__(self, filesystem_fixture: str | Path | None = None) -> None:
         self.filesystem_fixture = str(filesystem_fixture or "unknown")
-        self._profile: LinuxEnvironmentProfile | None = None
+        self._profile: Host | None = None
 
     @property
-    def capabilities(self) -> Capabilities:
-        return Capabilities(capture_state=False, snapshot=False)
+    def capabilities(self) -> Caps:
+        return Caps(capture_state=False, snapshot=False)
 
     @property
-    def profile(self) -> LinuxEnvironmentProfile:
+    def profile(self) -> Host:
         if self._profile is None:
-            self._profile = LinuxEnvironmentProfile.collect(self.filesystem_fixture)
+            self._profile = Host.collect(self.filesystem_fixture)
         return self._profile
 
     def describe(self) -> Mapping[str, str]:
         return self.profile.facts()
 
-    def observe(self) -> EnvironmentObservation:
+    def observe(self) -> Fact:
         return self.profile.observation()
 
     def satisfies(self, requirements: Mapping[str, str]) -> bool:

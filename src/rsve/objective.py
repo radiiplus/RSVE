@@ -6,46 +6,46 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, Mapping, Sequence
 
 from .logic import (
-    AllOf,
-    AnyOf,
+    Every,
+    Either,
     Constraint,
     Equal,
-    FiniteEnum,
-    IntRange,
+    Set,
+    Range,
     Literal,
-    NamedAssumption,
+    Axiom,
     Negate,
-    StateRelation,
+    Rel,
     Variable,
 )
-from .model import Authorization, State, TraceEvent, _canonical
-from .graph import ProfileInstance, ProfileRequirement, ProfileVerification
-from .schema import SCHEMA_VERSION, SchemaMixin, encode
+from .model import Authorization, State, Event, _canonical
+from .graph import Persona, Need, Check
+from .schema import Version, Schema, encode
 
 
-class ObjectiveValidationError(ValueError):
+class Invalid(ValueError):
     """Raised when an objective is outside the authorized harness."""
 
 
 class Predicate:
     type_name: ClassVar[str]
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         raise NotImplementedError
 
     def to_dict(self) -> dict[str, Any]:
         raise NotImplementedError
 
     def to_record(self) -> dict[str, Any]:
-        return {"schema_version": SCHEMA_VERSION, "type": self.type_name, "payload": self.to_dict()}
+        return {"schema_version": Version, "type": self.type_name, "payload": self.to_dict()}
 
 
 @dataclass(frozen=True)
-class ConstraintPredicate(Predicate):
+class Test(Predicate):
     type_name: ClassVar[str] = "constraint_predicate"
     constraint: Constraint
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         environment = state.as_dict()
         if trace:
             environment.update({f"event.{key}": value for key, value in trace[-1].observation.items()})
@@ -56,12 +56,12 @@ class ConstraintPredicate(Predicate):
 
 
 @dataclass(frozen=True)
-class StateEquals(Predicate):
+class Same(Predicate):
     type_name: ClassVar[str] = "state_equals"
     key: str
     expected: Any
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         return state.get(self.key) == self.expected
 
     def to_dict(self) -> dict[str, Any]:
@@ -69,14 +69,14 @@ class StateEquals(Predicate):
 
 
 @dataclass(frozen=True)
-class FlowToSink(Predicate):
+class Flow(Predicate):
     type_name: ClassVar[str] = "flow_to_sink"
     source_entry: str
     canary: str
     sink: str
     require_lineage: bool = False
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         source_seen = False
         for event in trace:
             if event.entry_point == self.source_entry and _contains(event.request, self.canary):
@@ -110,11 +110,11 @@ class FlowToSink(Predicate):
 
 
 @dataclass(frozen=True)
-class AllowedStateChanges(Predicate):
+class Changes(Predicate):
     type_name: ClassVar[str] = "allowed_state_changes"
     keys: frozenset[str]
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         if not trace:
             return True
         initial = trace[0].before.as_dict()
@@ -129,12 +129,12 @@ class AllowedStateChanges(Predicate):
 
 
 @dataclass(frozen=True)
-class GuardInvariant(Predicate):
+class Guard(Predicate):
     type_name: ClassVar[str] = "guard_invariant"
     entry_point: str | None = None
     expected: bool = True
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         matched = tuple(
             event for event in trace
             if event.guard_result is not None
@@ -149,11 +149,11 @@ class GuardInvariant(Predicate):
 
 
 @dataclass(frozen=True)
-class EntrySequence(Predicate):
+class Order(Predicate):
     type_name: ClassVar[str] = "entry_sequence"
     entries: tuple[str, ...]
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         actual = [event.entry_point for event in trace]
         cursor = 0
         for entry in self.entries:
@@ -168,11 +168,11 @@ class EntrySequence(Predicate):
 
 
 @dataclass(frozen=True)
-class AllPredicates(Predicate):
+class All(Predicate):
     type_name: ClassVar[str] = "all_predicates"
     predicates: tuple[Predicate, ...]
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         return all(predicate.evaluate(state, trace) for predicate in self.predicates)
 
     def to_dict(self) -> dict[str, Any]:
@@ -180,11 +180,11 @@ class AllPredicates(Predicate):
 
 
 @dataclass(frozen=True)
-class AnyPredicate(Predicate):
+class Some(Predicate):
     type_name: ClassVar[str] = "any_predicate"
     predicates: tuple[Predicate, ...]
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         return any(predicate.evaluate(state, trace) for predicate in self.predicates)
 
     def to_dict(self) -> dict[str, Any]:
@@ -192,11 +192,11 @@ class AnyPredicate(Predicate):
 
 
 @dataclass(frozen=True)
-class NotPredicate(Predicate):
+class Not(Predicate):
     type_name: ClassVar[str] = "not_predicate"
     predicate: Predicate
 
-    def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         return not self.predicate.evaluate(state, trace)
 
     def to_dict(self) -> dict[str, Any]:
@@ -204,7 +204,7 @@ class NotPredicate(Predicate):
 
 
 @dataclass(frozen=True)
-class ObjectiveBudget(SchemaMixin):
+class Limits(Schema):
     max_trace_length: int = 2
     max_states: int = 1_000
     max_events: int = 10_000
@@ -222,7 +222,7 @@ class ObjectiveBudget(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class ObjectiveDefinition(SchemaMixin):
+class Objective(Schema):
     """Declarative objective restricted to one explicitly authorized harness."""
 
     objective_id: str
@@ -234,8 +234,8 @@ class ObjectiveDefinition(SchemaMixin):
     allowed_state_changes: frozenset[str] = frozenset()
     checkpoints: tuple[Predicate, ...] = ()
     assumptions: tuple[str, ...] = ()
-    profile_requirements: tuple[ProfileRequirement, ...] = ()
-    budget: ObjectiveBudget = field(default_factory=ObjectiveBudget)
+    profile_requirements: tuple[Need, ...] = ()
+    budget: Limits = field(default_factory=Limits)
     version: str = "1"
 
     def __post_init__(self) -> None:
@@ -254,7 +254,7 @@ class ObjectiveDefinition(SchemaMixin):
 
     @property
     def postcondition(self) -> Predicate:
-        return self.postconditions[0] if len(self.postconditions) == 1 else AllPredicates(self.postconditions)
+        return self.postconditions[0] if len(self.postconditions) == 1 else All(self.postconditions)
 
     def validate(
         self,
@@ -262,47 +262,47 @@ class ObjectiveDefinition(SchemaMixin):
         *,
         harness_sinks: set[str] | frozenset[str] = frozenset(),
         environment: Mapping[str, str] | None = None,
-        execution_profile: ProfileInstance | None = None,
+        execution_profile: Persona | None = None,
     ) -> None:
         if not authorization.permits(self.target_id, self.authorization_scope):
-            raise ObjectiveValidationError("objective is outside the authorized target/scope")
+            raise Invalid("objective is outside the authorized target/scope")
         referenced_sinks = set(self.permitted_sinks)
         for predicate in self._predicates():
-            if isinstance(predicate, FlowToSink):
+            if isinstance(predicate, Flow):
                 referenced_sinks.add(predicate.sink)
         if referenced_sinks and not referenced_sinks <= set(harness_sinks):
-            raise ObjectiveValidationError("objective references a sink outside the controlled harness")
+            raise Invalid("objective references a sink outside the controlled harness")
         if environment is not None:
             for key, expected in self.environment_boundaries.items():
                 if environment.get(key) != expected:
-                    raise ObjectiveValidationError(f"environment boundary does not match: {key}")
+                    raise Invalid(f"environment boundary does not match: {key}")
         if execution_profile is not None:
             observed_target = execution_profile.execution_scope.get("target_id")
             if observed_target is not None and observed_target != self.target_id:
-                raise ObjectiveValidationError("objective target does not match the observed target profile")
+                raise Invalid("objective target does not match the observed target profile")
         if self.profile_requirements:
             if execution_profile is None:
-                raise ObjectiveValidationError("objective requires profiles but no profile was observed")
+                raise Invalid("objective requires profiles but no profile was observed")
             verifications = tuple(requirement.verify(execution_profile) for requirement in self.profile_requirements)
             if any(item.status.value != "MATCH" for item in verifications):
                 detail = ", ".join(sorted({item.requirement_id for item in verifications if item.status.value != "MATCH"}))
-                raise ObjectiveValidationError(
+                raise Invalid(
                     f"objective profile requirements are unresolved: {detail}"
                 )
 
-    def verify_profile(self, execution_profile: ProfileInstance | None) -> tuple[ProfileVerification, ...] | None:
+    def verify(self, execution_profile: Persona | None) -> tuple[Check, ...] | None:
         if not self.profile_requirements:
             return None
         return tuple(requirement.verify(execution_profile) for requirement in self.profile_requirements)
 
-    def evaluate(self, final_state: State, trace: Sequence[TraceEvent]) -> bool:
+    def evaluate(self, final_state: State, trace: Sequence[Event]) -> bool:
         if not all(predicate.evaluate(final_state, trace) for predicate in self.postconditions):
             return False
-        if self.allowed_state_changes and not AllowedStateChanges(self.allowed_state_changes).evaluate(final_state, trace):
+        if self.allowed_state_changes and not Changes(self.allowed_state_changes).evaluate(final_state, trace):
             return False
         return True
 
-    def checkpoints_satisfied(self, initial_state: State, trace: Sequence[TraceEvent]) -> bool:
+    def satisfy(self, initial_state: State, trace: Sequence[Event]) -> bool:
         checkpoints = [(initial_state, ())]
         checkpoints.extend((event.after, trace[:index]) for index, event in enumerate(trace, 1))
         return all(any(predicate.evaluate(state, prefix) for state, prefix in checkpoints) for predicate in self.checkpoints)
@@ -312,10 +312,10 @@ class ObjectiveDefinition(SchemaMixin):
 
         def visit(predicate: Predicate) -> None:
             found.append(predicate)
-            if isinstance(predicate, (AllPredicates, AnyPredicate)):
+            if isinstance(predicate, (All, Some)):
                 for child in predicate.predicates:
                     visit(child)
-            elif isinstance(predicate, NotPredicate):
+            elif isinstance(predicate, Not):
                 visit(predicate.predicate)
 
         for predicate in self.postconditions + self.checkpoints:
@@ -324,8 +324,8 @@ class ObjectiveDefinition(SchemaMixin):
 
     def to_record(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
-            "type": "ObjectiveDefinition",
+            "schema_version": Version,
+            "type": "Objective",
             "payload": {
                 "objective_id": self.objective_id,
                 "target_id": self.target_id,
@@ -343,8 +343,8 @@ class ObjectiveDefinition(SchemaMixin):
         }
 
     @classmethod
-    def from_record(cls, record: dict[str, Any]) -> "ObjectiveDefinition":
-        if record.get("schema_version") != SCHEMA_VERSION or record.get("type") != "ObjectiveDefinition":
+    def from_record(cls, record: dict[str, Any]) -> "Objective":
+        if record.get("schema_version") != Version or record.get("type") != "Objective":
             raise ValueError("unsupported objective schema version or type")
         payload = record.get("payload")
         if not isinstance(payload, dict):
@@ -359,8 +359,8 @@ class ObjectiveDefinition(SchemaMixin):
             allowed_state_changes=frozenset(payload.get("allowed_state_changes", ())),
             checkpoints=tuple(_predicate_from_record(item) for item in payload.get("checkpoints", ())),
             assumptions=tuple(payload.get("assumptions", ())),
-            profile_requirements=tuple(ProfileRequirement.from_record(item) for item in payload.get("profile_requirements", ())),
-            budget=ObjectiveBudget.from_record(payload.get("budget", ObjectiveBudget().to_record())),
+            profile_requirements=tuple(Need.from_record(item) for item in payload.get("profile_requirements", ())),
+            budget=Limits.from_record(payload.get("budget", Limits().to_record())),
             version=payload.get("version", "1"),
         )
 
@@ -383,53 +383,53 @@ def _evaluate_constraint(node: Constraint, environment: Mapping[str, Any]) -> bo
 
     if isinstance(node, Equal):
         return value(node.left) == value(node.right)
-    if isinstance(node, IntRange):
+    if isinstance(node, Range):
         item = value(node.value)
         return item is not None and node.minimum <= item <= node.maximum
-    if isinstance(node, FiniteEnum):
+    if isinstance(node, Set):
         return value(node.value) in node.values
-    if isinstance(node, AllOf):
+    if isinstance(node, Every):
         return all(_evaluate_constraint(item, environment) for item in node.terms)
-    if isinstance(node, AnyOf):
+    if isinstance(node, Either):
         return any(_evaluate_constraint(item, environment) for item in node.terms)
     if isinstance(node, Negate):
         return not _evaluate_constraint(node.term, environment)
-    if isinstance(node, NamedAssumption):
+    if isinstance(node, Axiom):
         return _evaluate_constraint(node.term, environment)
-    if isinstance(node, StateRelation):
+    if isinstance(node, Rel):
         left, right = value(node.left), value(node.right)
         return {"=": left == right, "==": left == right, "!=": left != right, "<": left < right, "<=": left <= right, ">": left > right, ">=": left >= right}[node.relation]
     raise ValueError(f"unsupported objective constraint: {type(node).__name__}")
 
 
 def _predicate_from_record(record: Mapping[str, Any]) -> Predicate:
-    if record.get("schema_version") != SCHEMA_VERSION:
+    if record.get("schema_version") != Version:
         raise ValueError("unsupported predicate schema version")
     kind = record.get("type")
     payload = record.get("payload")
     if not isinstance(payload, dict):
         raise ValueError("predicate payload must be an object")
-    if kind == ConstraintPredicate.type_name:
-        return ConstraintPredicate(Constraint.from_record(payload["constraint"]))
-    if kind == StateEquals.type_name:
-        return StateEquals(payload["key"], payload["expected"])
-    if kind == FlowToSink.type_name:
-        return FlowToSink(
+    if kind == Test.type_name:
+        return Test(Constraint.from_record(payload["constraint"]))
+    if kind == Same.type_name:
+        return Same(payload["key"], payload["expected"])
+    if kind == Flow.type_name:
+        return Flow(
             payload["source_entry"],
             payload["canary"],
             payload["sink"],
             bool(payload.get("require_lineage", False)),
         )
-    if kind == AllowedStateChanges.type_name:
-        return AllowedStateChanges(frozenset(payload["keys"]))
-    if kind == GuardInvariant.type_name:
-        return GuardInvariant(payload.get("entry_point"), bool(payload.get("expected", True)))
-    if kind == EntrySequence.type_name:
-        return EntrySequence(tuple(payload["entries"]))
-    if kind == AllPredicates.type_name:
-        return AllPredicates(tuple(_predicate_from_record(item) for item in payload["predicates"]))
-    if kind == AnyPredicate.type_name:
-        return AnyPredicate(tuple(_predicate_from_record(item) for item in payload["predicates"]))
-    if kind == NotPredicate.type_name:
-        return NotPredicate(_predicate_from_record(payload["predicate"]))
+    if kind == Changes.type_name:
+        return Changes(frozenset(payload["keys"]))
+    if kind == Guard.type_name:
+        return Guard(payload.get("entry_point"), bool(payload.get("expected", True)))
+    if kind == Order.type_name:
+        return Order(tuple(payload["entries"]))
+    if kind == All.type_name:
+        return All(tuple(_predicate_from_record(item) for item in payload["predicates"]))
+    if kind == Some.type_name:
+        return Some(tuple(_predicate_from_record(item) for item in payload["predicates"]))
+    if kind == Not.type_name:
+        return Not(_predicate_from_record(payload["predicate"]))
     raise ValueError(f"unsupported objective predicate: {kind!r}")

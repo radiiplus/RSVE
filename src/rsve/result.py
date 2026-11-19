@@ -6,10 +6,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping
 
-from .model import State, TraceEvent, _canonical
+from .model import State, Event, _canonical
 
 
-class AnalysisStatus(str, Enum):
+class Status(str, Enum):
     VALIDATED_WITNESS = "VALIDATED_WITNESS"
     MODEL_SAT = "MODEL_SAT"
     SAT_CANDIDATE = "SAT_CANDIDATE"
@@ -19,13 +19,13 @@ class AnalysisStatus(str, Enum):
     MODEL_DIVERGENCE = "MODEL_DIVERGENCE"
 
 
-class SolverStatus(str, Enum):
+class Verdict(str, Enum):
     SAT = "SAT"
     UNSAT_BOUNDED = "UNSAT_BOUNDED"
     UNKNOWN = "UNKNOWN"
 
 
-class GapKind(str, Enum):
+class Grade(str, Enum):
     BOUND = "BOUND_EXHAUSTED"
     STATE_BUDGET = "STATE_BUDGET_EXHAUSTED"
     EVENT_BUDGET = "EVENT_BUDGET_EXHAUSTED"
@@ -37,11 +37,11 @@ class GapKind(str, Enum):
 class Witness:
     objective: str
     target_id: str
-    events: tuple[TraceEvent, ...]
+    events: tuple[Event, ...]
     final_state: State
     validated: bool = True
     model_aligned: bool | None = None
-    predicted_events: tuple[TraceEvent, ...] = ()
+    predicted_events: tuple[Event, ...] = ()
     interactions: tuple[Mapping[str, Any], ...] = ()
     input_refs: tuple[str, ...] = ()
     state_checkpoints: tuple[Mapping[str, Any], ...] = ()
@@ -68,8 +68,8 @@ class Witness:
 
 
 @dataclass(frozen=True)
-class ProofResult:
-    status: SolverStatus
+class Proof:
+    status: Verdict
     bound: int
     explored_states: int
     explored_events: int
@@ -87,8 +87,8 @@ class ProofResult:
 
 
 @dataclass(frozen=True)
-class ResidualGap:
-    kind: GapKind
+class Gap:
+    kind: Grade
     detail: str
     evidence: Mapping[str, Any] = field(default_factory=dict)
 
@@ -104,13 +104,13 @@ class Divergence:
 
 
 @dataclass(frozen=True)
-class AnalysisReport:
-    status: AnalysisStatus
+class Report:
+    status: Status
     target_id: str
     objective: str
     witness: Witness | None
-    proof: ProofResult
-    gaps: tuple[ResidualGap, ...] = ()
+    proof: Proof
+    gaps: tuple[Gap, ...] = ()
     explored_states: int = 0
     explored_events: int = 0
     model_version: str = "1"

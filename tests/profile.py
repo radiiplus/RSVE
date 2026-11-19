@@ -1,11 +1,11 @@
 import unittest
 
-from rsve import ProfileInstance, ProfileMatchStatus, ProfileRequirement
+from rsve import Persona, Match, Need
 
 
-class ProfileRequirementTests(unittest.TestCase):
+class Suite(unittest.TestCase):
     def setUp(self) -> None:
-        self.profile = ProfileInstance(
+        self.profile = Persona(
             "node-a",
             "runtime",
             "node.js",
@@ -16,7 +16,7 @@ class ProfileRequirementTests(unittest.TestCase):
         )
 
     def test_requirement_round_trips_and_matches_scoped_profile(self):
-        requirement = ProfileRequirement(
+        requirement = Need(
             "node-runtime",
             "runtime",
             "node.js",
@@ -24,14 +24,14 @@ class ProfileRequirementTests(unittest.TestCase):
             "24.21.0",
             execution_scope={"target_id": "fixture"},
         )
-        self.assertEqual(ProfileRequirement.from_record(requirement.to_record()), requirement)
-        self.assertEqual(requirement.verify(self.profile).status, ProfileMatchStatus.MATCH)
+        self.assertEqual(Need.from_record(requirement.to_record()), requirement)
+        self.assertEqual(requirement.verify(self.profile).status, Match.MATCH)
 
     def test_drift_and_unknown_are_distinct(self):
-        drift = ProfileRequirement("node-runtime", "runtime", "node.js", "rsve.node", "25.0").verify(self.profile)
-        self.assertEqual(drift.status, ProfileMatchStatus.DRIFT)
-        unknown = ProfileRequirement("node-runtime", "runtime", "node.js", "rsve.node", "unknown", execution_scope={"kernel": "6"}).verify(self.profile)
-        self.assertEqual(unknown.status, ProfileMatchStatus.UNKNOWN)
+        drift = Need("node-runtime", "runtime", "node.js", "rsve.node", "25.0").verify(self.profile)
+        self.assertEqual(drift.status, Match.DRIFT)
+        unknown = Need("node-runtime", "runtime", "node.js", "rsve.node", "unknown", execution_scope={"kernel": "6"}).verify(self.profile)
+        self.assertEqual(unknown.status, Match.UNKNOWN)
 
 
 if __name__ == "__main__":

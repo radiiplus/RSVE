@@ -6,20 +6,20 @@ from collections import deque
 from dataclasses import replace
 from typing import Iterable
 
-from .model import Authorization, Budget, Decision, Objective, State, TraceEvent, TransitionModel
+from .model import Authorization, Budget, Decision, Goal, State, Event, Model
 from .result import (
-    AnalysisReport,
-    AnalysisStatus,
+    Report,
+    Status,
     Divergence,
-    GapKind,
-    ProofResult,
-    ResidualGap,
-    SolverStatus,
+    Grade,
+    Proof,
+    Gap,
+    Verdict,
     Witness,
 )
 
 
-class AuthorizationError(PermissionError):
+class Denied(PermissionError):
     """Raised when an objective is outside the caller's explicit lab scope."""
 
 
@@ -34,29 +34,29 @@ class Engine:
 
     def analyze(
         self,
-        model: TransitionModel,
-        objective: Objective,
+        model: Model,
+        objective: Goal,
         authorization: Authorization,
         budget: Budget = Budget(),
-    ) -> AnalysisReport:
+    ) -> Report:
         if not authorization.permits(model.target_id, objective.scope):
-            raise AuthorizationError(
+            raise Denied(
                 f"subject {authorization.subject!r} is not authorized for "
                 f"{model.target_id!r} in scope {objective.scope!r}"
             )
 
-        queue: deque[tuple[int, State, tuple[TraceEvent, ...], bool]] = deque(
+        queue: deque[tuple[int, State, tuple[Event, ...], bool]] = deque(
             [(0, model.initial_state, (), False)]
         )
         visited: set[tuple[int, str, tuple[tuple[str, str], ...]]] = set()
-        operations = model.ordered_operations()
-        inputs = model.ordered_inputs()
+        operations = model.ops()
+        inputs = model.args()
         explored_states = 0
         explored_events = 0
         state_budget_hit = False
         event_budget_hit = False
 
-        def objective_reached(state: State, trace: tuple[TraceEvent, ...]) -> bool:
+        def reach(state: State, trace: tuple[Event, ...]) -> bool:
             if not objective.postcondition(state, trace):
                 return False
             if not objective.effect_lemmas:
@@ -77,7 +77,7 @@ class Engine:
             visited.add(visit_key)
             explored_states += 1
 
-            if objective_reached(state, trace):
+            if reach(state, trace):
                 witness = Witness(
                     objective=objective.name,
                     target_id=model.target_id,
@@ -86,8 +86,8 @@ class Engine:
                     validated=False,
                 )
 
-                proof = ProofResult(
-                    status=SolverStatus.SAT,
+                proof = Proof(
+                    status=Verdict.SAT,
                     bound=budget.max_depth,
                     explored_states=explored_states,
                     explored_events=explored_events,
@@ -95,8 +95,8 @@ class Engine:
                     query=objective.description or objective.name,
                     assumptions=model.assumptions,
                 )
-                return AnalysisReport(
-                    status=AnalysisStatus.MODEL_SAT,
+                return Report(
+                    status=Status.MODEL_SAT,
                     target_id=model.target_id,
                     objective=objective.name,
                     witness=witness,
@@ -115,7 +115,7 @@ class Engine:
 
             for operation in operations:
                 for request in inputs:
-                    if not objective.accepts_request(request):
+                    if not objective.accept(request):
                         continue
                     if not model.allows(operation.entry_point.name, request):
                         continue
@@ -145,23 +145,23 @@ class Engine:
                 break
 
         if event_budget_hit or state_budget_hit:
-            status = AnalysisStatus.BUDGET_EXHAUSTED
-            solver_status = SolverStatus.UNKNOWN
+            status = Status.BUDGET_EXHAUSTED
+            solver_status = Verdict.UNKNOWN
             gaps = []
             if event_budget_hit:
-                gaps.append(ResidualGap(GapKind.EVENT_BUDGET, "event exploration budget was exhausted"))
+                gaps.append(Gap(Grade.EVENT_BUDGET, "event exploration budget was exhausted"))
             if state_budget_hit:
-                gaps.append(ResidualGap(GapKind.STATE_BUDGET, "state exploration budget was exhausted"))
+                gaps.append(Gap(Grade.STATE_BUDGET, "state exploration budget was exhausted"))
         else:
-            status = AnalysisStatus.UNSAT_BOUNDED
-            solver_status = SolverStatus.UNSAT_BOUNDED
-            gaps = [ResidualGap(
-                GapKind.BOUND,
+            status = Status.UNSAT_BOUNDED
+            solver_status = Verdict.UNSAT_BOUNDED
+            gaps = [Gap(
+                Grade.BOUND,
                 "absence of a witness is proved only through the declared depth bound",
                 {"max_depth": budget.max_depth},
             )]
 
-        proof = ProofResult(
+        proof = Proof(
             status=solver_status,
             bound=budget.max_depth,
             explored_states=explored_states,
@@ -170,7 +170,7 @@ class Engine:
             query=objective.description or objective.name,
             assumptions=model.assumptions,
         )
-        return AnalysisReport(
+        return Report(
             status=status,
             target_id=model.target_id,
             objective=objective.name,
@@ -184,8 +184,8 @@ class Engine:
         )
 
     @staticmethod
-    def compare_trace(
-        expected: Iterable[TraceEvent], observed: Iterable[TraceEvent]
+    def compare(
+        expected: Iterable[Event], observed: Iterable[Event]
     ) -> tuple[Divergence, ...]:
         """Return the first model/reality mismatch, preserving later evidence."""
         expected_events = tuple(expected)
@@ -230,18 +230,18 @@ class Engine:
             ))
         return tuple(divergences)
 
-    def reconcile(self, report: AnalysisReport, observed: Iterable[TraceEvent]) -> AnalysisReport:
+    def reconcile(self, report: Report, observed: Iterable[Event]) -> Report:
         if report.witness is None:
             return report
-        divergences = self.compare_trace(report.witness.events, observed)
+        divergences = self.compare(report.witness.events, observed)
         if not divergences:
             return report
         return replace(
             report,
-            status=AnalysisStatus.MODEL_DIVERGENCE,
+            status=Status.MODEL_DIVERGENCE,
             divergences=divergences,
-            gaps=report.gaps + (ResidualGap(
-                GapKind.ASSUMPTION,
+            gaps=report.gaps + (Gap(
+                Grade.ASSUMPTION,
                 "observed runtime behavior diverges from the modeled witness",
                 {"first_index": divergences[0].index},
             ),),

@@ -9,10 +9,10 @@ from typing import Any, Callable, Iterable, Mapping, TypeAlias
 Primitive: TypeAlias = None | bool | int | float | str | bytes
 Value: TypeAlias = Primitive | tuple[Primitive, ...]
 Request: TypeAlias = Mapping[str, Value]
-StatePredicate: TypeAlias = Callable[["State", tuple["TraceEvent", ...]], bool]
+Check: TypeAlias = Callable[["State", tuple["Event", ...]], bool]
 Guard: TypeAlias = Callable[["State", Request], bool]
-StateUpdate: TypeAlias = Callable[["State", Request], "State"]
-Observation: TypeAlias = Callable[["State", Request, "State"], Mapping[str, Value]]
+Change: TypeAlias = Callable[["State", Request], "State"]
+View: TypeAlias = Callable[["State", Request, "State"], Mapping[str, Value]]
 
 
 def _canonical(value: Any) -> Any:
@@ -35,7 +35,7 @@ class Fidelity(str, Enum):
     SUBSTRATE = "substrate"
 
 
-class ExecutionMode(str, Enum):
+class Mode(str, Enum):
     CONCRETE = "concrete"
     INSTRUMENTED = "instrumented"
     CONCOLIC = "concolic"
@@ -63,11 +63,11 @@ class Provenance:
 
 
 @dataclass(frozen=True)
-class EffectLemma:
+class Lemma:
     """A separately testable intermediate predicate for a larger objective."""
 
     name: str
-    predicate: StatePredicate
+    predicate: Check
     provenance: Provenance = field(default_factory=lambda: Provenance("unspecified"))
 
 
@@ -97,7 +97,7 @@ class State:
     def as_dict(self) -> dict[str, Value]:
         return dict(self._items)
 
-    def with_updates(self, **updates: Value) -> "State":
+    def update(self, **updates: Value) -> "State":
         values = self.as_dict()
         values.update(updates)
         return State(values)
@@ -107,7 +107,7 @@ class State:
 
 
 @dataclass(frozen=True)
-class EntryPoint:
+class Entry:
     name: str
     declared: bool = True
     capabilities: frozenset[str] = frozenset()
@@ -133,7 +133,7 @@ class Outcome:
     terminal: bool = False
     guard: bool | None = None
     fidelity: Fidelity = Fidelity.MODELED
-    mode: ExecutionMode = ExecutionMode.ABSTRACT
+    mode: Mode = Mode.ABSTRACT
     evidence: tuple[str, ...] = ()
     uncertainty: tuple[str, ...] = ()
     id: str = ""
@@ -152,8 +152,8 @@ class Outcome:
         *,
         component: str = "",
         order: int = 0,
-    ) -> "TraceEvent":
-        return TraceEvent(
+    ) -> "Event":
+        return Event(
             operation=operation,
             entry_point=entry,
             request=dict(request),
@@ -181,21 +181,21 @@ class Operation:
     """A modeled state transition, kept independent of any runtime."""
 
     name: str
-    entry_point: EntryPoint
+    entry_point: Entry
     guard: Guard = lambda _state, _request: True
-    apply: StateUpdate = lambda state, _request: state
-    observe: Observation = lambda _before, _request, _after: {}
+    apply: Change = lambda state, _request: state
+    observe: View = lambda _before, _request, _after: {}
     fidelity: Fidelity = Fidelity.MODELED
     provenance: str = "model"
     transforms: tuple[Any, ...] = ()
     recognizers: tuple[Any, ...] = ()
     effects: tuple[str, ...] = ()
-    mode: ExecutionMode = ExecutionMode.ABSTRACT
+    mode: Mode = Mode.ABSTRACT
     component: str = ""
     symbolic_transition: Any | None = None
     relation: Callable[[State, Request], Iterable[Outcome]] | None = None
-    deny: StateUpdate | None = None
-    watch: Observation | None = None
+    deny: Change | None = None
+    watch: View | None = None
     loss: tuple[str, ...] = ()
     env: Mapping[str, Value] = field(default_factory=dict)
     stop: bool = True
@@ -291,7 +291,7 @@ class Operation:
 
 
 @dataclass(frozen=True)
-class TraceEvent:
+class Event:
     operation: str
     entry_point: str
     request: dict[str, Value]
@@ -299,7 +299,7 @@ class TraceEvent:
     after: State
     observation: dict[str, Value] = field(default_factory=dict)
     fidelity: Fidelity = Fidelity.MODELED
-    mode: ExecutionMode = ExecutionMode.ABSTRACT
+    mode: Mode = Mode.ABSTRACT
     event_id: str = ""
     run_id: str = ""
     trace_id: str = ""
@@ -375,15 +375,15 @@ class Authorization:
 
 
 @dataclass(frozen=True)
-class Objective:
+class Goal:
     name: str
     scope: str
-    postcondition: StatePredicate
+    postcondition: Check
     constraints: tuple[Callable[[Request], bool], ...] = ()
-    effect_lemmas: tuple[EffectLemma, ...] = ()
+    effect_lemmas: tuple[Lemma, ...] = ()
     description: str = ""
 
-    def accepts_request(self, request: Request) -> bool:
+    def accept(self, request: Request) -> bool:
         return all(constraint(request) for constraint in self.constraints)
 
 
@@ -399,7 +399,7 @@ class Budget:
 
 
 @dataclass(frozen=True)
-class LearnedExclusion:
+class Exclusion:
     """A bounded, evidence-backed request region rejected by the target."""
 
     entry_point: str
@@ -436,7 +436,7 @@ class LearnedExclusion:
 
 
 @dataclass(frozen=True)
-class TransitionModel:
+class Model:
     target_id: str
     initial_state: State
     inputs: tuple[Request, ...]
@@ -446,7 +446,7 @@ class TransitionModel:
     assumptions: tuple[str, ...] = ()
     excluded_interactions: tuple[tuple[str, str], ...] = ()
     demoted_assumptions: tuple[str, ...] = ()
-    learned_exclusions: tuple[LearnedExclusion, ...] = ()
+    learned_exclusions: tuple[Exclusion, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.target_id:
@@ -455,20 +455,20 @@ class TransitionModel:
             raise ValueError("operation names must be unique per entry point")
 
     @classmethod
-    def from_iterables(
+    def build(
         cls,
         target_id: str,
         initial_state: State,
         inputs: Iterable[Request],
         operations: Iterable[Operation],
         **kwargs: Any,
-    ) -> "TransitionModel":
+    ) -> "Model":
         return cls(target_id, initial_state, tuple(dict(item) for item in inputs), tuple(operations), **kwargs)
 
-    def ordered_operations(self) -> tuple[Operation, ...]:
+    def ops(self) -> tuple[Operation, ...]:
         return tuple(sorted(self.operations, key=lambda operation: (operation.entry_point.name, operation.name)))
 
-    def ordered_inputs(self) -> tuple[Request, ...]:
+    def args(self) -> tuple[Request, ...]:
         return tuple(sorted(self.inputs, key=lambda request: repr(_canonical(request))))
 
     def allows(self, entry_point: str, request: Request) -> bool:
@@ -477,10 +477,10 @@ class TransitionModel:
             return False
         return not any(item.matches(entry_point, request) for item in self.learned_exclusions)
 
-    def with_exclusion(self, entry_point: str, request: Request, *, assumption: str | None = None) -> "TransitionModel":
+    def exclude(self, entry_point: str, request: Request, *, assumption: str | None = None) -> "Model":
         exclusion = (entry_point, repr(_canonical(dict(request))))
         assumptions = self.assumptions + ((assumption,) if assumption else ())
-        return TransitionModel(
+        return Model(
             target_id=self.target_id,
             initial_state=self.initial_state,
             inputs=self.inputs,
@@ -493,9 +493,9 @@ class TransitionModel:
             learned_exclusions=self.learned_exclusions,
         )
 
-    def with_demoted_assumptions(self, assumptions: Iterable[str]) -> "TransitionModel":
+    def demote(self, assumptions: Iterable[str]) -> "Model":
         demoted = tuple(sorted(set(self.demoted_assumptions) | set(assumptions)))
-        return TransitionModel(
+        return Model(
             target_id=self.target_id,
             initial_state=self.initial_state,
             inputs=self.inputs,
@@ -508,9 +508,9 @@ class TransitionModel:
             learned_exclusions=self.learned_exclusions,
         )
 
-    def with_learned_exclusion(self, exclusion: LearnedExclusion) -> "TransitionModel":
+    def learn(self, exclusion: Exclusion) -> "Model":
         learned = tuple(item for item in self.learned_exclusions if item != exclusion) + (exclusion,)
-        return TransitionModel(
+        return Model(
             target_id=self.target_id,
             initial_state=self.initial_state,
             inputs=self.inputs,

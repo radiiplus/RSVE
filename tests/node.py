@@ -2,34 +2,34 @@ import unittest
 from pathlib import Path
 import tempfile
 
-from rsve import Authorization, Fidelity, JsonlArtifactStore, OpenTelemetryAdapter
-from rsve.extensions import NodeTargetAdapter
+from rsve import Authorization, Fidelity, Jsonl, Otel
+from rsve.extensions import Node
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "node" / "fixture.mjs"
 
 
-class NodeAdapterTests(unittest.TestCase):
+class Suite(unittest.TestCase):
     def setUp(self) -> None:
-        self.adapter = NodeTargetAdapter(FIXTURE, target_id="node-fixture")
+        self.adapter = Node(FIXTURE, target_id="node-fixture")
         self.auth = Authorization("test-runner", frozenset({"node-lab"}), frozenset({"node-fixture"}))
 
     def tearDown(self) -> None:
         self.adapter.teardown()
 
     def test_capabilities_and_surface_preserve_phantom_evidence(self) -> None:
-        environment = self.adapter.environment_observation()
+        environment = self.adapter.observe()
         self.assertTrue(environment.profile_id.startswith("linux-"))
         self.assertIn("memory_model", environment.facts)
-        report = self.adapter.capability_report()
+        report = self.adapter.offer()
         self.assertIn("async.correlation", report.supported_event_hooks)
         self.assertFalse(report.deterministic_replay)
         self.assertTrue(any("universal" in item.lower() for item in report.limitations))
-        registry = self.adapter.surface_registry()
-        self.assertEqual([item.entry_point.name for item in registry.phantom_entries()], ["dynamic_debug"])
-        self.assertTrue(registry.phantom_entries()[0].evidence)
+        registry = self.adapter.surface()
+        self.assertEqual([item.entry_point.name for item in registry.phantoms()], ["dynamic_debug"])
+        self.assertTrue(registry.phantoms()[0].evidence)
 
-        profile = self.adapter.analysis_profile()
+        profile = self.adapter.profile()
         self.assertEqual(profile.execution_scope["target_id"], "node-fixture")
         self.assertEqual(profile.component, "node.js")
 
@@ -71,15 +71,15 @@ class NodeAdapterTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.adapter.invoke("increment", {"amount": 1}, Authorization("denied", frozenset()))
         with self.assertRaises(PermissionError):
-            self.adapter.execute_trace(
+            self.adapter.trace(
                 ({"entry_point": "increment", "request": {"amount": 1}},),
                 Authorization("denied", frozenset()),
             )
 
     def test_payload_evidence_is_hashed_and_redacted_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            store = JsonlArtifactStore(Path(directory) / "evidence.jsonl")
-            adapter = NodeTargetAdapter(FIXTURE, target_id="node-fixture", artifact_store=store)
+            store = Jsonl(Path(directory) / "evidence.jsonl")
+            adapter = Node(FIXTURE, target_id="node-fixture", artifact_store=store)
             try:
                 events = adapter.invoke("increment", {"amount": 1, "token": "canary-secret"}, self.auth)
                 reference = events[0].evidence_refs[0]
@@ -94,8 +94,8 @@ class NodeAdapterTests(unittest.TestCase):
 
     def test_trace_codec_preserves_rsve_fields_without_otel_dependency(self) -> None:
         events = self.adapter.invoke("increment", {"amount": 1}, self.auth)
-        exported = OpenTelemetryAdapter().export(events, target=self.adapter.identity())
-        imported = OpenTelemetryAdapter().import_events(exported)
+        exported = Otel().export(events, target=self.adapter.identity())
+        imported = Otel().imported(exported)
         self.assertEqual(len(imported), len(events))
         self.assertEqual(imported[0].operation, events[0].operation)
         self.assertEqual(imported[0].state_after_id, events[0].state_after_id)

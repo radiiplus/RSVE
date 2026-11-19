@@ -6,10 +6,10 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
-from .model import Decision, ExecutionMode, Fidelity, State, TraceEvent
+from .model import Decision, Mode, Fidelity, State, Event
 
 
-class OpenTelemetryAdapter:
+class Otel:
     """Map canonical RSVE events to/from an OTLP-shaped JSON object.
 
     This is a wire-shape adapter, not an OpenTelemetry SDK integration. The
@@ -18,7 +18,7 @@ class OpenTelemetryAdapter:
 
     schema_version = "rsve.otel/1"
 
-    def export(self, events: Sequence[TraceEvent], *, target: Mapping[str, str] | None = None) -> dict[str, Any]:
+    def export(self, events: Sequence[Event], *, target: Mapping[str, str] | None = None) -> dict[str, Any]:
         target = dict(target or {})
         spans = []
         for event in events:
@@ -71,17 +71,17 @@ class OpenTelemetryAdapter:
             "resourceSpans": [{"scopeSpans": [{"scope": {"name": "rsve"}, "spans": spans}]}],
         }
 
-    def import_events(self, payload: Mapping[str, Any]) -> tuple[TraceEvent, ...]:
+    def imported(self, payload: Mapping[str, Any]) -> tuple[Event, ...]:
         if payload.get("rsve_schema_version") != self.schema_version:
             raise ValueError("unsupported RSVE OTel schema version")
         spans = []
         for resource_span in payload.get("resourceSpans", ()):
             for scope_span in resource_span.get("scopeSpans", ()):
                 spans.extend(scope_span.get("spans", ()))
-        events: list[TraceEvent] = []
+        events: list[Event] = []
         for order, span in enumerate(spans):
             attrs = span.get("attributes", {})
-            events.append(TraceEvent(
+            events.append(Event(
                 operation=span.get("name", "unknown"),
                 entry_point=attrs.get("rsve.entry_point", "unknown"),
                 request=json.loads(attrs.get("rsve.request", "{}")),
@@ -89,7 +89,7 @@ class OpenTelemetryAdapter:
                 after=State(json.loads(attrs.get("rsve.after", "{}"))),
                 observation=json.loads(attrs.get("rsve.observation", "{}")),
                 fidelity=Fidelity(attrs.get("rsve.fidelity", Fidelity.OBSERVED.value)),
-                mode=ExecutionMode(attrs.get("rsve.mode", ExecutionMode.INSTRUMENTED.value)),
+                mode=Mode(attrs.get("rsve.mode", Mode.INSTRUMENTED.value)),
                 event_id=attrs.get("rsve.event_id", ""),
                 run_id=attrs.get("rsve.run_id", ""),
                 trace_id=attrs.get("rsve.trace_id", _original_trace_id(span.get("traceId", ""))),

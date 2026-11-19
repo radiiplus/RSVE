@@ -1,25 +1,16 @@
 """Optional runtime and environment extensions for RSVE core."""
 
-from .linux import LinuxEnvironmentAdapter, LinuxEnvironmentProfile
-from .evm import EvmReplayReport, EvmReplayRun, EvmTargetAdapter
-from .node import NodeTargetAdapter, ReplayReport, ReplayRun
-from .qemu import QemuLinuxSubstrate, QemuSnapshot
-from .contract import (
-    EvmAdapterContract,
-    EvmCapabilities,
-    EvmExecutionContext,
-    JvmAdapterContract,
-    JvmCapabilities,
-    NativeAdapterContract,
-    NativeCapabilities,
-    NativeTargetIdentity,
-)
+from .linux import Linux, Host
+from .evm import Report, Run, Evm
+from .node import Node, Report, Run
+from .qemu import Qemu, Snapshot
+from .contract import Chain, Fork, Context, Jvm, Java, Native, Memory, Identity
 
 __all__ = [
-    "EvmAdapterContract", "EvmCapabilities", "EvmExecutionContext",
-    "EvmReplayReport", "EvmReplayRun", "EvmTargetAdapter",
-    "JvmAdapterContract", "JvmCapabilities", "LinuxEnvironmentAdapter",
-    "LinuxEnvironmentProfile", "NativeAdapterContract", "NativeCapabilities",
-    "NativeTargetIdentity", "NodeTargetAdapter", "QemuLinuxSubstrate",
-    "QemuSnapshot", "ReplayReport", "ReplayRun",
+    "Chain", "Fork", "Context",
+    "Report", "Run", "Evm",
+    "Jvm", "Java", "Linux",
+    "Host", "Native", "Memory",
+    "Identity", "Node", "Qemu",
+    "Snapshot", "Report", "Run",
 ]

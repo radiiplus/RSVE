@@ -7,14 +7,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Iterable
 
-from .logic import AllOf, Constraint
-from .ir import ResultScope
-from .result import SolverStatus
-from .solver import ConstraintQuery, SolverResult, Z3SolverAdapter
+from .logic import Every, Constraint
+from .ir import Scope
+from .result import Verdict
+from .solver import Query, Answer, Zed
 
 
-class ResidualKind(str, Enum):
-    TRANSFORM_DOMAIN = "transform_domain_mismatch"
+class Type(str, Enum):
+    TRANSFORM_DOMAIN = "gap"
     OVER_ACCEPTANCE = "over_acceptance"
     UNDER_ACCEPTANCE = "under_acceptance"
     PATH_GUARD = "bounded_path_guard"
@@ -31,14 +31,14 @@ class ResidualKind(str, Enum):
     OPAQUE = "unknown_transition_semantics"
 
 
-class ResidualStatus(str, Enum):
+class Phase(str, Enum):
     FOUND = "FOUND"
     EMPTY = "EMPTY"
     UNKNOWN = "UNKNOWN"
 
 
 @dataclass(frozen=True)
-class CandidateRegion:
+class Area:
     region_id: str
     candidates: tuple[Any, ...]
     explored: frozenset[str] = frozenset()
@@ -56,19 +56,19 @@ class CandidateRegion:
     def coverage(self) -> float:
         return 1.0 if not self.candidates else (len(self.candidates) - len(self.pending)) / len(self.candidates)
 
-    def mark_explored(self, values: Iterable[Any]) -> "CandidateRegion":
+    def mark(self, values: Iterable[Any]) -> "Area":
         known = self.explored | {_key(value) for value in values}
-        return CandidateRegion(self.region_id, self.candidates, frozenset(known))
+        return Area(self.region_id, self.candidates, frozenset(known))
 
 
 @dataclass(frozen=True)
-class ResidualResult:
-    kind: ResidualKind
-    status: ResidualStatus
+class Residual:
+    kind: Type
+    status: Phase
     residual: tuple[Any, ...]
-    region: CandidateRegion
+    region: Area
     detail: str
-    solver_result: SolverResult | None = None
+    solver_result: Answer | None = None
     transition: str | None = None
     expected: Any = None
     observed: Any = None
@@ -78,8 +78,8 @@ class ResidualResult:
 
 
 def mismatch(
-    kind: ResidualKind,
-    region: CandidateRegion,
+    kind: Type,
+    region: Area,
     detail: str,
     *,
     transition: str | None = None,
@@ -88,11 +88,11 @@ def mismatch(
     evidence: Iterable[str] = (),
     fidelity: str = "unknown",
     uncertainty: Iterable[str] = (),
-) -> ResidualResult:
+) -> Residual:
     """Record a transition-space residual without implying exploitability."""
-    return ResidualResult(
+    return Residual(
         kind=kind,
-        status=ResidualStatus.FOUND,
+        status=Phase.FOUND,
         residual=(),
         region=region,
         detail=detail,
@@ -105,15 +105,15 @@ def mismatch(
     )
 
 
-def transform_domain_residual(
+def transform(
     transform: Callable[[Any], Any] | None,
-    source: CandidateRegion,
+    source: Area,
     downstream_domain: Iterable[Any],
-) -> ResidualResult:
+) -> Residual:
     if transform is None:
-        return ResidualResult(
-            ResidualKind.TRANSFORM_DOMAIN,
-            ResidualStatus.UNKNOWN,
+        return Residual(
+            Type.TRANSFORM_DOMAIN,
+            Phase.UNKNOWN,
             (),
             source,
             "transform relation is opaque; no identity or unconstrained approximation was assumed",
@@ -124,61 +124,61 @@ def transform_domain_residual(
         output = transform(candidate)
         outputs.setdefault(_key(output), output)
     residual = tuple(output for key, output in sorted(outputs.items()) if key not in downstream)
-    region = source.mark_explored(source.pending)
-    return ResidualResult(
-        ResidualKind.TRANSFORM_DOMAIN,
-        ResidualStatus.FOUND if residual else ResidualStatus.EMPTY,
+    region = source.mark(source.pending)
+    return Residual(
+        Type.TRANSFORM_DOMAIN,
+        Phase.FOUND if residual else Phase.EMPTY,
         residual,
         region,
         "computed Image(T) minus the declared downstream domain over the finite source region",
     )
 
 
-def acceptance_residual(
+def accept(
     actual: Callable[[Any], bool],
     intended: Callable[[Any], bool],
-    region: CandidateRegion,
+    region: Area,
     *,
     over: bool,
-) -> ResidualResult:
+) -> Residual:
     residual = tuple(
         candidate
         for candidate in region.pending
         if ((actual(candidate) and not intended(candidate)) if over else (intended(candidate) and not actual(candidate)))
     )
-    checked = region.mark_explored(region.pending)
-    kind = ResidualKind.OVER_ACCEPTANCE if over else ResidualKind.UNDER_ACCEPTANCE
+    checked = region.mark(region.pending)
+    kind = Type.OVER_ACCEPTANCE if over else Type.UNDER_ACCEPTANCE
     direction = "actual minus intended" if over else "intended minus actual"
-    return ResidualResult(
+    return Residual(
         kind,
-        ResidualStatus.FOUND if residual else ResidualStatus.EMPTY,
+        Phase.FOUND if residual else Phase.EMPTY,
         residual,
         checked,
         f"computed {direction} over the finite candidate region",
     )
 
 
-def bounded_path_residual(
+def route(
     constraints: tuple[Constraint, ...],
-    solver: Z3SolverAdapter,
+    solver: Zed,
     *,
     query_id: str,
-    scope: ResultScope | None = None,
-) -> ResidualResult:
+    scope: Scope | None = None,
+) -> Residual:
     if not constraints:
         raise ValueError("bounded path query requires at least one guard/constraint")
-    formula = constraints[0] if len(constraints) == 1 else AllOf(constraints)
-    result = solver.solve(ConstraintQuery(query_id, formula, scope=scope))
+    formula = constraints[0] if len(constraints) == 1 else Every(constraints)
+    result = solver.solve(Query(query_id, formula, scope=scope))
     status = {
-        SolverStatus.SAT: ResidualStatus.FOUND,
-        SolverStatus.UNSAT_BOUNDED: ResidualStatus.EMPTY,
-        SolverStatus.UNKNOWN: ResidualStatus.UNKNOWN,
+        Verdict.SAT: Phase.FOUND,
+        Verdict.UNSAT_BOUNDED: Phase.EMPTY,
+        Verdict.UNKNOWN: Phase.UNKNOWN,
     }[result.status]
-    return ResidualResult(
-        ResidualKind.PATH_GUARD,
+    return Residual(
+        Type.PATH_GUARD,
         status,
-        (result.model,) if result.status is SolverStatus.SAT else (),
-        CandidateRegion(query_id, ()),
+        (result.model,) if result.status is Verdict.SAT else (),
+        Area(query_id, ()),
         "conjunction of the supplied bounded path guards",
         result,
     )

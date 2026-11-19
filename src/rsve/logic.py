@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, ClassVar
 
-from .schema import SCHEMA_VERSION, encode
+from .schema import Version, encode
 
 
 class Sort(str, Enum):
@@ -26,11 +26,11 @@ class Constraint:
         raise NotImplementedError
 
     def to_record(self) -> dict[str, Any]:
-        return {"schema_version": SCHEMA_VERSION, "type": self.type_name, "payload": self.to_dict()}
+        return {"schema_version": Version, "type": self.type_name, "payload": self.to_dict()}
 
     @classmethod
     def from_record(cls, record: dict[str, Any]) -> "Constraint":
-        if record.get("schema_version") != SCHEMA_VERSION:
+        if record.get("schema_version") != Version:
             raise ValueError(f"unsupported schema version: {record.get('schema_version')!r}")
         try:
             node_type = _TYPES[record["type"]]
@@ -138,7 +138,7 @@ def Multiply(left: Constraint, right: Constraint) -> Arithmetic:
 
 
 @dataclass(frozen=True)
-class IntRange(Constraint):
+class Range(Constraint):
     type_name: ClassVar[str] = "int_range"
     value: Constraint
     minimum: int
@@ -152,12 +152,12 @@ class IntRange(Constraint):
         return {"value": _node(self.value), "minimum": self.minimum, "maximum": self.maximum}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "IntRange":
+    def from_dict(cls, data: dict[str, Any]) -> "Range":
         return cls(_load(data["value"]), int(data["minimum"]), int(data["maximum"]))
 
 
 @dataclass(frozen=True)
-class FiniteEnum(Constraint):
+class Set(Constraint):
     type_name: ClassVar[str] = "finite_enum"
     value: Constraint
     values: tuple[Any, ...]
@@ -170,12 +170,12 @@ class FiniteEnum(Constraint):
         return {"value": _node(self.value), "values": [encode(item) for item in self.values]}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "FiniteEnum":
+    def from_dict(cls, data: dict[str, Any]) -> "Set":
         return cls(_load(data["value"]), tuple(data["values"]))
 
 
 @dataclass(frozen=True)
-class AllOf(Constraint):
+class Every(Constraint):
     type_name: ClassVar[str] = "all_of"
     terms: tuple[Constraint, ...]
 
@@ -187,12 +187,12 @@ class AllOf(Constraint):
         return {"terms": [_node(term) for term in self.terms]}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AllOf":
+    def from_dict(cls, data: dict[str, Any]) -> "Every":
         return cls(tuple(_load(term) for term in data["terms"]))
 
 
 @dataclass(frozen=True)
-class AnyOf(Constraint):
+class Either(Constraint):
     type_name: ClassVar[str] = "any_of"
     terms: tuple[Constraint, ...]
 
@@ -204,7 +204,7 @@ class AnyOf(Constraint):
         return {"terms": [_node(term) for term in self.terms]}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AnyOf":
+    def from_dict(cls, data: dict[str, Any]) -> "Either":
         return cls(tuple(_load(term) for term in data["terms"]))
 
 
@@ -222,7 +222,7 @@ class Negate(Constraint):
 
 
 @dataclass(frozen=True)
-class StateRelation(Constraint):
+class Rel(Constraint):
     type_name: ClassVar[str] = "state_relation"
     left: Constraint
     relation: str
@@ -236,12 +236,12 @@ class StateRelation(Constraint):
         return {"left": _node(self.left), "relation": self.relation, "right": _node(self.right)}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "StateRelation":
+    def from_dict(cls, data: dict[str, Any]) -> "Rel":
         return cls(_load(data["left"]), data["relation"], _load(data["right"]))
 
 
 @dataclass(frozen=True)
-class NamedAssumption(Constraint):
+class Axiom(Constraint):
     type_name: ClassVar[str] = "named_assumption"
     name: str
     term: Constraint
@@ -254,13 +254,13 @@ class NamedAssumption(Constraint):
         return {"name": self.name, "term": _node(self.term)}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "NamedAssumption":
+    def from_dict(cls, data: dict[str, Any]) -> "Axiom":
         return cls(data["name"], _load(data["term"]))
 
 
 _TYPES = {
     node.type_name: node
-    for node in (Literal, Variable, Equal, Arithmetic, IntRange, FiniteEnum, AllOf, AnyOf, Negate, StateRelation, NamedAssumption)
+    for node in (Literal, Variable, Equal, Arithmetic, Range, Set, Every, Either, Negate, Rel, Axiom)
 }
 
 
@@ -269,20 +269,20 @@ def named_assertions(term: Constraint) -> tuple[tuple[str, Constraint], ...]:
     found: list[tuple[str, Constraint]] = []
 
     def visit(node: Constraint) -> None:
-        if isinstance(node, NamedAssumption):
+        if isinstance(node, Axiom):
             found.append((node.name, node.term))
             visit(node.term)
-        elif isinstance(node, (AllOf, AnyOf)):
+        elif isinstance(node, (Every, Either)):
             for child in node.terms:
                 visit(child)
-        elif isinstance(node, (Equal, StateRelation)):
+        elif isinstance(node, (Equal, Rel)):
             visit(node.left)
             visit(node.right)
         elif isinstance(node, Arithmetic):
             visit(node.left)
             visit(node.right)
-        elif isinstance(node, (IntRange, FiniteEnum, Negate)):
-            visit(node.value if isinstance(node, (IntRange, FiniteEnum)) else node.term)
+        elif isinstance(node, (Range, Set, Negate)):
+            visit(node.value if isinstance(node, (Range, Set)) else node.term)
 
     visit(term)
     return tuple(found)

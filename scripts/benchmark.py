@@ -15,23 +15,23 @@ from rsve import (  # noqa: E402
     Authorization,
     Budget,
     Engine,
-    EntryPoint,
-    NodeTargetAdapter,
+    Entry,
+    Node,
     Objective,
     Operation,
     State,
-    TransitionModel,
+    Model,
 )
 
 
-def modeled_fixture() -> TransitionModel:
+def modeled_fixture() -> Model:
     operation = Operation(
         name="increment",
-        entry_point=EntryPoint("bench.increment"),
+        entry_point=Entry("bench.increment"),
         guard=lambda _state, request: request["amount"] > 0,
-        apply=lambda state, request: state.with_updates(count=state["count"] + request["amount"]),
+        apply=lambda state, request: state.update(count=state["count"] + request["amount"]),
     )
-    return TransitionModel("bench", State({"count": 0}), ({"amount": 1}, {"amount": 2}), (operation,))
+    return Model("bench", State({"count": 0}), ({"amount": 1}, {"amount": 2}), (operation,))
 
 
 def measure(rounds: int, function) -> float:
@@ -53,7 +53,7 @@ def main() -> None:
     authorization = Authorization("benchmark", frozenset({"bench-lab"}))
     modeled_ms = measure(args.rounds, lambda: Engine().analyze(model, objective, authorization, Budget(max_depth=1)))
 
-    adapter = NodeTargetAdapter(ROOT / "tests/fixtures/node/fixture.mjs", target_id="node-fixture")
+    adapter = Node(ROOT / "tests/fixtures/node/fixture.mjs", target_id="node-fixture")
     adapter.prepare()
     baseline = adapter.snapshot()
     observed_events = 0
@@ -61,7 +61,7 @@ def main() -> None:
     def instrumented_run() -> None:
         nonlocal observed_events
         adapter.reset(baseline)
-        events = adapter.execute_trace(({"entry_point": "increment", "request": {"amount": 1}},))
+        events = adapter.trace(({"entry_point": "increment", "request": {"amount": 1}},))
         observed_events = len(events)
 
     try:

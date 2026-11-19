@@ -3,35 +3,35 @@ from pathlib import Path
 
 from rsve import (
     Authorization,
-    EntryPoint,
-    FlowToSink,
-    GuardInvariant,
-    HybridPlanner,
-    ObjectiveBudget,
-    ObjectiveDefinition,
+    Entry,
+    Flow,
+    Guard,
+    Planner,
+    Limits,
+    Objective,
     Operation,
     State,
-    StateEquals,
-    TransitionModel,
+    Same,
+    Model,
 )
-from rsve.extensions import EvmTargetAdapter
-from rsve.result import AnalysisStatus
+from rsve.extensions import Evm
+from rsve.result import Status
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "evm" / "src" / "Counter.sol"
 ANVIL = Path("/home/codespace/.foundry/bin/anvil")
 
 
-def model() -> TransitionModel:
-    return TransitionModel(
+def model() -> Model:
+    return Model(
         target_id="evm-fixture",
         initial_state=State({"count": 0}),
         inputs=({"amount": 1, "canary": "RSVE-CANARY"},),
         operations=(Operation(
             name="state.mutation",
-            entry_point=EntryPoint("increment"),
+            entry_point=Entry("increment"),
             guard=lambda _state, request: 0 < request["amount"] <= 10,
-            apply=lambda state, request: state.with_updates(count=state["count"] + request["amount"]),
+            apply=lambda state, request: state.update(count=state["count"] + request["amount"]),
             observe=lambda _before, _request, after: {"count": after["count"]},
             component="evm.fixture.state",
         ),),
@@ -39,17 +39,17 @@ def model() -> TransitionModel:
 
 
 @unittest.skipUnless(ANVIL.exists(), "Foundry/Anvil is required for the EVM vertical slice")
-class EvmAdapterTests(unittest.TestCase):
+class Suite(unittest.TestCase):
     def setUp(self):
-        self.adapter = EvmTargetAdapter(FIXTURE, target_id="evm-fixture", port=18547)
+        self.adapter = Evm(FIXTURE, target_id="evm-fixture", port=18547)
         self.auth = Authorization("evm-tests", frozenset({"evm-lab"}), frozenset({"evm-fixture"}))
 
     def tearDown(self):
         self.adapter.teardown()
 
     def test_chain_entries_revert_and_replay(self):
-        self.assertTrue(self.adapter.evm_capabilities.local_chain)
-        self.assertTrue(self.adapter.evm_capabilities.storage_state)
+        self.assertTrue(self.adapter.caps.local_chain)
+        self.assertTrue(self.adapter.caps.storage_state)
         good = self.adapter.invoke("increment", {"amount": 1, "canary": "RSVE-CANARY"}, self.auth)
         self.assertEqual(good[0].operation, "state.mutation")
         self.assertEqual(good[0].after["count"], 1)
@@ -65,18 +65,18 @@ class EvmAdapterTests(unittest.TestCase):
         self.assertEqual(len(replay.runs), 2)
 
     def test_shared_objective_planner_validates_on_evm(self):
-        objective = ObjectiveDefinition(
+        objective = Objective(
             "evm-reach-one",
             "evm-fixture",
             "evm-lab",
-            (StateEquals("count", 1), FlowToSink("increment", "RSVE-CANARY", "evm.fixture.state"), GuardInvariant()),
+            (Same("count", 1), Flow("increment", "RSVE-CANARY", "evm.fixture.state"), Guard()),
             permitted_sinks=frozenset({"evm.fixture.state"}),
-            budget=ObjectiveBudget(max_trace_length=1, replay_runs=2),
+            budget=Limits(max_trace_length=1, replay_runs=2),
         )
-        report = HybridPlanner(harness_sinks={"evm.fixture.state"}).plan(
+        report = Planner(harness_sinks={"evm.fixture.state"}).plan(
             model(), objective, self.auth, adapter=self.adapter,
         )
-        self.assertEqual(report.status, AnalysisStatus.VALIDATED_WITNESS)
+        self.assertEqual(report.status, Status.VALIDATED_WITNESS)
         self.assertTrue(report.witness.validated)
         self.assertEqual(report.witness.final_state["count"], 1)
 

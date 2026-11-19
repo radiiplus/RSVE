@@ -10,28 +10,28 @@ from dataclasses import dataclass
 from itertools import product
 from typing import Any, Callable, Mapping, Sequence
 
-from .adapter import TargetAdapter
-from .logic import AllOf, Constraint, Equal, Literal, Sort, Variable
-from .diff import DifferentialAnalyzer
+from .adapter import Target
+from .logic import Every, Constraint, Equal, Literal, Sort, Variable
+from .diff import Analyzer
 from .index import Index
-from .model import Authorization, Decision, Operation, State, TraceEvent, TransitionModel
-from .objective import AllPredicates, AnyPredicate, ObjectiveDefinition, StateEquals
+from .model import Authorization, Decision, Operation, State, Event, Model
+from .objective import All, Some, Objective, Same
 from .result import (
-    AnalysisReport,
-    AnalysisStatus,
+    Report,
+    Status,
     Divergence,
-    GapKind,
-    ProofResult,
-    ResidualGap,
-    SolverStatus,
+    Grade,
+    Proof,
+    Gap,
+    Verdict,
     Witness,
 )
-from .solver import ConstraintQuery, Z3SolverAdapter
-from .wp import WeakestPreconditionEngine, WeakestPreconditionStatus
+from .solver import Query, Zed
+from .wp import WP, Truth
 
 
 @dataclass(frozen=True)
-class BackwardPlan:
+class Plan:
     objective_id: str
     required_actions: tuple[tuple[str, Mapping[str, Any]], ...]
     method: str
@@ -41,12 +41,12 @@ class BackwardPlan:
 
 
 @dataclass(frozen=True)
-class CandidateAttempt:
+class Attempt:
     interactions: tuple[Mapping[str, Any], ...]
-    predicted_events: tuple[TraceEvent, ...]
+    predicted_events: tuple[Event, ...]
     replayed: bool
     objective_observed: bool | None
-    observed_events: tuple[TraceEvent, ...] = ()
+    observed_events: tuple[Event, ...] = ()
     replay_stable: bool | None = None
     divergences: tuple[Divergence, ...] = ()
     detail: str = ""
@@ -67,10 +67,10 @@ def _transform_is_lossy(transform: Any) -> bool:
     return marker.value != "none" if hasattr(marker, "value") else bool(marker)
 
 
-def _symbolic_postcondition(objective: ObjectiveDefinition) -> Constraint | None:
+def _symbolic_postcondition(objective: Objective) -> Constraint | None:
     constraints: list[Constraint] = []
     for predicate in objective.postconditions:
-        if not isinstance(predicate, StateEquals):
+        if not isinstance(predicate, Same):
             return None
         sort = _sort_for(predicate.expected)
         if sort is None:
@@ -83,7 +83,7 @@ def _symbolic_postcondition(objective: ObjectiveDefinition) -> Constraint | None
         )
     if not constraints:
         return None
-    return constraints[0] if len(constraints) == 1 else AllOf(tuple(constraints))
+    return constraints[0] if len(constraints) == 1 else Every(tuple(constraints))
 
 
 def _initial_state_constraints(state: State) -> list[Constraint]:
@@ -111,7 +111,7 @@ def _request_for_step(model: Mapping[str, Any], index: int) -> dict[str, Any]:
     return request
 
 
-class BackwardRegressor:
+class Regressor:
     """Derive bounded preimages for supported concrete operations.
 
     This deliberately reports bounded preimage enumeration as incomplete for
@@ -120,12 +120,12 @@ class BackwardRegressor:
 
     def regress(
         self,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
+        model: Model,
+        objective: Objective,
         *,
-        solver: Z3SolverAdapter | None = None,
+        solver: Zed | None = None,
         solver_timeout_ms: int | None = None,
-    ) -> BackwardPlan:
+    ) -> Plan:
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
         index = Index.build(model)
@@ -133,25 +133,25 @@ class BackwardRegressor:
         indexed = [item.operation for item in index.predecessors(needed)] if needed else []
         seen = {(item.entry_point.name, item.name) for item in indexed}
         operations = tuple(indexed) + tuple(
-            item for item in model.ordered_operations()
+            item for item in model.ops()
             if (item.entry_point.name, item.name) not in seen
         )
         if needed and not indexed:
             uncertainty.append("no indexed writer was found for the objective state keys")
         for operation in operations:
-            for request in model.ordered_inputs():
-                if self.weakest_precondition(operation, request, objective)(model.initial_state):
+            for request in model.args():
+                if self.preimage(operation, request, objective)(model.initial_state):
                     actions.append((operation.entry_point.name, dict(request)))
         symbolic_actions, symbolic_uncertainty = self._symbolic_actions(
             model,
             objective,
-            solver=solver or Z3SolverAdapter(),
+            solver=solver or Zed(),
             solver_timeout_ms=solver_timeout_ms,
         )
         symbolic_traces, sequence_uncertainty = self._symbolic_traces(
             model,
             objective,
-            solver=solver or Z3SolverAdapter(),
+            solver=solver or Zed(),
             solver_timeout_ms=solver_timeout_ms,
         )
         for action in symbolic_actions:
@@ -172,10 +172,10 @@ class BackwardRegressor:
             uncertainty.append("no one-step preimage was found; longer paths use forward bounded exploration")
         if any(operation.transforms and any(_transform_is_lossy(transform) for transform in operation.transforms) for operation in model.operations):
             uncertainty.append("information-losing transforms require bounded forward/preimage search")
-        return BackwardPlan(
+        return Plan(
             objective_id=objective.objective_id,
             required_actions=tuple(actions),
-            method=("weakest_precondition+solver+sequence+bounded_preimage"
+            method=("preimage+solver+sequence+bounded_preimage"
                     if symbolic_actions or symbolic_traces else "bounded_preimage_enumeration"),
             complete=False,
             uncertainty=tuple(uncertainty),
@@ -186,29 +186,29 @@ class BackwardRegressor:
     def _keys(predicates: Sequence[Any]) -> frozenset[str]:
         found: set[str] = set()
         for predicate in predicates:
-            if isinstance(predicate, StateEquals):
+            if isinstance(predicate, Same):
                 found.add(predicate.key)
-            elif isinstance(predicate, (AllPredicates, AnyPredicate)):
-                found.update(BackwardRegressor._keys(predicate.predicates))
+            elif isinstance(predicate, (All, Some)):
+                found.update(Regressor._keys(predicate.predicates))
         return frozenset(found)
 
     def _symbolic_traces(
         self,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
+        model: Model,
+        objective: Objective,
         *,
-        solver: Z3SolverAdapter,
+        solver: Zed,
         solver_timeout_ms: int | None,
     ) -> tuple[list[tuple[Mapping[str, Any], ...]], list[str]]:
         symbolic_operations = tuple(
-            operation for operation in model.ordered_operations()
+            operation for operation in model.ops()
             if operation.symbolic_transition is not None
         )
         if len(symbolic_operations) < 1 or objective.budget.max_trace_length < 2:
             return [], []
         postcondition = _symbolic_postcondition(objective)
         if postcondition is None:
-            return [], ["multi-step symbolic regression supports StateEquals postconditions only"]
+            return [], ["multi-step symbolic regression supports Same postconditions only"]
         initial_constraints = _initial_state_constraints(model.initial_state)
         traces: list[tuple[Mapping[str, Any], ...]] = []
         uncertainty: list[str] = []
@@ -220,23 +220,23 @@ class BackwardRegressor:
                     uncertainty.append("multi-step symbolic sequence bound reached")
                     return traces, uncertainty
                 transitions = tuple(operation.symbolic_transition for operation in sequence)
-                result = WeakestPreconditionEngine().derive(postcondition, transitions)
-                if result.status is not WeakestPreconditionStatus.EXACT or result.precondition is None:
+                result = WP().derive(postcondition, transitions)
+                if result.status is not Truth.EXACT or result.precondition is None:
                     continue
                 formula: Constraint = result.precondition
                 if initial_constraints:
-                    formula = AllOf(tuple(initial_constraints) + (formula,))
+                    formula = Every(tuple(initial_constraints) + (formula,))
                 solved = solver.solve(
-                    ConstraintQuery(
+                    Query(
                         f"wp-sequence:{objective.objective_id}:{length}:{examined}",
                         formula,
                     ),
                     timeout_ms=solver_timeout_ms,
                 )
-                if solved.status is SolverStatus.UNKNOWN:
+                if solved.status is Verdict.UNKNOWN:
                     uncertainty.append(solved.unknown_reason or "multi-step symbolic query returned UNKNOWN")
                     continue
-                if solved.status is not SolverStatus.SAT:
+                if solved.status is not Verdict.SAT:
                     continue
                 interactions = tuple(
                     {
@@ -251,26 +251,26 @@ class BackwardRegressor:
 
     def _symbolic_actions(
         self,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
+        model: Model,
+        objective: Objective,
         *,
-        solver: Z3SolverAdapter,
+        solver: Zed,
         solver_timeout_ms: int | None,
     ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str]]:
         if not any(operation.symbolic_transition is not None for operation in model.operations):
             return [], []
         postcondition = _symbolic_postcondition(objective)
         if postcondition is None:
-            return [], ["symbolic backward planning supports StateEquals postconditions only"]
+            return [], ["symbolic backward planning supports Same postconditions only"]
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
-        wp_engine = WeakestPreconditionEngine()
-        for operation in model.ordered_operations():
+        wp_engine = WP()
+        for operation in model.ops():
             transition = operation.symbolic_transition
             if transition is None:
                 continue
             result = wp_engine.derive(postcondition, (transition,))
-            if result.status is not WeakestPreconditionStatus.EXACT or result.precondition is None:
+            if result.status is not Truth.EXACT or result.precondition is None:
                 uncertainty.append(
                     f"symbolic preimage for {operation.entry_point.name} is unknown: {result.reason or 'unsupported semantics'}"
                 )
@@ -282,20 +282,20 @@ class BackwardRegressor:
             ]
             formula: Constraint = result.precondition
             if initial_constraints:
-                formula = AllOf(tuple(initial_constraints) + (formula,))
+                formula = Every(tuple(initial_constraints) + (formula,))
             solved = solver.solve(
-                ConstraintQuery(
+                Query(
                     f"wp:{objective.objective_id}:{operation.entry_point.name}",
                     formula,
                 ),
                 timeout_ms=solver_timeout_ms,
             )
-            if solved.status is SolverStatus.UNKNOWN:
+            if solved.status is Verdict.UNKNOWN:
                 uncertainty.append(
                     f"solver could not concretize symbolic preimage for {operation.entry_point.name}: {solved.unknown_reason or 'unknown'}"
                 )
                 continue
-            if solved.status is not SolverStatus.SAT:
+            if solved.status is not Verdict.SAT:
                 continue
             request = {
                 name.removeprefix("input.").removeprefix("request."): value
@@ -310,11 +310,11 @@ class BackwardRegressor:
     def _request_key(request: Mapping[str, Any]) -> str:
         return json.dumps(dict(request), sort_keys=True, separators=(",", ":"), default=str)
 
-    def weakest_precondition(
+    def preimage(
         self,
         operation: Operation,
         request: Mapping[str, Any],
-        objective: ObjectiveDefinition,
+        objective: Objective,
     ) -> Callable[[State], bool]:
         """Return the exact concrete preimage predicate for a modeled relation.
 
@@ -337,7 +337,7 @@ class BackwardRegressor:
         return precondition
 
 
-class HybridPlanner:
+class Planner:
     """Use backward action hints, then deterministic forward concretization."""
 
     def __init__(self, *, harness_sinks: set[str] | frozenset[str] = frozenset()) -> None:
@@ -345,13 +345,13 @@ class HybridPlanner:
 
     def plan(
         self,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
+        model: Model,
+        objective: Objective,
         authorization: Authorization,
         *,
-        adapter: TargetAdapter | None = None,
+        adapter: Target | None = None,
         environment: Mapping[str, str] | None = None,
-    ) -> AnalysisReport:
+    ) -> Report:
         adapter_environment = self._environment(adapter)
         execution_profile = self._analysis_profile(adapter)
         objective.validate(
@@ -360,7 +360,7 @@ class HybridPlanner:
             environment=environment or adapter_environment,
             execution_profile=execution_profile,
         )
-        backward = BackwardRegressor().regress(
+        backward = Regressor().regress(
             model,
             objective,
             solver_timeout_ms=objective.budget.solver_timeout_ms,
@@ -368,7 +368,7 @@ class HybridPlanner:
         phantom_attempt = self._probe_phantom_entries(adapter, objective, authorization)
         if phantom_attempt is not None and phantom_attempt.objective_observed and phantom_attempt.replay_stable:
             return self._report(
-                AnalysisStatus.VALIDATED_WITNESS,
+                Status.VALIDATED_WITNESS,
                 model,
                 objective,
                 (),
@@ -381,7 +381,7 @@ class HybridPlanner:
         preferred = {(entry, self._request_key(request)) for entry, request in backward.required_actions}
         started = time.monotonic()
         budget = objective.budget
-        queue: list[tuple[int, int, int, State, tuple[TraceEvent, ...]]] = []
+        queue: list[tuple[int, int, int, State, tuple[Event, ...]]] = []
         serial = 0
         heapq.heappush(queue, (0, serial, 0, model.initial_state, ()))
         for interactions in backward.required_traces:
@@ -390,7 +390,7 @@ class HybridPlanner:
                 state, trace = seeded
                 serial += 1
                 heapq.heappush(queue, (-1, serial, len(trace), state, trace))
-        input_candidates = list(model.ordered_inputs())
+        input_candidates = list(model.args())
         for _entry, request in backward.required_actions:
             if self._request_key(request) not in {self._request_key(item) for item in input_candidates}:
                 input_candidates.append(dict(request))
@@ -398,7 +398,7 @@ class HybridPlanner:
         visited: set[tuple[int, str, tuple[tuple[str, str], ...]]] = set()
         explored_states = 0
         explored_events = 0
-        attempts: list[CandidateAttempt] = []
+        attempts: list[Attempt] = []
         budget_hit = False
 
         while queue:
@@ -412,7 +412,7 @@ class HybridPlanner:
             visited.add(key)
             explored_states += 1
 
-            if objective.evaluate(state, trace) and objective.checkpoints_satisfied(model.initial_state, trace):
+            if objective.evaluate(state, trace) and objective.satisfy(model.initial_state, trace):
                 attempt = self._replay_candidate(
                     adapter,
                     objective,
@@ -424,7 +424,7 @@ class HybridPlanner:
                 attempts.append(attempt)
                 if attempt.replayed and attempt.objective_observed and self._stable(attempt, objective):
                     return self._report(
-                        AnalysisStatus.VALIDATED_WITNESS,
+                        Status.VALIDATED_WITNESS,
                         model,
                         objective,
                         trace,
@@ -437,7 +437,7 @@ class HybridPlanner:
 
                 if not attempt.replayed:
                     return self._report(
-                        AnalysisStatus.SAT_CANDIDATE,
+                        Status.SAT_CANDIDATE,
                         model,
                         objective,
                         trace,
@@ -449,7 +449,7 @@ class HybridPlanner:
                     )
                 if attempt.divergences and attempt.objective_observed is not True:
                     return self._report(
-                        AnalysisStatus.MODEL_DIVERGENCE,
+                        Status.MODEL_DIVERGENCE,
                         model,
                         objective,
                         trace,
@@ -465,7 +465,7 @@ class HybridPlanner:
 
             if depth >= budget.max_trace_length:
                 continue
-            for operation in model.ordered_operations():
+            for operation in model.ops():
                 for request in input_candidates:
                     if explored_events >= budget.max_events:
                         budget_hit = True
@@ -496,9 +496,9 @@ class HybridPlanner:
             if budget_hit:
                 break
 
-        status = AnalysisStatus.BUDGET_EXHAUSTED if budget_hit else (AnalysisStatus.UNKNOWN if attempts else AnalysisStatus.UNSAT_BOUNDED)
-        gaps = [ResidualGap(
-            GapKind.EVENT_BUDGET if budget_hit else (GapKind.ASSUMPTION if attempts else GapKind.BOUND),
+        status = Status.BUDGET_EXHAUSTED if budget_hit else (Status.UNKNOWN if attempts else Status.UNSAT_BOUNDED)
+        gaps = [Gap(
+            Grade.EVENT_BUDGET if budget_hit else (Grade.ASSUMPTION if attempts else Grade.BOUND),
             "bounded hybrid search exhausted its event/time/state budget" if budget_hit else ("candidate replay did not satisfy the objective or stability policy" if attempts else "no witness exists in the encoded bounded model/surface"),
             {"max_trace_length": budget.max_trace_length, "attempts": len(attempts)},
         )]
@@ -507,7 +507,7 @@ class HybridPlanner:
             model,
             objective,
             (),
-            attempts[-1] if attempts else CandidateAttempt((), (), False, None),
+            attempts[-1] if attempts else Attempt((), (), False, None),
             explored_states,
             explored_events,
             backward,
@@ -515,46 +515,46 @@ class HybridPlanner:
             gaps=gaps,
         )
 
-    def analyze(self, *args: Any, **kwargs: Any) -> AnalysisReport:
+    def analyze(self, *args: Any, **kwargs: Any) -> Report:
         """Compatibility spelling for callers that use the engine's analyze API."""
         return self.plan(*args, **kwargs)
 
     def _replay_candidate(
         self,
-        adapter: TargetAdapter | None,
-        objective: ObjectiveDefinition,
-        model: TransitionModel,
-        predicted: Sequence[TraceEvent],
+        adapter: Target | None,
+        objective: Objective,
+        model: Model,
+        predicted: Sequence[Event],
         environment: Mapping[str, str],
         authorization: Authorization,
-    ) -> CandidateAttempt:
+    ) -> Attempt:
         interactions = tuple({"entry_point": event.entry_point, "request": dict(event.request)} for event in predicted)
         if adapter is None:
-            return CandidateAttempt(interactions, tuple(predicted), False, None, detail="candidate was not replayed by a target adapter")
+            return Attempt(interactions, tuple(predicted), False, None, detail="candidate was not replayed by a target adapter")
         adapter.prepare()
         baseline = adapter.snapshot()
-        all_runs: list[tuple[TraceEvent, ...]] = []
+        all_runs: list[tuple[Event, ...]] = []
         outcomes: list[bool] = []
         signatures: list[str] = []
         first_divergences: tuple[Divergence, ...] = ()
         try:
             for _ in range(objective.budget.replay_runs):
                 adapter.reset(baseline)
-                observed = tuple(adapter.execute_trace(interactions, authorization))
+                observed = tuple(adapter.trace(interactions, authorization))
                 all_runs.append(observed)
                 final_state = observed[-1].after if observed else model.initial_state
-                outcomes.append(objective.evaluate(final_state, observed) and objective.checkpoints_satisfied(model.initial_state, observed))
+                outcomes.append(objective.evaluate(final_state, observed) and objective.satisfy(model.initial_state, observed))
                 signatures.append(hashlib.sha256(json.dumps({
                     "events": [self._semantic_event(event) for event in observed],
-                    "output": self._semantic_output(getattr(adapter, "collect_output", lambda: {})()),
+                    "output": self._semantic_output(getattr(adapter, "output", lambda: {})()),
                 }, sort_keys=True, default=str).encode()).hexdigest())
                 if not first_divergences:
-                    first_divergences = DifferentialAnalyzer().compare(predicted, observed)
+                    first_divergences = Analyzer().compare(predicted, observed)
         finally:
             adapter.teardown()
         stable = len(set(outcomes)) == 1 and len(set(signatures)) == 1 and bool(outcomes)
         detail = "replay objective did not hold" if not all(outcomes) else ("replay was unstable" if not stable else "")
-        return CandidateAttempt(
+        return Attempt(
             interactions,
             tuple(predicted),
             True,
@@ -567,20 +567,20 @@ class HybridPlanner:
 
     def _report(
         self,
-        status: AnalysisStatus,
-        model: TransitionModel,
-        objective: ObjectiveDefinition,
-        predicted: Sequence[TraceEvent],
-        attempt: CandidateAttempt,
+        status: Status,
+        model: Model,
+        objective: Objective,
+        predicted: Sequence[Event],
+        attempt: Attempt,
         explored_states: int,
         explored_events: int,
-        backward: BackwardPlan,
+        backward: Plan,
         environment: Mapping[str, str],
         *,
-        gaps: Sequence[ResidualGap] = (),
-    ) -> AnalysisReport:
+        gaps: Sequence[Gap] = (),
+    ) -> Report:
         witness = None
-        witness_events = attempt.observed_events if status is AnalysisStatus.VALIDATED_WITNESS and attempt.observed_events else tuple(predicted)
+        witness_events = attempt.observed_events if status is Status.VALIDATED_WITNESS and attempt.observed_events else tuple(predicted)
         model_aligned = (not bool(attempt.divergences)) if attempt.replayed and attempt.predicted_events else None
         if witness_events or attempt.interactions:
             final_state = witness_events[-1].after if witness_events else model.initial_state
@@ -589,7 +589,7 @@ class HybridPlanner:
                 target_id=model.target_id,
                 events=witness_events,
                 final_state=final_state,
-                validated=status is AnalysisStatus.VALIDATED_WITNESS,
+                validated=status is Status.VALIDATED_WITNESS,
                 model_aligned=model_aligned,
                 predicted_events=tuple(predicted),
                 interactions=attempt.interactions,
@@ -601,13 +601,13 @@ class HybridPlanner:
             )
         divergences = attempt.divergences
         proof_status = (
-            SolverStatus.SAT
-            if witness and status in {AnalysisStatus.VALIDATED_WITNESS, AnalysisStatus.SAT_CANDIDATE, AnalysisStatus.MODEL_DIVERGENCE}
-            else SolverStatus.UNKNOWN
-            if status in {AnalysisStatus.BUDGET_EXHAUSTED, AnalysisStatus.UNKNOWN, AnalysisStatus.MODEL_DIVERGENCE}
-            else SolverStatus.UNSAT_BOUNDED
+            Verdict.SAT
+            if witness and status in {Status.VALIDATED_WITNESS, Status.SAT_CANDIDATE, Status.MODEL_DIVERGENCE}
+            else Verdict.UNKNOWN
+            if status in {Status.BUDGET_EXHAUSTED, Status.UNKNOWN, Status.MODEL_DIVERGENCE}
+            else Verdict.UNSAT_BOUNDED
         )
-        proof = ProofResult(
+        proof = Proof(
             status=proof_status,
             bound=objective.budget.max_trace_length,
             explored_states=explored_states,
@@ -622,8 +622,8 @@ class HybridPlanner:
         )
         report_gaps = list(gaps)
         if attempt.detail:
-            report_gaps.append(ResidualGap(GapKind.ASSUMPTION, attempt.detail, {"interactions": attempt.interactions}))
-        return AnalysisReport(
+            report_gaps.append(Gap(Grade.ASSUMPTION, attempt.detail, {"interactions": attempt.interactions}))
+        return Report(
             status=status,
             target_id=model.target_id,
             objective=objective.objective_id,
@@ -652,12 +652,12 @@ class HybridPlanner:
 
     @staticmethod
     def _model_trace(
-        model: TransitionModel,
+        model: Model,
         interactions: Sequence[Mapping[str, Any]],
-    ) -> tuple[State, tuple[TraceEvent, ...]] | None:
-        operations = {operation.entry_point.name: operation for operation in model.ordered_operations()}
+    ) -> tuple[State, tuple[Event, ...]] | None:
+        operations = {operation.entry_point.name: operation for operation in model.ops()}
         state = model.initial_state
-        events: list[TraceEvent] = []
+        events: list[Event] = []
         for index, interaction in enumerate(interactions):
             entry = str(interaction["entry_point"])
             operation = operations.get(entry)
@@ -681,18 +681,18 @@ class HybridPlanner:
 
     @staticmethod
     def _probe_phantom_entries(
-        adapter: TargetAdapter | None,
-        objective: ObjectiveDefinition,
+        adapter: Target | None,
+        objective: Objective,
         authorization: Authorization,
-    ) -> CandidateAttempt | None:
+    ) -> Attempt | None:
         if adapter is None:
             return None
-        registry_factory = getattr(adapter, "surface_registry", None)
+        registry_factory = getattr(adapter, "surface", None)
         replay = getattr(adapter, "replay", None)
         if not callable(registry_factory) or not callable(replay):
             return None
         registry = registry_factory()
-        for observed in registry.phantom_entries():
+        for observed in registry.phantoms():
             interactions = ({"entry_point": observed.entry_point.name, "request": {}},)
             try:
                 report = replay(interactions, runs=objective.budget.replay_runs, authorization=authorization)
@@ -702,9 +702,9 @@ class HybridPlanner:
                 continue
             run = report.runs[0]
             observed_objective = bool(run.events) and objective.evaluate(run.events[-1].after, run.events)
-            observed_objective = observed_objective and objective.checkpoints_satisfied(run.events[0].before, run.events)
+            observed_objective = observed_objective and objective.satisfy(run.events[0].before, run.events)
             if observed_objective:
-                return CandidateAttempt(
+                return Attempt(
                     interactions,
                     (),
                     True,
@@ -716,7 +716,7 @@ class HybridPlanner:
         return None
 
     @staticmethod
-    def _semantic_event(event: TraceEvent) -> dict[str, Any]:
+    def _semantic_event(event: Event) -> dict[str, Any]:
         return {
             "operation": event.operation,
             "entry_point": event.entry_point,
@@ -738,22 +738,22 @@ class HybridPlanner:
         return output
 
     @staticmethod
-    def _environment(adapter: TargetAdapter | None) -> Mapping[str, str]:
-        observation = getattr(adapter, "environment_observation", None)
+    def _environment(adapter: Target | None) -> Mapping[str, str]:
+        observation = getattr(adapter, "observe", None)
         if observation is None:
             return {}
         result = observation()
         facts = dict(getattr(result, "facts", result))
-        profile_factory = getattr(adapter, "analysis_profile", None)
+        profile_factory = getattr(adapter, "profile", None)
         if callable(profile_factory):
             facts["profile_id"] = profile_factory().profile_id
         return facts
 
     @staticmethod
-    def _analysis_profile(adapter: TargetAdapter | None) -> Any | None:
-        profile_factory = getattr(adapter, "analysis_profile", None)
+    def _analysis_profile(adapter: Target | None) -> Any | None:
+        profile_factory = getattr(adapter, "profile", None)
         return profile_factory() if callable(profile_factory) else None
 
     @staticmethod
-    def _stable(attempt: CandidateAttempt, objective: ObjectiveDefinition) -> bool:
+    def _stable(attempt: Attempt, objective: Objective) -> bool:
         return attempt.replayed and attempt.objective_observed is True and attempt.replay_stable is True and objective.budget.replay_runs >= 1

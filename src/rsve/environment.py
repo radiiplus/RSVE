@@ -9,7 +9,7 @@ from typing import Any, Callable, Mapping
 from .model import State
 
 
-class EnvironmentResultStatus(str, Enum):
+class Signal(str, Enum):
     PREDICTED = "predicted"
     OBSERVED = "observed"
     DIVERGENCE = "divergence"
@@ -17,41 +17,41 @@ class EnvironmentResultStatus(str, Enum):
 
 
 @dataclass(frozen=True)
-class ReactiveEnvironmentState:
+class Context:
     target: State
     environment: State
     scope: str = "workspace"
 
 
 @dataclass(frozen=True)
-class EnvironmentStep:
+class Step:
     transition_id: str
-    before: ReactiveEnvironmentState
-    after: ReactiveEnvironmentState
+    before: Context
+    after: Context
     outputs: Mapping[str, Any] = field(default_factory=dict)
-    status: EnvironmentResultStatus = EnvironmentResultStatus.PREDICTED
+    status: Signal = Signal.PREDICTED
     reasons: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
-class EnvironmentDivergence:
+class Drift:
     transition_id: str
-    predicted: EnvironmentStep
-    observed: EnvironmentStep
+    predicted: Step
+    observed: Step
     differing_target_keys: tuple[str, ...]
     differing_environment_keys: tuple[str, ...]
 
 
-TargetEnvironmentTransition = Callable[[ReactiveEnvironmentState, Mapping[str, Any]], tuple[State, State, Mapping[str, Any]]]
+Reaction = Callable[[Context, Mapping[str, Any]], tuple[State, State, Mapping[str, Any]]]
 
 
-class ReactiveEnvironment:
+class World:
     """Predict and reconcile environment reactions without assuming determinism."""
 
     def __init__(
         self,
-        initial: ReactiveEnvironmentState,
-        transitions: Mapping[str, TargetEnvironmentTransition],
+        initial: Context,
+        transitions: Mapping[str, Reaction],
         *,
         nondeterministic: frozenset[str] = frozenset(),
     ) -> None:
@@ -59,31 +59,31 @@ class ReactiveEnvironment:
         self.transitions = dict(transitions)
         self.nondeterministic = nondeterministic
 
-    def predict(self, transition_id: str, state: ReactiveEnvironmentState, request: Mapping[str, Any]) -> EnvironmentStep:
+    def predict(self, transition_id: str, state: Context, request: Mapping[str, Any]) -> Step:
         transition = self.transitions.get(transition_id)
         if transition is None:
-            return EnvironmentStep(transition_id, state, state, status=EnvironmentResultStatus.UNKNOWN, reasons=("environment transition semantics unavailable",))
+            return Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=("environment transition semantics unavailable",))
         try:
             target, environment, outputs = transition(state, request)
         except Exception as exc:
-            return EnvironmentStep(transition_id, state, state, status=EnvironmentResultStatus.UNKNOWN, reasons=(f"environment transition failed: {type(exc).__name__}",))
-        status = EnvironmentResultStatus.UNKNOWN if transition_id in self.nondeterministic else EnvironmentResultStatus.PREDICTED
-        return EnvironmentStep(transition_id, state, ReactiveEnvironmentState(target, environment, state.scope), outputs, status)
+            return Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=(f"environment transition failed: {type(exc).__name__}",))
+        status = Signal.UNKNOWN if transition_id in self.nondeterministic else Signal.PREDICTED
+        return Step(transition_id, state, Context(target, environment, state.scope), outputs, status)
 
     def observe(
         self,
         transition_id: str,
-        before: ReactiveEnvironmentState,
-        after: ReactiveEnvironmentState,
+        before: Context,
+        after: Context,
         outputs: Mapping[str, Any] | None = None,
-    ) -> EnvironmentStep:
-        return EnvironmentStep(transition_id, before, after, dict(outputs or {}), EnvironmentResultStatus.OBSERVED)
+    ) -> Step:
+        return Step(transition_id, before, after, dict(outputs or {}), Signal.OBSERVED)
 
-    def reconcile(self, predicted: EnvironmentStep, observed: EnvironmentStep) -> EnvironmentDivergence | None:
+    def reconcile(self, predicted: Step, observed: Step) -> Drift | None:
         target_keys = tuple(sorted(set(predicted.after.target.as_dict()) | set(observed.after.target.as_dict())))
         environment_keys = tuple(sorted(set(predicted.after.environment.as_dict()) | set(observed.after.environment.as_dict())))
         target_diff = tuple(key for key in target_keys if predicted.after.target.get(key) != observed.after.target.get(key))
         environment_diff = tuple(key for key in environment_keys if predicted.after.environment.get(key) != observed.after.environment.get(key))
         if not target_diff and not environment_diff and dict(predicted.outputs) == dict(observed.outputs):
             return None
-        return EnvironmentDivergence(predicted.transition_id, predicted, observed, target_diff, environment_diff)
+        return Drift(predicted.transition_id, predicted, observed, target_diff, environment_diff)

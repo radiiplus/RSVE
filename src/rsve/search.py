@@ -8,11 +8,11 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from .result import AnalysisStatus
+from .result import Status
 
 
 @dataclass(frozen=True)
-class DomainSearchBudget:
+class Bounds:
     max_candidates: int = 1_000
     max_trace_length: int = 4
     max_time_ms: int = 5_000
@@ -23,8 +23,8 @@ class DomainSearchBudget:
 
 
 @dataclass(frozen=True)
-class DomainSearchResult:
-    status: AnalysisStatus
+class Found:
+    status: Status
     attempts: int
     generated: int
     candidate: tuple[Mapping[str, Any], ...] = ()
@@ -32,7 +32,7 @@ class DomainSearchResult:
     frontier_digest: str = ""
 
 
-class DeterministicDomainExplorer:
+class Explorer:
     """Explore an expanding interaction domain without claiming completeness."""
 
     def search(
@@ -41,8 +41,8 @@ class DeterministicDomainExplorer:
         expand: Callable[[tuple[Mapping[str, Any], ...]], Iterable[Sequence[Mapping[str, Any]]]],
         evaluate: Callable[[tuple[Mapping[str, Any], ...]], bool],
         *,
-        budget: DomainSearchBudget = DomainSearchBudget(),
-    ) -> DomainSearchResult:
+        budget: Bounds = Bounds(),
+    ) -> Found:
         queue = [self._normalize(candidate) for candidate in seeds]
         seen: set[str] = set()
         attempts = 0
@@ -62,8 +62,8 @@ class DeterministicDomainExplorer:
                 continue
             attempts += 1
             if evaluate(candidate):
-                return DomainSearchResult(
-                    AnalysisStatus.VALIDATED_WITNESS,
+                return Found(
+                    Status.VALIDATED_WITNESS,
                     attempts,
                     generated,
                     candidate,
@@ -75,13 +75,13 @@ class DeterministicDomainExplorer:
                 if len(normalized) <= budget.max_trace_length and self._key(normalized) not in seen:
                     queue.append(normalized)
                     generated += 1
-        status = AnalysisStatus.BUDGET_EXHAUSTED if budget_hit else AnalysisStatus.UNSAT_BOUNDED
+        status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
         detail = (
             "open interaction domain exhausted its explicit candidate/time budget"
             if budget_hit
             else "no candidate in the generated finite interaction region satisfied the replay validator"
         )
-        return DomainSearchResult(status, attempts, generated, detail=detail, frontier_digest=self._frontier_digest(queue))
+        return Found(status, attempts, generated, detail=detail, frontier_digest=self._frontier_digest(queue))
 
     @staticmethod
     def _normalize(candidate: Sequence[Mapping[str, Any]]) -> tuple[Mapping[str, Any], ...]:

@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from .result import AnalysisReport
+from .result import Report
 
 
-class JsonlArtifactStore:
+class Jsonl:
     """Append-only store with stable IDs and conservative default redaction.
 
     The store is intentionally a local baseline, not a replacement for a
@@ -51,8 +51,8 @@ class JsonlArtifactStore:
                     return record
         return None
 
-    def record_report(self, report: AnalysisReport) -> str:
+    def report(self, report: Report) -> str:
         return self.put("analysis_report", report.canonical())
 
-    def record_solver_result(self, result: Any) -> str:
+    def solve(self, result: Any) -> str:
         return self.put("solver_result", result.to_record())

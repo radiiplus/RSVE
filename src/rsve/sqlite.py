@@ -10,19 +10,19 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
-from .result import AnalysisReport
+from .result import Report
 
 
-STORE_SCHEMA_VERSION = 1
+Store = 1
 
 
-class SqliteArtifactStore:
+class Sqlite:
     """Local transactional artifact ledger with explicit stale-query tracking."""
 
     def __init__(self, path: str | Path, *, redact_keys: frozenset[str] | None = None) -> None:
         self.path = Path(path)
         if str(self.path) == ":memory:":
-            raise ValueError("SqliteArtifactStore requires a file path for durable transactions")
+            raise ValueError("Sqlite requires a file path for durable transactions")
         self.redact_keys = redact_keys or frozenset({"secret", "token", "password", "private_key"})
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._migrate()
@@ -60,10 +60,10 @@ class SqliteArtifactStore:
             return None
         return {"id": row[0], "kind": row[1], "payload": json.loads(row[2]), "schema_version": row[3]}
 
-    def record_report(self, report: AnalysisReport) -> str:
+    def report(self, report: Report) -> str:
         return self.put("analysis_report", report.canonical())
 
-    def record_solver_result(self, result: Any) -> str:
+    def solve(self, result: Any) -> str:
         payload = result.to_record()
         query_id = str(getattr(result, "query_id", "unknown"))
         scope = getattr(result, "scope", None)
@@ -102,7 +102,7 @@ class SqliteArtifactStore:
             "external_bytes": True,
         })
 
-    def record_model_delta(self, delta: Any) -> str:
+    def delta(self, delta: Any) -> str:
         payload = {
             "delta_id": delta.delta_id,
             "parent_revision": delta.parent_revision,
@@ -128,7 +128,7 @@ class SqliteArtifactStore:
             )
         return artifact_id
 
-    def invalidate_queries(
+    def invalidate(
         self,
         query_ids: Sequence[str],
         *,
@@ -147,7 +147,7 @@ class SqliteArtifactStore:
                 delta_id=delta_id,
             )
 
-    def get_solver_result(
+    def answer(
         self,
         query_id: str,
         *,
@@ -189,7 +189,7 @@ class SqliteArtifactStore:
             ),
         }
 
-    def is_query_valid(self, query_id: str, *, model_revision: str, execution_profile_id: str) -> bool:
+    def valid(self, query_id: str, *, model_revision: str, execution_profile_id: str) -> bool:
         with self._session() as connection:
             row = connection.execute(
                 "SELECT valid, model_revision, execution_profile_id FROM solver_results "
@@ -204,7 +204,7 @@ class SqliteArtifactStore:
         artifact_id = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
         connection.execute(
             "INSERT OR IGNORE INTO artifacts (id, kind, payload, schema_version) VALUES (?, ?, ?, ?)",
-            (artifact_id, kind, json.dumps(normalized["payload"], sort_keys=True, separators=(",", ":"), default=str), STORE_SCHEMA_VERSION),
+            (artifact_id, kind, json.dumps(normalized["payload"], sort_keys=True, separators=(",", ":"), default=str), Store),
         )
         return artifact_id
 
@@ -235,7 +235,7 @@ class SqliteArtifactStore:
         with self._session() as connection:
             connection.execute("CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
             current = connection.execute("SELECT value FROM metadata WHERE key = 'schema_version'").fetchone()
-            if current is not None and int(current[0]) != STORE_SCHEMA_VERSION:
+            if current is not None and int(current[0]) != Store:
                 raise RuntimeError(f"unsupported artifact store schema: {current[0]}")
             connection.executescript(
                 """
@@ -270,7 +270,7 @@ class SqliteArtifactStore:
             if current is None:
                 connection.execute(
                     "INSERT INTO metadata (key, value) VALUES ('schema_version', ?)",
-                    (str(STORE_SCHEMA_VERSION),),
+                    (str(Store),),
                 )
 
     def _connect(self) -> sqlite3.Connection:

@@ -9,28 +9,28 @@ from typing import Any, Iterable, Iterator, Mapping
 import z3
 
 from .logic import (
-    AllOf,
-    AnyOf,
+    Every,
+    Either,
     Arithmetic,
     Constraint,
     Equal,
-    FiniteEnum,
-    IntRange,
+    Set,
+    Range,
     Literal,
-    NamedAssumption,
+    Axiom,
     Negate,
     Sort,
-    StateRelation,
+    Rel,
     Variable,
 )
-from .adapter import Capabilities
-from .ir import ResultScope
-from .result import SolverStatus
-from .schema import SCHEMA_VERSION, encode
+from .adapter import Caps
+from .ir import Scope
+from .result import Verdict
+from .schema import Version, encode
 
 
 @dataclass(frozen=True)
-class SolverLimits:
+class Quota:
     timeout_ms: int | None = None
     memory_mb: int | None = None
 
@@ -42,17 +42,17 @@ class SolverLimits:
 
 
 @dataclass(frozen=True)
-class ConstraintQuery:
+class Query:
     query_id: str
     formula: Constraint
-    scope: ResultScope | None = None
+    scope: Scope | None = None
     assumptions: tuple[str, ...] = ()
-    limits: SolverLimits = field(default_factory=SolverLimits)
+    limits: Quota = field(default_factory=Quota)
 
     def to_record(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
-            "type": "ConstraintQuery",
+            "schema_version": Version,
+            "type": "Query",
             "payload": {
                 "query_id": self.query_id,
                 "formula": self.formula.to_record(),
@@ -64,8 +64,8 @@ class ConstraintQuery:
 
 
 @dataclass(frozen=True)
-class SolverResult:
-    status: SolverStatus
+class Answer:
+    status: Verdict
     query_id: str
     backend: str
     backend_version: str
@@ -77,7 +77,7 @@ class SolverResult:
     unsat_core: tuple[str, ...] = ()
     proof_artifact: bytes | None = None
     unknown_reason: str | None = None
-    scope: ResultScope | None = None
+    scope: Scope | None = None
 
     @property
     def has_proof(self) -> bool:
@@ -85,8 +85,8 @@ class SolverResult:
 
     def to_record(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
-            "type": "SolverResult",
+            "schema_version": Version,
+            "type": "Answer",
             "payload": {
                 "status": self.status.value,
                 "query_id": self.query_id,
@@ -105,11 +105,11 @@ class SolverResult:
         }
 
 
-class UnsupportedConstraint(ValueError):
+class Unknown(ValueError):
     """Raised internally when the selected backend cannot encode a node."""
 
 
-class _Translator:
+class Map:
     def __init__(self) -> None:
         self.variables: dict[str, z3.ExprRef] = {}
 
@@ -123,7 +123,7 @@ class _Translator:
         elif variable.sort is Sort.STRING:
             expr = z3.String(variable.name)
         else:
-            raise UnsupportedConstraint(f"sort {variable.sort.value} is not supported by the Z3 adapter")
+            raise Unknown(f"sort {variable.sort.value} is not supported by the Z3 adapter")
         self.variables[variable.name] = expr
         return expr
 
@@ -134,11 +134,11 @@ class _Translator:
             return z3.IntVal(int(literal.value))
         if literal.sort is Sort.BITVECTOR:
             if expected is None or not z3.is_bv(expected):
-                raise UnsupportedConstraint("bitvector literals require a bitvector variable context")
+                raise Unknown("bitvector literals require a bitvector variable context")
             return z3.BitVecVal(int(literal.value), expected.size())
         if literal.sort is Sort.STRING:
             return z3.StringVal(str(literal.value))
-        raise UnsupportedConstraint(f"sort {literal.sort.value} is not supported by the Z3 adapter")
+        raise Unknown(f"sort {literal.sort.value} is not supported by the Z3 adapter")
 
     def expr(self, node: Constraint) -> z3.ExprRef:
         if isinstance(node, Variable):
@@ -165,13 +165,13 @@ class _Translator:
                 return left - right
             if node.operator == "*":
                 return left * right
-            raise UnsupportedConstraint(f"arithmetic operator {node.operator!r} is unsupported")
-        if isinstance(node, IntRange):
+            raise Unknown(f"arithmetic operator {node.operator!r} is unsupported")
+        if isinstance(node, Range):
             value = self.expr(node.value)
             if z3.is_bv(value):
                 return z3.And(z3.UGE(value, z3.BitVecVal(node.minimum, value.size())), z3.ULE(value, z3.BitVecVal(node.maximum, value.size())))
             return z3.And(value >= node.minimum, value <= node.maximum)
-        if isinstance(node, FiniteEnum):
+        if isinstance(node, Set):
             value = self.expr(node.value)
             terms = []
             for item in node.values:
@@ -184,16 +184,16 @@ class _Translator:
                 elif z3.is_string(value):
                     literal = z3.StringVal(str(item))
                 else:
-                    raise UnsupportedConstraint("finite enum value has unsupported sort")
+                    raise Unknown("finite enum value has unsupported sort")
                 terms.append(value == literal)
             return z3.Or(*terms)
-        if isinstance(node, AllOf):
+        if isinstance(node, Every):
             return z3.And(*(self.expr(term) for term in node.terms))
-        if isinstance(node, AnyOf):
+        if isinstance(node, Either):
             return z3.Or(*(self.expr(term) for term in node.terms))
         if isinstance(node, Negate):
             return z3.Not(self.expr(node.term))
-        if isinstance(node, StateRelation):
+        if isinstance(node, Rel):
             left = self.expr(node.left)
             right = self.expr(node.right)
             if node.relation in {"=", "=="}:
@@ -208,10 +208,10 @@ class _Translator:
                 return left > right
             if node.relation == ">=":
                 return left >= right
-            raise UnsupportedConstraint(f"relation {node.relation!r} is unsupported")
-        if isinstance(node, NamedAssumption):
+            raise Unknown(f"relation {node.relation!r} is unsupported")
+        if isinstance(node, Axiom):
             return self.expr(node.term)
-        raise UnsupportedConstraint(f"constraint node {type(node).__name__} is unsupported")
+        raise Unknown(f"constraint node {type(node).__name__} is unsupported")
 
 def _smt2(node: Constraint) -> str:
     """Stable human-readable query form; backend translation remains authoritative."""
@@ -227,51 +227,51 @@ def _smt2(node: Constraint) -> str:
         return f"(= {_smt2(node.left)} {_smt2(node.right)})"
     if isinstance(node, Arithmetic):
         return f"({node.operator} {_smt2(node.left)} {_smt2(node.right)})"
-    if isinstance(node, IntRange):
+    if isinstance(node, Range):
         return f"(and (>= {_smt2(node.value)} {node.minimum}) (<= {_smt2(node.value)} {node.maximum}))"
-    if isinstance(node, FiniteEnum):
+    if isinstance(node, Set):
         return "(or " + " ".join(f"(= {_smt2(node.value)} {item!r})" for item in node.values) + ")"
-    if isinstance(node, AllOf):
+    if isinstance(node, Every):
         return "(and " + " ".join(_smt2(term) for term in node.terms) + ")"
-    if isinstance(node, AnyOf):
+    if isinstance(node, Either):
         return "(or " + " ".join(_smt2(term) for term in node.terms) + ")"
     if isinstance(node, Negate):
         return f"(not {_smt2(node.term)})"
-    if isinstance(node, StateRelation):
+    if isinstance(node, Rel):
         return f"({node.relation} {_smt2(node.left)} {_smt2(node.right)})"
-    if isinstance(node, NamedAssumption):
+    if isinstance(node, Axiom):
         return f"(! {_smt2(node.term)} :named {node.name})"
-    raise UnsupportedConstraint(type(node).__name__)
+    raise Unknown(type(node).__name__)
 
 
 def _top_level_named_assertions(formula: Constraint) -> tuple[tuple[str, Constraint], ...]:
     """Return only named conjuncts that can safely participate in an UNSAT core.
 
-    A named wrapper nested under ``AnyOf`` or ``Negate`` is part of the formula's
+    A named wrapper nested under ``Either`` or ``Negate`` is part of the formula's
     local logic. Tracking it as a separate solver assertion would turn a nested
     disjunct into a global conjunct and change the query semantics.
     """
-    terms = formula.terms if isinstance(formula, AllOf) else (formula,)
+    terms = formula.terms if isinstance(formula, Every) else (formula,)
     return tuple(
         (term.name, term.term)
         for term in terms
-        if isinstance(term, NamedAssumption)
+        if isinstance(term, Axiom)
     )
 
 
 def _formula_without_top_level_named_terms(formula: Constraint) -> Constraint | None:
     """Remove tracked top-level conjuncts while preserving nested formula logic."""
-    if isinstance(formula, NamedAssumption):
+    if isinstance(formula, Axiom):
         return None
-    if not isinstance(formula, AllOf):
+    if not isinstance(formula, Every):
         return formula
-    remaining = tuple(term for term in formula.terms if not isinstance(term, NamedAssumption))
+    remaining = tuple(term for term in formula.terms if not isinstance(term, Axiom))
     if not remaining:
         return None
-    return remaining[0] if len(remaining) == 1 else AllOf(remaining)
+    return remaining[0] if len(remaining) == 1 else Every(remaining)
 
 
-class Z3SolverAdapter:
+class Zed:
     """Thin adapter; no Z3 objects escape through the result contract."""
 
     backend_name = "z3"
@@ -280,8 +280,8 @@ class Z3SolverAdapter:
         self.capture_proofs = capture_proofs
 
     @property
-    def capabilities(self) -> Capabilities:
-        return Capabilities(
+    def capabilities(self) -> Caps:
+        return Caps(
             symbolize=True,
             prove=self.capture_proofs,
             models=True,
@@ -290,8 +290,8 @@ class Z3SolverAdapter:
             incremental_scopes=True,
         )
 
-    def solve(self, query: ConstraintQuery, *, timeout_ms: int | None = None) -> SolverResult:
-        translator = _Translator()
+    def solve(self, query: Query, *, timeout_ms: int | None = None) -> Answer:
+        translator = Map()
         options: dict[str, Any] = {"timeout_ms": timeout_ms or query.limits.timeout_ms}
         solver = z3.Solver()
         if options["timeout_ms"] is not None:
@@ -314,9 +314,9 @@ class Z3SolverAdapter:
             for name in query.assumptions:
                 solver.assert_and_track(z3.Bool(name), name)
             query_text = root_expression.sexpr() if root_expression is not None else _smt2(query.formula)
-        except (UnsupportedConstraint, ValueError) as exc:
-            return SolverResult(
-                status=SolverStatus.UNKNOWN,
+        except (Unknown, ValueError) as exc:
+            return Answer(
+                status=Verdict.UNKNOWN,
                 query_id=query.query_id,
                 backend=self.backend_name,
                 backend_version=z3.get_version_string(),
@@ -335,8 +335,8 @@ class Z3SolverAdapter:
                 name: _model_value(model.eval(variable, model_completion=True))
                 for name, variable in sorted(translator.variables.items())
             }
-            return SolverResult(
-                status=SolverStatus.SAT,
+            return Answer(
+                status=Verdict.SAT,
                 query_id=query.query_id,
                 backend=self.backend_name,
                 backend_version=z3.get_version_string(),
@@ -354,8 +354,8 @@ class Z3SolverAdapter:
                     proof = str(solver.proof()).encode("utf-8")
                 except z3.Z3Exception:
                     proof = None
-            return SolverResult(
-                status=SolverStatus.UNSAT_BOUNDED,
+            return Answer(
+                status=Verdict.UNSAT_BOUNDED,
                 query_id=query.query_id,
                 backend=self.backend_name,
                 backend_version=z3.get_version_string(),
@@ -367,8 +367,8 @@ class Z3SolverAdapter:
                 proof_artifact=proof,
                 scope=query.scope,
             )
-        return SolverResult(
-            status=SolverStatus.UNKNOWN,
+        return Answer(
+            status=Verdict.UNKNOWN,
             query_id=query.query_id,
             backend=self.backend_name,
             backend_version=z3.get_version_string(),
@@ -381,19 +381,19 @@ class Z3SolverAdapter:
         )
 
     @contextmanager
-    def incremental(self) -> Iterator["IncrementalZ3Session"]:
-        session = IncrementalZ3Session(self)
+    def incremental(self) -> Iterator["Stack"]:
+        session = Stack(self)
         try:
             yield session
         finally:
             session.close()
 
 
-class IncrementalZ3Session:
-    def __init__(self, adapter: Z3SolverAdapter) -> None:
+class Stack:
+    def __init__(self, adapter: Zed) -> None:
         self.adapter = adapter
         self._solver = z3.Solver()
-        self._translator = _Translator()
+        self._translator = Map()
         self._constraints: list[Constraint] = []
         self._scopes: list[int] = []
         self._closed = False
@@ -408,8 +408,8 @@ class IncrementalZ3Session:
                 self._solver.add(self._translator.expr(root_formula))
             for name, assertion in tracked:
                 self._solver.assert_and_track(self._translator.expr(assertion), name)
-        except (UnsupportedConstraint, z3.Z3Exception) as exc:
-            raise UnsupportedConstraint(str(exc)) from exc
+        except (Unknown, z3.Z3Exception) as exc:
+            raise Unknown(str(exc)) from exc
         self._constraints.append(constraint)
 
     def push(self) -> None:
@@ -424,11 +424,11 @@ class IncrementalZ3Session:
         self._solver.pop()
         del self._constraints[self._scopes.pop():]
 
-    def solve(self, query_id: str = "incremental", *, scope: ResultScope | None = None) -> SolverResult:
+    def solve(self, query_id: str = "incremental", *, scope: Scope | None = None) -> Answer:
         if not self._constraints:
             raise ValueError("incremental query has no constraints")
-        formula = AllOf(tuple(self._constraints)) if len(self._constraints) > 1 else self._constraints[0]
-        query = ConstraintQuery(query_id, formula, scope=scope)
+        formula = Every(tuple(self._constraints)) if len(self._constraints) > 1 else self._constraints[0]
+        query = Query(query_id, formula, scope=scope)
         return _normalize_solver_result(
             self.adapter,
             self._solver,
@@ -445,19 +445,19 @@ class IncrementalZ3Session:
         self._constraints.clear()
         self._scopes.clear()
         self._solver = z3.Solver()
-        self._translator = _Translator()
+        self._translator = Map()
         self._closed = True
 
 
 def _normalize_solver_result(
-    adapter: Z3SolverAdapter,
+    adapter: Zed,
     solver: z3.Solver,
-    translator: _Translator,
-    query: ConstraintQuery,
+    translator: Map,
+    query: Query,
     options: Mapping[str, Any],
     query_text: str,
     named: tuple[str, ...],
-) -> SolverResult:
+) -> Answer:
     status = solver.check()
     common = {
         "query_id": query.query_id,
@@ -471,8 +471,8 @@ def _normalize_solver_result(
     }
     if status == z3.sat:
         model = solver.model()
-        return SolverResult(
-            status=SolverStatus.SAT,
+        return Answer(
+            status=Verdict.SAT,
             model={name: _model_value(model.eval(variable, model_completion=True)) for name, variable in sorted(translator.variables.items())},
             **common,
         )
@@ -483,13 +483,13 @@ def _normalize_solver_result(
                 proof = str(solver.proof()).encode("utf-8")
             except z3.Z3Exception:
                 proof = None
-        return SolverResult(
-            status=SolverStatus.UNSAT_BOUNDED,
+        return Answer(
+            status=Verdict.UNSAT_BOUNDED,
             unsat_core=tuple(sorted(str(item) for item in solver.unsat_core())),
             proof_artifact=proof,
             **common,
         )
-    return SolverResult(status=SolverStatus.UNKNOWN, unknown_reason=solver.reason_unknown(), **common)
+    return Answer(status=Verdict.UNKNOWN, unknown_reason=solver.reason_unknown(), **common)
 
 
 def _model_value(value: z3.ExprRef) -> Any:

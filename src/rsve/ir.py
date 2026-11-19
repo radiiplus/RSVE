@@ -7,8 +7,8 @@ from enum import Enum
 from typing import Any, Mapping
 
 from .logic import Constraint
-from .model import ExecutionMode, Fidelity, Provenance
-from .schema import SchemaMixin
+from .model import Mode, Fidelity, Provenance
+from .schema import Schema
 
 
 class Partiality(str, Enum):
@@ -17,7 +17,7 @@ class Partiality(str, Enum):
     UNKNOWN = "unknown"
 
 
-class RelationKind(str, Enum):
+class Relation(str, Enum):
     FUNCTION = "function"
     RELATION = "relation"
     UNKNOWN = "unknown"
@@ -32,7 +32,7 @@ class Invertibility(str, Enum):
     UNKNOWN = "unknown"
 
 
-class InformationLoss(str, Enum):
+class Loss(str, Enum):
     NONE = "none"
     POSSIBLE = "possible"
     CONFIRMED = "confirmed"
@@ -40,7 +40,7 @@ class InformationLoss(str, Enum):
 
 
 @dataclass(frozen=True)
-class TargetIdentity(SchemaMixin):
+class Identity(Schema):
     target_id: str
     runtime: str
     runtime_version: str
@@ -58,7 +58,7 @@ class TargetIdentity(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Representation(SchemaMixin):
+class Representation(Schema):
     representation_id: str
     type_name: str
     encoding: str = "opaque"
@@ -70,14 +70,14 @@ class Representation(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class TypedValue(SchemaMixin):
+class Cell(Schema):
     value: Any
     representation_id: str
     provenance: Provenance = field(default_factory=lambda: Provenance("model"))
 
 
 @dataclass(frozen=True)
-class Evidence(SchemaMixin):
+class Evidence(Schema):
     evidence_id: str
     tier: Fidelity
     source: str
@@ -87,23 +87,23 @@ class Evidence(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class StateIdentity(SchemaMixin):
+class Key(Schema):
     state_id: str
     parent_state_id: str | None = None
     scope: str = "session"
 
 
 @dataclass(frozen=True)
-class StateCheckpoint(SchemaMixin):
-    identity: StateIdentity
+class Checkpoint(Schema):
+    identity: Key
     values: Mapping[str, Any]
-    mode: ExecutionMode
+    mode: Mode
     tier: Fidelity
     evidence: tuple[Evidence, ...] = ()
 
 
 @dataclass(frozen=True)
-class Interaction(SchemaMixin):
+class Interaction(Schema):
     ordinal: int
     entry_point: str
     request: Mapping[str, Any]
@@ -117,16 +117,16 @@ class Interaction(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Transform(SchemaMixin):
+class Transform(Schema):
     transform_id: str
     input_representation: str
     output_representation: str
     semantics_ref: str
     semantics_version: str
     partiality: Partiality
-    relation: RelationKind
+    relation: Relation
     invertibility: Invertibility
-    information_loss: InformationLoss
+    information_loss: Loss
     state_effects: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
 
@@ -136,7 +136,7 @@ class Transform(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Recognizer(SchemaMixin):
+class Recognizer(Schema):
     recognizer_id: str
     input_representation: str
     actual_predicate_ref: str
@@ -148,7 +148,7 @@ class Recognizer(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Effect(SchemaMixin):
+class Effect(Schema):
     effect_id: str
     observable: str
     state_effects: tuple[str, ...] = ()
@@ -156,7 +156,7 @@ class Effect(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Contract(SchemaMixin):
+class Contract(Schema):
     contract_id: str
     intended_predicate_ref: str
     observed_enforcement_ref: str
@@ -165,7 +165,7 @@ class Contract(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Assumption(SchemaMixin):
+class Assumption(Schema):
     assumption_id: str
     statement: str
     tier: Fidelity
@@ -174,7 +174,7 @@ class Assumption(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class Transition(SchemaMixin):
+class Transition(Schema):
     transition_id: str
     entry_point: str
     input_representation: str
@@ -184,36 +184,36 @@ class Transition(SchemaMixin):
     effect_ids: tuple[str, ...] = ()
     guard_ref: str | None = None
     partiality: Partiality = Partiality.UNKNOWN
-    relation: RelationKind = RelationKind.UNKNOWN
+    relation: Relation = Relation.UNKNOWN
     state_effects: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
 
 
 @dataclass(frozen=True)
-class ModelRevision(SchemaMixin):
+class Revision(Schema):
     revision_id: str
     parent_revision_id: str | None
-    target: TargetIdentity
+    target: Identity
     transitions: tuple[Transition, ...]
     assumptions: tuple[Assumption, ...] = ()
     created_by: str = "rsve"
 
 
 @dataclass(frozen=True)
-class ResultScope(SchemaMixin):
+class Scope(Schema):
     target_id: str
     build_hash: str
     model_revision_id: str
     max_depth: int
     max_states: int
     environment: Mapping[str, str] = field(default_factory=dict)
-    mode: ExecutionMode = ExecutionMode.ABSTRACT
+    mode: Mode = Mode.ABSTRACT
     tier: Fidelity = Fidelity.MODELED
     execution_profile_id: str = "unknown"
 
 
 @dataclass(frozen=True)
-class EnvironmentObservation(SchemaMixin):
+class Fact(Schema):
     facts: Mapping[str, str]
     unknown: tuple[str, ...] = ()
     redacted_keys: tuple[str, ...] = ()
@@ -223,29 +223,29 @@ class EnvironmentObservation(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class TraceRecord(SchemaMixin):
+class Record(Schema):
     trace_id: str
     ordinal: int
     interaction: Interaction
-    mode: ExecutionMode
+    mode: Mode
     tier: Fidelity
     state_checkpoint_ids: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
 
 
 @dataclass(frozen=True)
-class ObjectiveCheckpoint(SchemaMixin):
+class Mark(Schema):
     checkpoint_id: str
     predicate: Constraint
     evidence: tuple[Evidence, ...] = ()
 
 
 @dataclass(frozen=True)
-class ObjectiveAst(SchemaMixin):
+class Ast(Schema):
     objective_id: str
     scope: str
     postcondition: Constraint
-    checkpoints: tuple[ObjectiveCheckpoint, ...] = ()
+    checkpoints: tuple[Mark, ...] = ()
     assumptions: tuple[str, ...] = ()
 
 

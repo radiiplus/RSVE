@@ -7,14 +7,14 @@ from enum import Enum
 from types import UnionType
 from typing import Any, TypeVar, Union, get_args, get_origin, get_type_hints
 
-SCHEMA_VERSION = "rsve.schema/1"
+Version = "rsve.schema/1"
 T = TypeVar("T")
 
 
 def encode(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
-    if hasattr(value, "to_record") and not isinstance(value, SchemaMixin):
+    if hasattr(value, "to_record") and not isinstance(value, Schema):
         return {"__record__": value.to_record()}
     if isinstance(value, bytes):
         return {"__bytes__": value.hex()}
@@ -71,19 +71,19 @@ def _decode(annotation: Any, value: Any) -> Any:
     return value
 
 
-class SchemaMixin:
+class Schema:
     """Mixin for records with an explicit schema version and stable type name."""
 
     def to_record(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": Version,
             "type": type(self).__name__,
             "payload": encode(self),
         }
 
     @classmethod
     def from_record(cls: type[T], record: dict[str, Any]) -> T:
-        if record.get("schema_version") != SCHEMA_VERSION:
+        if record.get("schema_version") != Version:
             raise ValueError(f"unsupported schema version: {record.get('schema_version')!r}")
         if record.get("type") != cls.__name__:
             raise ValueError(f"record type {record.get('type')!r} is not {cls.__name__!r}")

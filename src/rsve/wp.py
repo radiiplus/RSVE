@@ -8,29 +8,29 @@ from enum import Enum
 from typing import Any, Mapping, Sequence
 
 from .logic import (
-    AllOf,
-    AnyOf,
+    Every,
+    Either,
     Arithmetic,
     Constraint,
     Equal,
-    FiniteEnum,
-    IntRange,
+    Set,
+    Range,
     Literal,
-    NamedAssumption,
+    Axiom,
     Negate,
-    StateRelation,
+    Rel,
     Variable,
 )
-from .schema import SCHEMA_VERSION, SchemaMixin
+from .schema import Version, Schema
 
 
-class WeakestPreconditionStatus(str, Enum):
+class Truth(str, Enum):
     EXACT = "EXACT"
     UNKNOWN = "UNKNOWN"
 
 
 @dataclass(frozen=True)
-class SymbolicTransition(SchemaMixin):
+class Symbolic(Schema):
     """A platform-neutral deterministic transition relation.
 
     Variables name pre-state values. ``assignments`` maps state variables to
@@ -54,8 +54,8 @@ class SymbolicTransition(SchemaMixin):
 
     def to_record(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
-            "type": "SymbolicTransition",
+            "schema_version": Version,
+            "type": "Symbolic",
             "payload": {
                 "transition_id": self.transition_id,
                 "entry_point": self.entry_point,
@@ -69,8 +69,8 @@ class SymbolicTransition(SchemaMixin):
         }
 
     @classmethod
-    def from_record(cls, record: dict[str, Any]) -> "SymbolicTransition":
-        if record.get("schema_version") != SCHEMA_VERSION or record.get("type") != "SymbolicTransition":
+    def from_record(cls, record: dict[str, Any]) -> "Symbolic":
+        if record.get("schema_version") != Version or record.get("type") != "Symbolic":
             raise ValueError("unsupported symbolic transition schema version or type")
         payload = record.get("payload")
         if not isinstance(payload, dict):
@@ -88,8 +88,8 @@ class SymbolicTransition(SchemaMixin):
 
 
 @dataclass(frozen=True)
-class WeakestPreconditionResult:
-    status: WeakestPreconditionStatus
+class Preimage:
+    status: Truth
     postcondition: Constraint
     precondition: Constraint | None
     transitions: tuple[str, ...]
@@ -99,12 +99,12 @@ class WeakestPreconditionResult:
 
     @property
     def exact(self) -> bool:
-        return self.status is WeakestPreconditionStatus.EXACT
+        return self.status is Truth.EXACT
 
     def to_record(self) -> dict[str, Any]:
         return {
-            "schema_version": SCHEMA_VERSION,
-            "type": "WeakestPreconditionResult",
+            "schema_version": Version,
+            "type": "Preimage",
             "payload": {
                 "status": self.status.value,
                 "postcondition": self.postcondition.to_record(),
@@ -117,20 +117,20 @@ class WeakestPreconditionResult:
         }
 
 
-class WeakestPreconditionEngine:
+class WP:
     """Compose substitutions backwards for exact supported transitions."""
 
     def derive(
         self,
         postcondition: Constraint,
-        transitions: Sequence[SymbolicTransition],
-    ) -> WeakestPreconditionResult:
+        transitions: Sequence[Symbolic],
+    ) -> Preimage:
         current = postcondition
         assumptions: list[str] = []
         for transition in reversed(tuple(transitions)):
             if not transition.deterministic or transition.relation != "function":
-                return WeakestPreconditionResult(
-                    WeakestPreconditionStatus.UNKNOWN,
+                return Preimage(
+                    Truth.UNKNOWN,
                     postcondition,
                     None,
                     tuple(item.transition_id for item in transitions),
@@ -139,11 +139,11 @@ class WeakestPreconditionEngine:
                     tuple(assumptions) + transition.assumptions,
                 )
             try:
-                current = AllOf((transition.guard, _substitute(current, transition.assignments)))
+                current = Every((transition.guard, _substitute(current, transition.assignments)))
                 assumptions.extend(transition.assumptions)
-            except UnsupportedSymbolicConstraint as exc:
-                return WeakestPreconditionResult(
-                    WeakestPreconditionStatus.UNKNOWN,
+            except Opaque as exc:
+                return Preimage(
+                    Truth.UNKNOWN,
                     postcondition,
                     None,
                     tuple(item.transition_id for item in transitions),
@@ -151,8 +151,8 @@ class WeakestPreconditionEngine:
                     str(exc),
                     tuple(assumptions) + transition.assumptions,
                 )
-        return WeakestPreconditionResult(
-            WeakestPreconditionStatus.EXACT,
+        return Preimage(
+            Truth.EXACT,
             postcondition,
             current,
             tuple(item.transition_id for item in transitions),
@@ -160,14 +160,14 @@ class WeakestPreconditionEngine:
             assumptions=tuple(assumptions),
         )
 
-    def _query(self, postcondition: Constraint, transitions: Sequence[SymbolicTransition]) -> str:
+    def _query(self, postcondition: Constraint, transitions: Sequence[Symbolic]) -> str:
         return json.dumps({
             "postcondition": postcondition.to_record(),
             "transitions": [item.to_record() for item in transitions],
         }, sort_keys=True, separators=(",", ":"))
 
 
-class UnsupportedSymbolicConstraint(ValueError):
+class Opaque(ValueError):
     pass
 
 
@@ -180,18 +180,18 @@ def _substitute(node: Constraint, assignments: Mapping[str, Constraint]) -> Cons
         return Equal(_substitute(node.left, assignments), _substitute(node.right, assignments))
     if isinstance(node, Arithmetic):
         return Arithmetic(node.operator, _substitute(node.left, assignments), _substitute(node.right, assignments))
-    if isinstance(node, IntRange):
-        return IntRange(_substitute(node.value, assignments), node.minimum, node.maximum)
-    if isinstance(node, FiniteEnum):
-        return FiniteEnum(_substitute(node.value, assignments), node.values)
-    if isinstance(node, AllOf):
-        return AllOf(tuple(_substitute(item, assignments) for item in node.terms))
-    if isinstance(node, AnyOf):
-        return AnyOf(tuple(_substitute(item, assignments) for item in node.terms))
+    if isinstance(node, Range):
+        return Range(_substitute(node.value, assignments), node.minimum, node.maximum)
+    if isinstance(node, Set):
+        return Set(_substitute(node.value, assignments), node.values)
+    if isinstance(node, Every):
+        return Every(tuple(_substitute(item, assignments) for item in node.terms))
+    if isinstance(node, Either):
+        return Either(tuple(_substitute(item, assignments) for item in node.terms))
     if isinstance(node, Negate):
         return Negate(_substitute(node.term, assignments))
-    if isinstance(node, StateRelation):
-        return StateRelation(_substitute(node.left, assignments), node.relation, _substitute(node.right, assignments))
-    if isinstance(node, NamedAssumption):
-        return NamedAssumption(node.name, _substitute(node.term, assignments))
-    raise UnsupportedSymbolicConstraint(f"unsupported constraint node: {type(node).__name__}")
+    if isinstance(node, Rel):
+        return Rel(_substitute(node.left, assignments), node.relation, _substitute(node.right, assignments))
+    if isinstance(node, Axiom):
+        return Axiom(node.name, _substitute(node.term, assignments))
+    raise Opaque(f"unsupported constraint node: {type(node).__name__}")

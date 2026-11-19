@@ -15,31 +15,31 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from ..adapter import CapabilityReport, Capabilities
-from .linux import LinuxEnvironmentAdapter
-from ..ir import EnvironmentObservation, Evidence, TargetIdentity
-from ..model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
-from .contract import EvmCapabilities, EvmExecutionContext
-from ..graph import AnalysisGraph, CapabilityManifest, PortDirection, ProfileInstance, Provenance as GraphProvenance, TypedPort
+from ..adapter import Offer, Caps
+from .linux import Linux
+from ..ir import Fact, Evidence, Identity
+from ..model import Authorization, Entry, Mode, Fidelity, Provenance, State, Event
+from .contract import Fork, Context
+from ..graph import Graph, Manifest, Direction, Persona, Provenance as GraphProvenance, Port
 
 
 @dataclass(frozen=True)
-class EvmReplayRun:
+class Run:
     run_id: str
-    events: tuple[TraceEvent, ...]
+    events: tuple[Event, ...]
     outcome: Mapping[str, Any]
     outcome_hash: str
 
 
 @dataclass(frozen=True)
-class EvmReplayReport:
-    runs: tuple[EvmReplayRun, ...]
+class Report:
+    runs: tuple[Run, ...]
     stable: bool
     replayability: str = "partially_replayable"
     limitations: tuple[str, ...] = ()
 
 
-class EvmTargetAdapter:
+class Evm:
     """Run one explicitly supplied Solidity fixture on a local Anvil chain."""
 
     def __init__(
@@ -73,8 +73,8 @@ class EvmTargetAdapter:
         self._runtime_version = "unknown"
 
     @property
-    def evm_capabilities(self) -> EvmCapabilities:
-        return EvmCapabilities(
+    def caps(self) -> Fork:
+        return Fork(
             local_chain=True,
             transaction_entries=True,
             call_entries=True,
@@ -93,9 +93,9 @@ class EvmTargetAdapter:
         )
 
     @property
-    def capabilities(self) -> Capabilities:
-        return Capabilities(
-            discover_entries=True,
+    def capabilities(self) -> Caps:
+        return Caps(
+            discover=True,
             invoke=True,
             replay=True,
             capture_state=True,
@@ -103,20 +103,20 @@ class EvmTargetAdapter:
             snapshot=True,
         )
 
-    def capability_report(self) -> CapabilityReport:
-        return CapabilityReport(
+    def offer(self) -> Offer:
+        return Offer(
             supported_entry_types=frozenset({"transaction", "call"}),
             supported_event_hooks=frozenset({"transaction.submit", "transaction.receipt", "call.outcome", "evm.log"}),
             state_capture=True,
             snapshot_reset=True,
             deterministic_replay=True,
-            limitations=self.evm_capabilities.limitations,
+            limitations=self.caps.limitations,
             side_effects=("local Anvil process and in-memory chain state",),
         )
 
-    def capability_manifest(self) -> CapabilityManifest:
-        report = self.capability_report()
-        return CapabilityManifest(
+    def manifest(self) -> Manifest:
+        report = self.offer()
+        return Manifest(
             extension_id="rsve.evm",
             namespace="rsve.evm/local-execution",
             version="1",
@@ -126,13 +126,13 @@ class EvmTargetAdapter:
             provenance=GraphProvenance("evm-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
 
-    def analysis_profile(self) -> ProfileInstance:
+    def profile(self) -> Persona:
         identity = self.identity()
-        observation = self.environment_observation()
+        observation = self.observe()
         scope = dict(observation.facts)
         scope["target_id"] = identity["target_id"]
         scope["forge_version"] = self._tool_version(self.forge_command)
-        return ProfileInstance(
+        return Persona(
             profile_id=f"{identity['target_id']}:{identity['build_hash']}",
             family="blockchain",
             component="evm.execution",
@@ -140,23 +140,23 @@ class EvmTargetAdapter:
             version=identity["runtime_version"],
             build_digest=identity["build_hash"],
             execution_scope=scope,
-            feature_set=frozenset(self.capability_report().supported_event_hooks),
+            feature_set=frozenset(self.offer().supported_event_hooks),
             provenance=GraphProvenance("evm-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
 
-    def analysis_graph(self) -> AnalysisGraph:
+    def graph(self) -> Graph:
         identity = self.identity()
-        profile = self.analysis_profile()
-        graph = AnalysisGraph.for_profile(
+        profile = self.profile()
+        graph = Graph.for_profile(
             profile,
             graph_id=f"evm:{identity['target_id']}",
             region_id="evm.target",
             region_name="EVM target",
-            capabilities=(self.capability_manifest(),),
+            capabilities=(self.manifest(),),
         )
-        for entry in self.discover_entries():
-            graph = graph.add_port(TypedPort(f"entry:{entry.name}:input", "evm.target", entry.name, PortDirection.INPUT, "transaction-call", "EvmCall"))
-            graph = graph.add_port(TypedPort(f"entry:{entry.name}:output", "evm.target", entry.name, PortDirection.OUTPUT, "transaction-result", "EvmResult"))
+        for entry in self.discover():
+            graph = graph.port(Port(f"entry:{entry.name}:input", "evm.target", entry.name, Direction.INPUT, "transaction-call", "EvmCall"))
+            graph = graph.port(Port(f"entry:{entry.name}:output", "evm.target", entry.name, Direction.OUTPUT, "transaction-result", "EvmResult"))
         return graph
 
     def identity(self) -> Mapping[str, str]:
@@ -172,9 +172,9 @@ class EvmTargetAdapter:
             "adapter_version": "1",
         }
 
-    def target_identity(self) -> TargetIdentity:
+    def target(self) -> Identity:
         identity = self.identity()
-        return TargetIdentity(
+        return Identity(
             target_id=identity["target_id"],
             runtime=identity["runtime"],
             runtime_version=identity["runtime_version"],
@@ -187,10 +187,10 @@ class EvmTargetAdapter:
             provenance=Provenance("evm-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
 
-    def environment_observation(self) -> EnvironmentObservation:
+    def observe(self) -> Fact:
         self._detect_runtime()
-        context = self.chain_context() if self._process and self._process.poll() is None else None
-        profile = LinuxEnvironmentAdapter(self.fixture.parent).observe() if platform.system().lower() == "linux" else EnvironmentObservation(
+        context = self.context() if self._process and self._process.poll() is None else None
+        profile = Linux(self.fixture.parent).observe() if platform.system().lower() == "linux" else Fact(
             facts={"os": platform.system().lower(), "kernel": platform.release()},
             unknown=("environment_profile", "memory_model", "scheduler", "snapshot_scope"),
         )
@@ -203,7 +203,7 @@ class EvmTargetAdapter:
             "rpc": f"http://127.0.0.1:{self.port}",
             "mining": "automined",
         })
-        return EnvironmentObservation(
+        return Fact(
             facts=facts,
             unknown=tuple(sorted(set(profile.unknown) | {"host_clock", "external_services"})),
             redacted_keys=profile.redacted_keys + ("private_keys",),
@@ -253,13 +253,13 @@ class EvmTargetAdapter:
             self._compile_dir.cleanup()
             self._compile_dir = None
 
-    def declared_entries(self) -> tuple[EntryPoint, ...]:
+    def declared_entries(self) -> tuple[Entry, ...]:
         return (
-            EntryPoint("increment", capabilities=frozenset({"transaction"}), provenance=Provenance("evm-fixture", "1", (str(self.fixture),), Fidelity.MODELED)),
-            EntryPoint("read", capabilities=frozenset({"call"}), provenance=Provenance("evm-fixture", "1", (str(self.fixture),), Fidelity.MODELED)),
+            Entry("increment", capabilities=frozenset({"transaction"}), provenance=Provenance("evm-fixture", "1", (str(self.fixture),), Fidelity.MODELED)),
+            Entry("read", capabilities=frozenset({"call"}), provenance=Provenance("evm-fixture", "1", (str(self.fixture),), Fidelity.MODELED)),
         )
 
-    def discover_entries(self) -> tuple[EntryPoint, ...]:
+    def discover(self) -> tuple[Entry, ...]:
         self.prepare()
         return self.declared_entries()
 
@@ -273,19 +273,19 @@ class EvmTargetAdapter:
         if isinstance(snapshot, dict):
             snapshot["snapshot_id"] = self._rpc("evm_snapshot")
 
-    def invoke(self, entry_point: str, request: Mapping[str, Any], authorization: Authorization) -> tuple[TraceEvent, ...]:
+    def invoke(self, entry_point: str, request: Mapping[str, Any], authorization: Authorization) -> tuple[Event, ...]:
         if not authorization.permits(self.target_id, self.scope):
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
-        return self.execute_trace(({"entry_point": entry_point, "request": dict(request)},), authorization)
+        return self.trace(({"entry_point": entry_point, "request": dict(request)},), authorization)
 
-    def execute_trace(self, interactions: Sequence[Mapping[str, Any]], authorization: Authorization) -> tuple[TraceEvent, ...]:
+    def trace(self, interactions: Sequence[Mapping[str, Any]], authorization: Authorization) -> tuple[Event, ...]:
         if not authorization.permits(self.target_id, self.scope):
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
         self._run_counter += 1
         run_id = f"run-{self._run_counter:06d}"
         trace_id = "trace-" + self._digest(list(interactions))[:20]
-        events: list[TraceEvent] = []
+        events: list[Event] = []
         for interaction in interactions:
             entry = str(interaction["entry_point"])
             request = dict(interaction.get("request", {}))
@@ -320,10 +320,10 @@ class EvmTargetAdapter:
             self._last_output = {"outcome": {"accepted": accepted, "count": after}, "receipt": dict(receipt or {})}
         return tuple(events)
 
-    def collect_output(self) -> Mapping[str, Any]:
+    def output(self) -> Mapping[str, Any]:
         return dict(self._last_output)
 
-    def replay(self, interactions: Sequence[Mapping[str, Any]], *, runs: int = 1, authorization: Authorization | None = None) -> EvmReplayReport:
+    def replay(self, interactions: Sequence[Mapping[str, Any]], *, runs: int = 1, authorization: Authorization | None = None) -> Report:
         if runs <= 0:
             raise ValueError("runs must be positive")
         authorization = authorization or Authorization("evm-replay", frozenset({self.scope}), frozenset({self.target_id}))
@@ -331,19 +331,19 @@ class EvmTargetAdapter:
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
         baseline = self._baseline or self.snapshot()
-        reports: list[EvmReplayRun] = []
+        reports: list[Run] = []
         for _ in range(runs):
             self.reset(baseline)
-            events = self.execute_trace(interactions, authorization)
+            events = self.trace(interactions, authorization)
             outcome = dict(self._last_output.get("outcome", {}))
-            reports.append(EvmReplayRun(events[0].run_id if events else f"run-{self._run_counter:06d}", events, outcome, self._digest(outcome)))
+            reports.append(Run(events[0].run_id if events else f"run-{self._run_counter:06d}", events, outcome, self._digest(outcome)))
         signatures = {self._digest({"events": [self._semantic_event(event) for event in run.events], "outcome": run.outcome}) for run in reports}
-        return EvmReplayReport(tuple(reports), len(signatures) == 1, "partially_replayable", self.capability_report().limitations)
+        return Report(tuple(reports), len(signatures) == 1, "partially_replayable", self.offer().limitations)
 
-    def chain_context(self) -> EvmExecutionContext:
+    def context(self) -> Context:
         block_number = int(self._rpc("eth_blockNumber"), 16)
         block = self._rpc("eth_getBlockByNumber", [hex(block_number), False])
-        return EvmExecutionContext(
+        return Context(
             chain_id=str(int(self._rpc("eth_chainId"), 16)),
             block_number=block_number,
             timestamp=int(block["timestamp"], 16) if block and block.get("timestamp") else None,
@@ -415,10 +415,10 @@ class EvmTargetAdapter:
             raise RuntimeError(payload["error"].get("message", payload["error"]))
         return payload.get("result")
 
-    def _event(self, operation: str, entry: str, request: Mapping[str, Any], before: int, after: int, observation: Mapping[str, Any], run_id: str, trace_id: str, ordering: int, component: str, guard_result: bool) -> TraceEvent:
+    def _event(self, operation: str, entry: str, request: Mapping[str, Any], before: int, after: int, observation: Mapping[str, Any], run_id: str, trace_id: str, ordering: int, component: str, guard_result: bool) -> Event:
         before_state = State({"count": before})
         after_state = State({"count": after})
-        return TraceEvent(
+        return Event(
             operation=operation,
             entry_point=entry,
             request=dict(request),
@@ -426,7 +426,7 @@ class EvmTargetAdapter:
             after=after_state,
             observation=dict(observation),
             fidelity=Fidelity.OBSERVED,
-            mode=ExecutionMode.INSTRUMENTED,
+            mode=Mode.INSTRUMENTED,
             event_id="event-" + self._digest({"trace": trace_id, "ordering": ordering, "operation": operation, "entry": entry, "before": before, "after": after})[:20],
             run_id=run_id,
             trace_id=trace_id,
@@ -436,7 +436,7 @@ class EvmTargetAdapter:
             state_before_id="state-" + self._digest(before_state.canonical())[:20],
             state_after_id="state-" + self._digest(after_state.canonical())[:20],
             guard_result=guard_result,
-            environment=dict(self.environment_observation().facts),
+            environment=dict(self.observe().facts),
             evidence_source="anvil.rpc",
             ordering=ordering,
         )
@@ -473,5 +473,5 @@ class EvmTargetAdapter:
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
 
     @staticmethod
-    def _semantic_event(event: TraceEvent) -> dict[str, Any]:
+    def _semantic_event(event: Event) -> dict[str, Any]:
         return {"operation": event.operation, "entry_point": event.entry_point, "request": event.request, "before": event.before.canonical(), "after": event.after.canonical(), "observation": event.observation, "guard_result": event.guard_result}
