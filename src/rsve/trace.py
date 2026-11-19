@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
-from .model import ExecutionMode, Fidelity, State, TraceEvent
+from .model import Decision, ExecutionMode, Fidelity, State, TraceEvent
 
 
 class OpenTelemetryAdapter:
@@ -36,6 +36,13 @@ class OpenTelemetryAdapter:
                 "rsve.state_before_id": event.state_before_id,
                 "rsve.state_after_id": event.state_after_id,
                 "rsve.guard_result": event.guard_result,
+                "rsve.decision": event.decision.value,
+                "rsve.terminal": event.terminal,
+                "rsve.effects": json.dumps(event.effects),
+                "rsve.reads": json.dumps(sorted(event.reads)),
+                "rsve.writes": json.dumps(sorted(event.writes)),
+                "rsve.reaction": json.dumps(event.reaction, sort_keys=True, default=str),
+                "rsve.uncertainty": json.dumps(event.uncertainty),
                 "rsve.request": json.dumps(event.request, sort_keys=True, default=str),
                 "rsve.before": json.dumps(event.before.canonical(), sort_keys=True, default=str),
                 "rsve.after": json.dumps(event.after.canonical(), sort_keys=True, default=str),
@@ -93,6 +100,13 @@ class OpenTelemetryAdapter:
                 state_before_id=attrs.get("rsve.state_before_id", ""),
                 state_after_id=attrs.get("rsve.state_after_id", ""),
                 guard_result=attrs.get("rsve.guard_result"),
+                decision=Decision(attrs.get("rsve.decision", Decision.ACCEPT.value)),
+                terminal=bool(attrs.get("rsve.terminal", False)),
+                effects=tuple(json.loads(attrs.get("rsve.effects", "[]"))),
+                reads=frozenset(json.loads(attrs.get("rsve.reads", "[]"))),
+                writes=frozenset(json.loads(attrs.get("rsve.writes", "[]"))),
+                reaction=json.loads(attrs.get("rsve.reaction", "{}")),
+                uncertainty=tuple(json.loads(attrs.get("rsve.uncertainty", "[]"))),
                 evidence_source=attrs.get("rsve.evidence_source", ""),
                 evidence_refs=tuple(json.loads(attrs.get("rsve.evidence_refs", "[]"))),
                 timestamp_ns=span.get("startTimeUnixNano"),

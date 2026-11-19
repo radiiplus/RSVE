@@ -44,6 +44,16 @@ class ExecutionMode(str, Enum):
     ABSTRACT = "abstract"
 
 
+class Decision(str, Enum):
+    """Classification of a modeled transition branch."""
+
+    ACCEPT = "ACCEPT"
+    REJECT = "REJECT"
+    UNDEFINED = "UNDEFINED"
+    ERROR = "ERROR"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass(frozen=True)
 class Provenance:
     source: str
@@ -105,6 +115,68 @@ class EntryPoint:
 
 
 @dataclass(frozen=True)
+class Outcome:
+    """One possible successor of an operation, including rejected branches."""
+
+    decision: Decision
+    after: State
+    observation: Mapping[str, Value] = field(default_factory=dict)
+    effects: tuple[str, ...] = ()
+    reads: frozenset[str] = frozenset()
+    writes: frozenset[str] = frozenset()
+    must: frozenset[str] = frozenset()
+    may: frozenset[str] = frozenset()
+    keep: frozenset[str] = frozenset()
+    unknown: frozenset[str] = frozenset()
+    environment: Mapping[str, Value] = field(default_factory=dict)
+    control: str | None = None
+    terminal: bool = False
+    guard: bool | None = None
+    fidelity: Fidelity = Fidelity.MODELED
+    mode: ExecutionMode = ExecutionMode.ABSTRACT
+    evidence: tuple[str, ...] = ()
+    uncertainty: tuple[str, ...] = ()
+    id: str = ""
+
+    def __iter__(self):
+        """Keep tuple-unpacking compatible with the original execute API."""
+        yield self.after
+        yield self.observation
+
+    def event(
+        self,
+        operation: str,
+        entry: str,
+        request: Request,
+        before: State,
+        *,
+        component: str = "",
+        order: int = 0,
+    ) -> "TraceEvent":
+        return TraceEvent(
+            operation=operation,
+            entry_point=entry,
+            request=dict(request),
+            before=before,
+            after=self.after,
+            observation=dict(self.observation),
+            fidelity=self.fidelity,
+            mode=self.mode,
+            component=component,
+            guard_result=self.guard,
+            decision=self.decision,
+            terminal=self.terminal,
+            effects=self.effects,
+            reads=self.reads,
+            writes=self.writes,
+            reaction=dict(self.environment),
+            evidence_refs=self.evidence,
+            uncertainty=self.uncertainty,
+            ordering=order,
+        )
+
+
+@dataclass(frozen=True)
 class Operation:
     """A modeled state transition, kept independent of any runtime."""
 
@@ -121,6 +193,18 @@ class Operation:
     mode: ExecutionMode = ExecutionMode.ABSTRACT
     component: str = ""
     symbolic_transition: Any | None = None
+    relation: Callable[[State, Request], Iterable[Outcome]] | None = None
+    deny: StateUpdate | None = None
+    watch: Observation | None = None
+    loss: tuple[str, ...] = ()
+    env: Mapping[str, Value] = field(default_factory=dict)
+    stop: bool = True
+    reads: frozenset[str] = frozenset()
+    writes: frozenset[str] = frozenset()
+    must: frozenset[str] = frozenset()
+    may: frozenset[str] = frozenset()
+    keep: frozenset[str] = frozenset()
+    unknown: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         for transform in self.transforms:
@@ -132,12 +216,78 @@ class Operation:
             if any(not hasattr(recognizer, field_name) for field_name in required):
                 raise TypeError("operation recognizers must use canonical ir.Recognizer records")
 
-    def execute(self, state: State, request: Request) -> tuple[State, Mapping[str, Value]] | None:
-        if not self.guard(state, request):
-            return None
-        next_state = self.apply(state, request)
-        observation = dict(self.observe(state, request, next_state))
-        return next_state, observation
+    def branches(self, state: State, request: Request) -> tuple[Outcome, ...]:
+        if self.relation is not None:
+            try:
+                values = self.relation(state, request)
+                if isinstance(values, Outcome):
+                    values = (values,)
+                return tuple(values)
+            except Exception as exc:  # model failures remain explicit outcomes
+                return (self._error(state, exc),)
+        try:
+            accepted = bool(self.guard(state, request))
+        except Exception as exc:
+            return (self._error(state, exc),)
+        if not accepted:
+            next_state = self.deny(state, request) if self.deny is not None else state
+            observation = dict(self.watch(state, request, next_state)) if self.watch else {}
+            return (Outcome(
+                decision=Decision.REJECT,
+                after=next_state,
+                observation=observation,
+                effects=self.loss,
+                reads=self.reads,
+                writes=self.writes | self.must | self.may,
+                must=self.must,
+                may=self.may,
+                keep=self.keep,
+                unknown=self.unknown,
+                environment=dict(self.env),
+                terminal=self.stop,
+                guard=False,
+                fidelity=self.fidelity,
+                mode=self.mode,
+                evidence=(self.provenance,),
+            ),)
+        try:
+            next_state = self.apply(state, request)
+            observation = dict(self.observe(state, request, next_state))
+        except Exception as exc:
+            return (self._error(state, exc),)
+        return (Outcome(
+            decision=Decision.ACCEPT,
+            after=next_state,
+            observation=observation,
+            effects=self.effects,
+            reads=self.reads,
+            writes=self.writes | self.must | self.may,
+            must=self.must,
+            may=self.may,
+            keep=self.keep,
+            unknown=self.unknown,
+            environment=dict(self.env),
+            guard=True,
+            fidelity=self.fidelity,
+            mode=self.mode,
+            evidence=(self.provenance,),
+        ),)
+
+    def execute(self, state: State, request: Request) -> Outcome:
+        """Return the first modeled branch; use branches for relations."""
+        return self.branches(state, request)[0]
+
+    def _error(self, state: State, error: Exception) -> Outcome:
+        return Outcome(
+            decision=Decision.ERROR,
+            after=state,
+            terminal=True,
+            guard=None,
+            fidelity=self.fidelity,
+            mode=self.mode,
+            evidence=(self.provenance,),
+            uncertainty=(f"{type(error).__name__}: {error}",),
+        )
 
 
 @dataclass(frozen=True)
@@ -166,6 +316,17 @@ class TraceEvent:
     timestamp_ns: int | None = None
     ordering: int = 0
     correlation_uncertain: bool = False
+    decision: Decision = Decision.ACCEPT
+    terminal: bool = False
+    effects: tuple[str, ...] = ()
+    reads: frozenset[str] = frozenset()
+    writes: frozenset[str] = frozenset()
+    reaction: dict[str, Value] = field(default_factory=dict)
+    uncertainty: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.guard_result is False and self.decision is Decision.ACCEPT:
+            object.__setattr__(self, "decision", Decision.REJECT)
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -193,6 +354,13 @@ class TraceEvent:
             "timestamp_ns": self.timestamp_ns,
             "ordering": self.ordering,
             "correlation_uncertain": self.correlation_uncertain,
+            "decision": self.decision.value,
+            "terminal": self.terminal,
+            "effects": list(self.effects),
+            "reads": sorted(self.reads),
+            "writes": sorted(self.writes),
+            "reaction": _canonical(self.reaction),
+            "uncertainty": list(self.uncertainty),
         }
 
 

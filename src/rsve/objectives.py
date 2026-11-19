@@ -135,12 +135,14 @@ class GuardInvariant(Predicate):
     expected: bool = True
 
     def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
-        return all(
-            event.guard_result is None
-            or (self.entry_point is not None and event.entry_point != self.entry_point)
-            or event.guard_result is self.expected
-            for event in trace
+        matched = tuple(
+            event for event in trace
+            if event.guard_result is not None
+            and (self.entry_point is None or event.entry_point == self.entry_point)
         )
+        if self.expected is False and not matched:
+            return False
+        return all(event.guard_result is self.expected for event in matched)
 
     def to_dict(self) -> dict[str, Any]:
         return {"entry_point": self.entry_point, "expected": self.expected}

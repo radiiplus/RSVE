@@ -63,6 +63,7 @@ from .residuals import (
     ResidualStatus,
     acceptance_residual,
     bounded_path_residual,
+    mismatch,
     transform_domain_residual,
 )
 from .solver import ConstraintQuery, SolverLimits, SolverResult, Z3SolverAdapter
@@ -70,18 +71,21 @@ from .schema import SCHEMA_VERSION, SchemaMixin
 from .model import (
     Authorization,
     Budget,
+    Decision,
     EntryPoint,
     EffectLemma,
     ExecutionMode,
     Fidelity,
     Objective,
     Operation,
+    Outcome,
     LearnedExclusion,
     Provenance,
     State,
     TraceEvent,
     TransitionModel,
 )
+from .index import Entry, Index
 from .results import (
     AnalysisReport,
     AnalysisStatus,
@@ -169,6 +173,7 @@ __all__ = [
     "CapabilityReport",
     "AuthorizationError",
     "Authorization",
+    "Decision",
     "Budget",
     "CandidateRegion",
     "CandidateAttempt",
@@ -260,6 +265,9 @@ __all__ = [
     "ObjectiveCheckpoint",
     "ObjectiveValidationError",
     "Operation",
+    "Outcome",
+    "Entry",
+    "Index",
     "LearnedExclusion",
     "OpenTelemetryAdapter",
     "ProofResult",
@@ -298,6 +306,7 @@ __all__ = [
     "Z3SolverAdapter",
     "acceptance_residual",
     "bounded_path_residual",
+    "mismatch",
     "compare_acceptance",
     "transform_domain_residual",
     "transform_domain_mismatch",

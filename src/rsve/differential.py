@@ -312,6 +312,11 @@ class DifferentialAnalyzer:
         if expected.guard_result is not None and actual.guard_result != expected.guard_result:
             kind = DivergenceKind.MODEL_TOO_LOOSE.value if actual.guard_result is False else DivergenceKind.MODEL_TOO_STRICT.value
             return Divergence(index, kind, expected.guard_result, actual.guard_result, "guard result differs")
+        if expected.decision != actual.decision:
+            kind = DivergenceKind.MODEL_TOO_LOOSE.value if actual.decision.value == "REJECT" else DivergenceKind.MODEL_TOO_STRICT.value
+            return Divergence(index, kind, expected.decision.value, actual.decision.value, "transition decision differs")
+        if expected.reaction != actual.reaction:
+            return Divergence(index, DivergenceKind.ENVIRONMENT.value, expected.reaction, actual.reaction, "environmental reaction differs")
         if expected.after != actual.after or expected.observation != actual.observation:
             return Divergence(index, DivergenceKind.OPAQUE_SEMANTICS.value, {"after": expected.after.canonical(), "observation": expected.observation}, {"after": actual.after.canonical(), "observation": actual.observation}, "matching operation has different state or observation semantics")
         return None

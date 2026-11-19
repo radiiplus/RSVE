@@ -6,7 +6,7 @@ from collections import deque
 from dataclasses import replace
 from typing import Iterable
 
-from .model import Authorization, Budget, Objective, State, TraceEvent, TransitionModel
+from .model import Authorization, Budget, Decision, Objective, State, TraceEvent, TransitionModel
 from .results import (
     AnalysisReport,
     AnalysisStatus,
@@ -45,8 +45,8 @@ class Engine:
                 f"{model.target_id!r} in scope {objective.scope!r}"
             )
 
-        queue: deque[tuple[int, State, tuple[TraceEvent, ...]]] = deque(
-            [(0, model.initial_state, ())]
+        queue: deque[tuple[int, State, tuple[TraceEvent, ...], bool]] = deque(
+            [(0, model.initial_state, (), False)]
         )
         visited: set[tuple[int, str, tuple[tuple[str, str], ...]]] = set()
         operations = model.ordered_operations()
@@ -69,7 +69,7 @@ class Engine:
             )
 
         while queue:
-            depth, state, trace = queue.popleft()
+            depth, state, trace, halted = queue.popleft()
             trace_key = tuple((event.operation, repr(event.request)) for event in trace)
             visit_key = (depth, repr(state.canonical()), trace_key)
             if visit_key in visited:
@@ -85,6 +85,7 @@ class Engine:
                     final_state=state,
                     validated=False,
                 )
+
                 proof = ProofResult(
                     status=SolverStatus.SAT,
                     bound=budget.max_depth,
@@ -106,6 +107,9 @@ class Engine:
                     build_hash=model.build_hash,
                 )
 
+            if halted:
+                continue
+
             if depth >= budget.max_depth:
                 continue
 
@@ -119,25 +123,22 @@ class Engine:
                         event_budget_hit = True
                         break
                     explored_events += 1
-                    result = operation.execute(state, request)
-                    if result is None:
-                        continue
-                    next_state, observation = result
-                    event = TraceEvent(
-                        operation=operation.name,
-                        entry_point=operation.entry_point.name,
-                        request=dict(request),
-                        before=state,
-                        after=next_state,
-                        observation=dict(observation),
-                        fidelity=operation.fidelity,
-                        mode=operation.mode,
-                        component=operation.component,
-                    )
-                    if explored_states + len(queue) >= budget.max_states:
-                        state_budget_hit = True
-                        continue
-                    queue.append((depth + 1, next_state, trace + (event,)))
+                    for outcome in operation.branches(state, request):
+                        if outcome.decision is Decision.UNKNOWN:
+                            continue
+                        event = outcome.event(
+                            operation.name,
+                            operation.entry_point.name,
+                            request,
+                            state,
+                            component=operation.component,
+                            order=len(trace),
+                        )
+                        if explored_states + len(queue) >= budget.max_states:
+                            state_budget_hit = True
+                            continue
+                        next_trace = trace + (event,)
+                        queue.append((depth + 1, outcome.after, next_trace, outcome.terminal))
                 if event_budget_hit:
                     break
             if event_budget_hit:

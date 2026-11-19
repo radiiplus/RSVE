@@ -13,8 +13,9 @@ from typing import Any, Callable, Mapping, Sequence
 from .adapters import TargetAdapter
 from .constraints import AllOf, Constraint, Equal, Literal, Sort, Variable
 from .differential import DifferentialAnalyzer
-from .model import Authorization, Operation, State, TraceEvent, TransitionModel
-from .objectives import ObjectiveDefinition, StateEquals
+from .index import Index
+from .model import Authorization, Decision, Operation, State, TraceEvent, TransitionModel
+from .objectives import AllPredicates, AnyPredicate, ObjectiveDefinition, StateEquals
 from .results import (
     AnalysisReport,
     AnalysisStatus,
@@ -127,7 +128,17 @@ class BackwardRegressor:
     ) -> BackwardPlan:
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
-        for operation in model.ordered_operations():
+        index = Index.build(model)
+        needed = self._keys(objective.postconditions)
+        indexed = [item.operation for item in index.predecessors(needed)] if needed else []
+        seen = {(item.entry_point.name, item.name) for item in indexed}
+        operations = tuple(indexed) + tuple(
+            item for item in model.ordered_operations()
+            if (item.entry_point.name, item.name) not in seen
+        )
+        if needed and not indexed:
+            uncertainty.append("no indexed writer was found for the objective state keys")
+        for operation in operations:
             for request in model.ordered_inputs():
                 if self.weakest_precondition(operation, request, objective)(model.initial_state):
                     actions.append((operation.entry_point.name, dict(request)))
@@ -170,6 +181,16 @@ class BackwardRegressor:
             uncertainty=tuple(uncertainty),
             required_traces=tuple(symbolic_traces),
         )
+
+    @staticmethod
+    def _keys(predicates: Sequence[Any]) -> frozenset[str]:
+        found: set[str] = set()
+        for predicate in predicates:
+            if isinstance(predicate, StateEquals):
+                found.add(predicate.key)
+            elif isinstance(predicate, (AllPredicates, AnyPredicate)):
+                found.update(BackwardRegressor._keys(predicate.predicates))
+        return frozenset(found)
 
     def _symbolic_traces(
         self,
@@ -302,23 +323,17 @@ class BackwardRegressor:
         claimed inverse for the underlying runtime transform.
         """
         def precondition(state: State) -> bool:
-            result = operation.execute(state, request)
-            if result is None:
-                return False
-            next_state, observation = result
-            event = TraceEvent(
-                operation=operation.name,
-                entry_point=operation.entry_point.name,
-                request=dict(request),
-                before=state,
-                after=next_state,
-                observation=dict(observation),
-                fidelity=operation.fidelity,
-                mode=operation.mode,
-                component=operation.component,
-                guard_result=True,
+            return any(
+                objective.evaluate(outcome.after, (outcome.event(
+                    operation.name,
+                    operation.entry_point.name,
+                    request,
+                    state,
+                    component=operation.component,
+                ),))
+                for outcome in operation.branches(state, request)
+                if outcome.decision is not Decision.UNKNOWN
             )
-            return objective.evaluate(next_state, (event,))
         return precondition
 
 
@@ -419,6 +434,7 @@ class HybridPlanner:
                         backward,
                         environment or adapter_environment,
                     )
+
                 if not attempt.replayed:
                     return self._report(
                         AnalysisStatus.SAT_CANDIDATE,
@@ -444,6 +460,9 @@ class HybridPlanner:
                         environment or adapter_environment,
                     )
 
+            if trace and trace[-1].terminal:
+                continue
+
             if depth >= budget.max_trace_length:
                 continue
             for operation in model.ordered_operations():
@@ -454,30 +473,24 @@ class HybridPlanner:
                     if not model.allows(operation.entry_point.name, request):
                         continue
                     explored_events += 1
-                    result = operation.execute(state, request)
-                    if result is None:
-                        continue
-                    next_state, observation = result
-                    event = TraceEvent(
-                        operation=operation.name,
-                        entry_point=operation.entry_point.name,
-                        request=dict(request),
-                        before=state,
-                        after=next_state,
-                        observation=dict(observation),
-                        fidelity=operation.fidelity,
-                        mode=operation.mode,
-                        component=operation.component,
-                        guard_result=True,
-                        ordering=len(trace),
-                    )
-                    if explored_states + len(queue) >= budget.max_states:
-                        budget_hit = True
-                        continue
-                    next_trace = trace + (event,)
-                    preference = 0 if (operation.entry_point.name, self._request_key(request)) in preferred else depth + 1
-                    serial += 1
-                    heapq.heappush(queue, (preference, serial, depth + 1, next_state, next_trace))
+                    for outcome in operation.branches(state, request):
+                        if outcome.decision is Decision.UNKNOWN:
+                            continue
+                        if explored_states + len(queue) >= budget.max_states:
+                            budget_hit = True
+                            continue
+                        event = outcome.event(
+                            operation.name,
+                            operation.entry_point.name,
+                            request,
+                            state,
+                            component=operation.component,
+                            order=len(trace),
+                        )
+                        next_trace = trace + (event,)
+                        preference = 0 if (operation.entry_point.name, self._request_key(request)) in preferred else depth + 1
+                        serial += 1
+                        heapq.heappush(queue, (preference, serial, depth + 1, outcome.after, next_trace))
                 if budget_hit:
                     break
             if budget_hit:
@@ -645,30 +658,25 @@ class HybridPlanner:
         operations = {operation.entry_point.name: operation for operation in model.ordered_operations()}
         state = model.initial_state
         events: list[TraceEvent] = []
-        for interaction in interactions:
+        for index, interaction in enumerate(interactions):
             entry = str(interaction["entry_point"])
             operation = operations.get(entry)
             request = dict(interaction.get("request", {}))
             if operation is None or not model.allows(entry, request):
                 return None
-            result = operation.execute(state, request)
-            if result is None:
-                return None
-            next_state, observation = result
-            events.append(TraceEvent(
-                operation=operation.name,
-                entry_point=entry,
-                request=request,
-                before=state,
-                after=next_state,
-                observation=dict(observation),
-                fidelity=operation.fidelity,
-                mode=operation.mode,
+            outcome = operation.execute(state, request)
+            event = outcome.event(
+                operation.name,
+                entry,
+                request,
+                state,
                 component=operation.component,
-                guard_result=True,
-                ordering=len(events),
-            ))
-            state = next_state
+                order=len(events),
+            )
+            events.append(event)
+            state = outcome.after
+            if outcome.terminal and index != len(interactions) - 1:
+                return None
         return state, tuple(events)
 
     @staticmethod
@@ -717,6 +725,10 @@ class HybridPlanner:
             "after": event.after.canonical(),
             "observation": event.observation,
             "guard_result": event.guard_result,
+            "decision": event.decision.value,
+            "terminal": event.terminal,
+            "effects": event.effects,
+            "reaction": event.reaction,
         }
 
     @staticmethod

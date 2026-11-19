@@ -18,6 +18,17 @@ class ResidualKind(str, Enum):
     OVER_ACCEPTANCE = "over_acceptance"
     UNDER_ACCEPTANCE = "under_acceptance"
     PATH_GUARD = "bounded_path_guard"
+    UNMODELED = "actual_transition_unmodeled"
+    UNOBSERVED = "modeled_transition_unobserved"
+    DIVERGENCE = "transition_state_divergence"
+    REJECTION = "unexpected_rejection_effect"
+    ACCEPTANCE = "unexpected_acceptance_effect"
+    MISSING = "missing_intended_transition"
+    CONTROL = "unexpected_control_transition"
+    ENVIRONMENT = "environmental_transition_divergence"
+    CAUSAL = "cross_region_causal_divergence"
+    ROUTE = "alternative_objective_route"
+    OPAQUE = "unknown_transition_semantics"
 
 
 class ResidualStatus(str, Enum):
@@ -58,6 +69,40 @@ class ResidualResult:
     region: CandidateRegion
     detail: str
     solver_result: SolverResult | None = None
+    transition: str | None = None
+    expected: Any = None
+    observed: Any = None
+    evidence: tuple[str, ...] = ()
+    fidelity: str = "unknown"
+    uncertainty: tuple[str, ...] = ()
+
+
+def mismatch(
+    kind: ResidualKind,
+    region: CandidateRegion,
+    detail: str,
+    *,
+    transition: str | None = None,
+    expected: Any = None,
+    observed: Any = None,
+    evidence: Iterable[str] = (),
+    fidelity: str = "unknown",
+    uncertainty: Iterable[str] = (),
+) -> ResidualResult:
+    """Record a transition-space residual without implying exploitability."""
+    return ResidualResult(
+        kind=kind,
+        status=ResidualStatus.FOUND,
+        residual=(),
+        region=region,
+        detail=detail,
+        transition=transition,
+        expected=expected,
+        observed=observed,
+        evidence=tuple(evidence),
+        fidelity=fidelity,
+        uncertainty=tuple(uncertainty),
+    )
 
 
 def transform_domain_residual(

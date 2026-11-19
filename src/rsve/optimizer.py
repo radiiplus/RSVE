@@ -12,7 +12,7 @@ from statistics import mean
 from typing import Any, Mapping, Sequence
 
 from .adapters import TargetAdapter
-from .model import Authorization, State, TraceEvent, TransitionModel
+from .model import Authorization, Decision, State, TraceEvent, TransitionModel
 from .objectives import ObjectiveDefinition
 from .results import Witness
 from .planner import BackwardRegressor
@@ -213,11 +213,12 @@ class RealizationOptimizer:
                 for request in inputs:
                     if not model.allows(operation.entry_point.name, request):
                         continue
-                    result = operation.execute(state, request)
-                    if result is None:
+                    outcome = operation.execute(state, request)
+                    if outcome.decision is Decision.UNKNOWN:
                         continue
-                    next_state, _observation = result
-                    queue.append((next_state, interactions + ({"entry_point": operation.entry_point.name, "request": dict(request)},)))
+                    if outcome.terminal:
+                        continue
+                    queue.append((outcome.after, interactions + ({"entry_point": operation.entry_point.name, "request": dict(request)},)))
         return tuple(candidates)
 
     def optimize_synthesized(
@@ -258,24 +259,21 @@ class RealizationOptimizer:
             request = dict(interaction.get("request", {}))
             if operation is None:
                 return ()
-            result = operation.execute(state, request)
-            if result is None:
+            outcome = operation.execute(state, request)
+            if outcome.decision is Decision.UNKNOWN:
                 return ()
-            after, observation = result
-            events.append(TraceEvent(
-                operation=operation.name,
-                entry_point=operation.entry_point.name,
-                request=request,
-                before=state,
-                after=after,
-                observation=dict(observation),
-                fidelity=operation.fidelity,
-                mode=operation.mode,
+            event = outcome.event(
+                operation.name,
+                operation.entry_point.name,
+                request,
+                state,
                 component=operation.component,
-                guard_result=True,
-                ordering=len(events),
-            ))
-            state = after
+                order=len(events),
+            )
+            events.append(event)
+            state = outcome.after
+            if outcome.terminal and interaction is not interactions[-1]:
+                return ()
         return tuple(events)
 
     @staticmethod
