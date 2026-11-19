@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from typing import Iterable
 
-from .model import Operation, Model
+from .logic import Constraint, Variable
+from .model import Decision, Operation, Model
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class Item:
     entry: str
     component: str
     unknown: bool = False
+    decision: Decision | None = None
 
 
 class Index:
@@ -41,29 +43,44 @@ class Index:
     def build(cls, model: Model) -> "Index":
         entries = []
         for operation in model.operations:
-            reads = frozenset(operation.reads)
-            writes = frozenset(operation.writes | operation.must | operation.may)
+            reads = set(_statekeys(operation.reads))
+            writes = set(operation.writes | operation.must | operation.may)
             symbolic = operation.symbolic_transition
             if symbolic is not None:
                 writes |= frozenset(getattr(symbolic, "assignments", {}).keys())
-            unknown = bool(operation.unknown)
+                reads.update(_statevars(symbolic.guard))
+                for expression in getattr(symbolic, "assignments", {}).values():
+                    reads.update(_statevars(expression))
             entries.append(Item(
                 operation=operation,
-                reads=reads,
-                writes=writes,
+                reads=frozenset(reads),
+                writes=frozenset(_statekeys(writes)),
                 effects=frozenset(operation.effects),
                 entry=operation.entry_point.name,
                 component=operation.component,
-                unknown=unknown,
+                unknown=bool(operation.unknown),
+                decision=Decision.ACCEPT,
             ))
+            deny = operation.deny_reads | operation.deny_writes | operation.deny_must | operation.deny_may
+            if operation.deny_effects or deny or operation.deny is not None or operation.deny_env:
+                entries.append(Item(
+                    operation=operation,
+                    reads=frozenset(_statekeys(operation.deny_reads)),
+                    writes=frozenset(_statekeys(operation.deny_writes | operation.deny_must | operation.deny_may)),
+                    effects=frozenset(operation.deny_effects),
+                    entry=operation.entry_point.name,
+                    component=operation.component,
+                    unknown=operation.deny is not None and not deny,
+                    decision=Decision.REJECT,
+                ))
         return cls(entries, model.model_version)
 
     def predecessors(self, keys: Iterable[str]) -> tuple[Item, ...]:
-        found: dict[tuple[str, str], Item] = {}
+        found: dict[tuple[str, str, Decision | None], Item] = {}
         for key in keys:
             for item in self.write.get(key, ()):
-                found[(item.entry, item.operation.name)] = item
-        return tuple(found[key] for key in sorted(found))
+                found[(item.entry, item.operation.name, item.decision)] = item
+        return tuple(found[key] for key in sorted(found, key=_order))
 
     def chain(self, keys: Iterable[str]) -> tuple[Item, ...]:
         """Return the bounded causal writer closure for the requested keys.
@@ -73,17 +90,17 @@ class Index:
         without treating the dependency summary as proof of reachability.
         """
         needed = set(keys)
-        found: dict[tuple[str, str], Item] = {}
+        found: dict[tuple[str, str, Decision | None], Item] = {}
         while needed:
             current = set(needed)
             needed.clear()
             for item in self.predecessors(current):
-                identity = (item.entry, item.operation.name)
+                identity = (item.entry, item.operation.name, item.decision)
                 if identity in found:
                     continue
                 found[identity] = item
                 needed.update(item.reads)
-        return tuple(found[key] for key in sorted(found))
+        return tuple(found[key] for key in sorted(found, key=_order))
 
     def readers(self, keys: Iterable[str]) -> tuple[Item, ...]:
         return self.collect(self.read, keys)
@@ -108,8 +125,33 @@ class Index:
 
     @staticmethod
     def collect(source: dict[str, tuple[Item, ...]], keys: Iterable[str]) -> tuple[Item, ...]:
-        found: dict[tuple[str, str], Item] = {}
+        found: dict[tuple[str, str, Decision | None], Item] = {}
         for key in keys:
             for item in source.get(key, ()):
-                found[(item.entry, item.operation.name)] = item
-        return tuple(found[key] for key in sorted(found))
+                found[(item.entry, item.operation.name, item.decision)] = item
+        return tuple(found[key] for key in sorted(found, key=_order))
+
+
+def _statevars(value: object) -> set[str]:
+    """Collect modeled state reads without treating request variables as state."""
+    found: set[str] = set()
+    if isinstance(value, Variable) and value.name.startswith("state."):
+        found.add(value.name.removeprefix("state."))
+    elif isinstance(value, Constraint) and is_dataclass(value):
+        for item in fields(value):
+            found.update(_statevars(getattr(value, item.name)))
+    elif isinstance(value, (tuple, list, set, frozenset)):
+        for item in value:
+            found.update(_statevars(item))
+    elif isinstance(value, dict):
+        for item in value.values():
+            found.update(_statevars(item))
+    return found
+
+
+def _statekeys(values: Iterable[str]) -> set[str]:
+    return {value.removeprefix("state.") for value in values}
+
+
+def _order(value: tuple[str, str, Decision | None]) -> tuple[str, str, str]:
+    return value[0], value[1], value[2].value if value[2] is not None else ""

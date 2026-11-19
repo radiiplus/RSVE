@@ -35,6 +35,21 @@ class Suite(unittest.TestCase):
         step = World(state, {}).predict("missing", state, {})
         self.assertEqual(step.status, Signal.UNKNOWN)
 
+    def test_options_preserve_possible_environmental_successors(self):
+        state = Context(State({"count": 0}), State({"quota": 1}))
+        world = World(
+            state,
+            {
+                "roll": lambda _state, _request: (
+                    (State({"count": 1}), State({"quota": 0}), {"branch": "a"}),
+                    (State({"count": 2}), State({"quota": 0}), {"branch": "b"}),
+                ),
+            },
+            nondeterministic=frozenset({"roll"}),
+        )
+        self.assertEqual(len(world.options("roll", state, {})), 2)
+        self.assertEqual(world.predict("roll", state, {}).status, Signal.UNKNOWN)
+
 
 if __name__ == "__main__":
     unittest.main()

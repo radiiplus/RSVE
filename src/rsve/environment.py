@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from .model import State
 
@@ -42,7 +42,7 @@ class Drift:
     differing_environment_keys: tuple[str, ...]
 
 
-Reaction = Callable[[Context, Mapping[str, Any]], tuple[State, State, Mapping[str, Any]]]
+Reaction = Callable[[Context, Mapping[str, Any]], tuple[State, State, Mapping[str, Any]] | Iterable[tuple[State, State, Mapping[str, Any]]]]
 
 
 class World:
@@ -60,15 +60,34 @@ class World:
         self.nondeterministic = nondeterministic
 
     def predict(self, transition_id: str, state: Context, request: Mapping[str, Any]) -> Step:
+        options = self.options(transition_id, state, request)
+        if not options:
+            return Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=("environment transition semantics unavailable",))
+        step = options[0]
+        if transition_id in self.nondeterministic:
+            return Step(
+                transition_id,
+                step.before,
+                step.after,
+                step.outputs,
+                Signal.UNKNOWN,
+                ("environment transition has multiple or uncontrolled outcomes",),
+            )
+        return step
+
+    def options(self, transition_id: str, state: Context, request: Mapping[str, Any]) -> tuple[Step, ...]:
         transition = self.transitions.get(transition_id)
         if transition is None:
-            return Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=("environment transition semantics unavailable",))
+            return (Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=("environment transition semantics unavailable",)),)
         try:
-            target, environment, outputs = transition(state, request)
+            result = transition(state, request)
+            values = _reactions(result)
         except Exception as exc:
-            return Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=(f"environment transition failed: {type(exc).__name__}",))
-        status = Signal.UNKNOWN if transition_id in self.nondeterministic else Signal.PREDICTED
-        return Step(transition_id, state, Context(target, environment, state.scope), outputs, status)
+            return (Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=(f"environment transition failed: {type(exc).__name__}",)),)
+        return tuple(
+            Step(transition_id, state, Context(target, environment, state.scope), outputs, Signal.PREDICTED)
+            for target, environment, outputs in values
+        )
 
     def observe(
         self,
@@ -87,3 +106,13 @@ class World:
         if not target_diff and not environment_diff and dict(predicted.outputs) == dict(observed.outputs):
             return None
         return Drift(predicted.transition_id, predicted, observed, target_diff, environment_diff)
+
+
+def _reactions(value: Any) -> tuple[tuple[State, State, Mapping[str, Any]], ...]:
+    if isinstance(value, tuple) and len(value) == 3 and isinstance(value[0], State) and isinstance(value[1], State) and isinstance(value[2], Mapping):
+        return (value,)
+    if isinstance(value, Iterable):
+        values = tuple(value)
+        if all(isinstance(item, tuple) and len(item) == 3 for item in values):
+            return values
+    raise TypeError("environment reaction must return one or more (target, environment, outputs) tuples")

@@ -6,7 +6,7 @@ import heapq
 import hashlib
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import product
 from typing import Any, Callable, Mapping, Sequence
 
@@ -28,6 +28,7 @@ from .result import (
 )
 from .solver import Query, Zed
 from .wp import WP, Truth
+from .workspace import Frame, Workspace
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,20 @@ class Attempt:
     replay_stable: bool | None = None
     divergences: tuple[Divergence, ...] = ()
     detail: str = ""
+
+
+@dataclass(frozen=True)
+class Distance:
+    """Explainable search priority; never a reachability proof."""
+
+    unmet: int
+    writers: int
+    uncertainty: int
+    cost: int
+
+    @property
+    def score(self) -> int:
+        return self.unmet * 100 + self.uncertainty * 50 + self.cost + max(0, 10 - self.writers)
 
 
 def _sort_for(value: Any) -> Sort | None:
@@ -351,7 +366,20 @@ class Planner:
         *,
         adapter: Target | None = None,
         environment: Mapping[str, str] | None = None,
+        workspace: Workspace | None = None,
     ) -> Report:
+        workspace = workspace or Workspace.flat(
+            model,
+            environment=State(dict(environment or {})),
+        )
+        validation = workspace.validate()
+        if validation is not None and not validation.structural:
+            raise ValueError(f"workspace topology is structurally invalid: {validation.errors}")
+        if validation is not None and not validation.ready:
+            raise ValueError(
+                "workspace composition is not executable: "
+                f"unverified={validation.unverified_connections}; missing={dict(validation.missing_capabilities)}"
+            )
         adapter_environment = self._environment(adapter)
         execution_profile = self._analysis_profile(adapter)
         objective.validate(
@@ -381,13 +409,13 @@ class Planner:
         preferred = {(entry, self._request_key(request)) for entry, request in backward.required_actions}
         started = time.monotonic()
         budget = objective.budget
-        queue: list[tuple[int, int, int, State, tuple[Event, ...], bool]] = []
+        queue: list[tuple[int, int, int, Frame, tuple[Event, ...], bool]] = []
         serial = 0
-        heapq.heappush(queue, (0, serial, 0, model.initial_state, (), False))
+        heapq.heappush(queue, (0, serial, 0, workspace.start(), (), False))
         for interactions in backward.required_traces:
-            for state, trace, uncertain in self._model_traces(model, interactions):
+            for frame, trace, uncertain in self._model_traces(model, interactions, workspace=workspace):
                 serial += 1
-                heapq.heappush(queue, (-1, serial, len(trace), state, trace, uncertain))
+                heapq.heappush(queue, (-1, serial, len(trace), frame, trace, uncertain))
         input_candidates = list(model.args())
         for _entry, request in backward.required_actions:
             if self._request_key(request) not in {self._request_key(item) for item in input_candidates}:
@@ -404,8 +432,30 @@ class Planner:
             if (time.monotonic() - started) * 1000 > budget.max_time_ms:
                 budget_hit = True
                 break
-            _, _, depth, state, trace, uncertain = heapq.heappop(queue)
-            key = (depth, json.dumps(state.canonical(), sort_keys=True), tuple((event.entry_point, repr(event.request)) for event in trace))
+            _, _, depth, frame, trace, uncertain = heapq.heappop(queue)
+            state = frame.target
+            key = (
+                depth,
+                json.dumps(state.canonical(), sort_keys=True),
+                json.dumps(frame.environment.canonical(), sort_keys=True),
+                uncertain,
+                tuple(
+                    (
+                        event.operation,
+                        event.entry_point,
+                        repr(event.request),
+                        event.decision.value,
+                        event.guard_result,
+                        event.terminal,
+                        event.effects,
+                        tuple(sorted(event.reads)),
+                        tuple(sorted(event.writes)),
+                        repr(event.reaction),
+                        event.uncertainty,
+                    )
+                    for event in trace
+                ),
+            )
             if key in visited:
                 continue
             visited.add(key)
@@ -472,25 +522,22 @@ class Planner:
                     if not model.allows(operation.entry_point.name, request):
                         continue
                     explored_events += 1
-                    for outcome in operation.branches(state, request):
-                        branch_unknown = uncertain or outcome.decision is Decision.UNKNOWN
-                        if outcome.decision is Decision.UNKNOWN:
+                    for move in workspace.moves(frame, operation.entry_point.name, request, operation=operation):
+                        outcome = move.outcome
+                        branch_unknown = move.after.uncertain
+                        if branch_unknown and not uncertain:
                             unknown_seen = True
                         if explored_states + len(queue) >= budget.max_states:
                             budget_hit = True
                             continue
-                        event = outcome.event(
-                            operation.name,
-                            operation.entry_point.name,
-                            request,
-                            state,
-                            component=operation.component,
-                            order=len(trace),
-                        )
+                        event = replace(move.event, ordering=len(trace))
                         next_trace = trace + (event,)
-                        preference = 0 if (operation.entry_point.name, self._request_key(request)) in preferred else depth + 1
+                        distance = self.distance(model, objective, move.after, next_trace)
+                        preference = distance.score
+                        if (operation.entry_point.name, self._request_key(request)) in preferred:
+                            preference -= 25
                         serial += 1
-                        heapq.heappush(queue, (preference, serial, depth + 1, outcome.after, next_trace, branch_unknown))
+                        heapq.heappush(queue, (preference, serial, depth + 1, move.after, next_trace, branch_unknown))
                 if budget_hit:
                     break
             if budget_hit:
@@ -514,6 +561,13 @@ class Planner:
             environment or adapter_environment,
             gaps=gaps,
         )
+
+    @staticmethod
+    def distance(model: Model, objective: Objective, frame: Frame, trace: Sequence[Event]) -> Distance:
+        unmet = sum(not predicate.evaluate(frame.target, trace) for predicate in objective.postconditions)
+        keys = Regressor._keys(objective.postconditions)
+        writers = len(Index.build(model).chain(keys)) if keys else 0
+        return Distance(unmet, writers, int(frame.uncertain), len(trace))
 
     def analyze(self, *args: Any, **kwargs: Any) -> Report:
         """Compatibility spelling for callers that use the engine's analyze API."""
@@ -654,32 +708,27 @@ class Planner:
     def _model_traces(
         model: Model,
         interactions: Sequence[Mapping[str, Any]],
-    ) -> tuple[tuple[State, tuple[Event, ...], bool], ...]:
-        frontier: list[tuple[State, tuple[Event, ...], bool]] = [(model.initial_state, (), False)]
+        *,
+        workspace: Workspace | None = None,
+    ) -> tuple[tuple[Frame, tuple[Event, ...], bool], ...]:
+        workspace = workspace or Workspace.flat(model)
+        frontier: list[tuple[Frame, tuple[Event, ...], bool]] = [(workspace.start(), (), False)]
         for index, interaction in enumerate(interactions):
             entry = str(interaction["entry_point"])
             request = dict(interaction.get("request", {}))
             operations = tuple(item for item in model.ops() if item.entry_point.name == entry)
             if not operations or not model.allows(entry, request):
                 return ()
-            next_frontier: list[tuple[State, tuple[Event, ...], bool]] = []
-            for state, events, uncertain in frontier:
+            next_frontier: list[tuple[Frame, tuple[Event, ...], bool]] = []
+            for frame, events, uncertain in frontier:
                 for operation in operations:
-                    for outcome in operation.branches(state, request):
-                        event = outcome.event(
-                            operation.name,
-                            entry,
-                            request,
-                            state,
-                            component=operation.component,
-                            order=len(events),
-                        )
-                        if outcome.terminal and index != len(interactions) - 1:
+                    for move in workspace.moves(frame, entry, request, operation=operation):
+                        if move.outcome.terminal and index != len(interactions) - 1:
                             continue
                         next_frontier.append((
-                            outcome.after,
-                            events + (event,),
-                            uncertain or outcome.decision is Decision.UNKNOWN,
+                            move.after,
+                            events + (replace(move.event, ordering=len(events)),),
+                            uncertain or move.after.uncertain,
                         ))
             frontier = next_frontier
             if not frontier:

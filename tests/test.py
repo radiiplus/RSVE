@@ -42,6 +42,7 @@ class Causal(unittest.TestCase):
             Entry("deny"),
             guard=lambda _state, request: request.get("kind") == "go",
             deny=lambda state, _request: state.update(ready=True),
+            deny_writes=frozenset({"ready"}),
             stop=False,
         )
         use = Operation(
@@ -64,6 +65,7 @@ class Causal(unittest.TestCase):
         report = Planner().plan(model, goal, self.auth())
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual([event.decision for event in report.witness.events], [Decision.REJECT, Decision.ACCEPT])
+        self.assertEqual(Index.build(model).predecessors(("ready",))[0].decision, Decision.REJECT)
 
     def testdeny(self):
         op = Operation(

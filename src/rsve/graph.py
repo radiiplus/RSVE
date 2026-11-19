@@ -317,7 +317,8 @@ class Registry(Schema):
 
 @dataclass(frozen=True)
 class Validation(Schema):
-    valid: bool
+    structural: bool
+    ready: bool
     errors: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
     unverified_connections: tuple[str, ...] = ()
@@ -625,7 +626,9 @@ class Graph(Schema):
                 errors.append(f"connection {edge.connection_id} references unknown destination binding")
         registry = Registry(self.capabilities)
         missing = {path.path_id: tuple(sorted(registry.resolve(path).missing)) for path in paths if not registry.resolve(path).complete}
-        return Validation(not errors, tuple(errors), tuple(warnings), tuple(unverified), missing)
+        structural = not errors
+        ready = structural and not unverified and not missing
+        return Validation(structural, ready, tuple(errors), tuple(warnings), tuple(unverified), missing)
 
     def reachable(self, start_region_id: str, *, max_depth: int | None = None) -> tuple[str, ...]:
         edges = {port.port_id: port.region_id for port in self.ports}
@@ -737,7 +740,7 @@ class Session(Schema):
             raise ValueError(f"extension already attached: {manifest.extension_id}")
         candidate = extension.attach(self.graph).register(manifest)
         validation = candidate.validate(required_paths)
-        if not validation.valid or validation.missing_capabilities:
+        if not validation.structural or not validation.ready or validation.missing_capabilities:
             raise ValueError(
                 f"extension attachment rejected: errors={validation.errors}; missing={dict(validation.missing_capabilities)}"
             )

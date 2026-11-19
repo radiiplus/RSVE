@@ -105,6 +105,27 @@ class Suite(unittest.TestCase):
         report = Planner().plan(model, objective, self.authorization)
         self.assertEqual(report.status, Status.UNKNOWN)
 
+    def test_known_branch_survives_same_state_unknown_branch(self):
+        operation = Operation(
+            "fork",
+            Entry("fork"),
+            relation=lambda state, _request: (
+                Outcome(Decision.UNKNOWN, state.update(goal=True), effects=("opaque",), terminal=True),
+                Outcome(Decision.ACCEPT, state.update(goal=True), effects=("known",), terminal=True),
+            ),
+        )
+        model = Model("node-fixture", State({"goal": False}), ({},), (operation,))
+        objective = Objective(
+            "known-goal",
+            "node-fixture",
+            "node-lab",
+            (Same("goal", True),),
+            budget=Limits(max_trace_length=1),
+        )
+        report = Planner().plan(model, objective, self.authorization)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual(report.witness.events[0].effects, ("known",))
+
     def test_single_entry_is_replay_validated(self):
         objective = Objective(
             "reach-two",

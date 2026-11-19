@@ -71,8 +71,23 @@ class Engine:
 
         while queue:
             depth, state, trace, halted, uncertain = queue.popleft()
-            trace_key = tuple((event.operation, repr(event.request)) for event in trace)
-            visit_key = (depth, repr(state.canonical()), trace_key)
+            trace_key = tuple(
+                (
+                    event.operation,
+                    event.entry_point,
+                    repr(event.request),
+                    event.decision.value,
+                    event.guard_result,
+                    event.terminal,
+                    event.effects,
+                    tuple(sorted(event.reads)),
+                    tuple(sorted(event.writes)),
+                    repr(event.reaction),
+                    event.uncertainty,
+                )
+                for event in trace
+            )
+            visit_key = (depth, repr(state.canonical()), uncertain, trace_key)
             if visit_key in visited:
                 continue
             visited.add(visit_key)

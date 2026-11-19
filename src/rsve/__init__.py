@@ -111,7 +111,7 @@ from .objective import (
     Invalid,
     Same,
 )
-from .planner import Plan, Regressor, Attempt, Planner
+from .planner import Plan, Regressor, Attempt, Distance, Planner
 from .diff import Analyzer, Kind, Experiment, Delta, Refinement
 from .wp import (
     Symbolic,
@@ -123,6 +123,7 @@ from .semantic import Branch, Interpreter, Meaning
 from .environment import Drift, Signal, Step, World, Context
 from .optimize import Weights, Choice, Phase, Cost, Optimizer
 from .search import Explorer, Bounds, Found
+from .workspace import Frame, Move, Workspace
 from .graph import (
     Graph,
     Usage,
@@ -314,9 +315,13 @@ __all__ = [
     "Witness",
     "Plan",
     "Regressor",
+    "Distance",
     "Not",
     "Symbolic",
     "WP",
     "Preimage",
     "Truth",
+    "Frame",
+    "Move",
+    "Workspace",
 ]

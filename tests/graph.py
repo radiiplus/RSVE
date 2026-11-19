@@ -51,8 +51,16 @@ class Suite(unittest.TestCase):
         self.assertEqual(graph.connections[1].status, Fit.TRANSFORM_REQUIRED)
         validation = graph.validate()
         self.assertIn("c1", validation.unverified_connections)
-        self.assertFalse(validation.valid)
+        self.assertFalse(validation.structural)
+        self.assertFalse(validation.ready)
         self.assertTrue(validation.errors)
+        self.assertTrue(validation.warnings)
+
+    def test_unverified_seam_is_structural_but_not_ready(self):
+        graph = self.graph.connect("app-out", "sys-in", connection_id="c1")
+        validation = graph.validate()
+        self.assertTrue(validation.structural)
+        self.assertFalse(validation.ready)
         self.assertTrue(validation.warnings)
 
     def test_cycles_are_traversed_with_stable_visited_set(self):
