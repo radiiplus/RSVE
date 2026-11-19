@@ -2,10 +2,12 @@ import unittest
 from pathlib import Path
 
 from rsve import (
+    Add,
     Authorization,
     EntrySequence,
     EntryPoint,
     FlowToSink,
+    IntRange,
     GuardInvariant,
     HybridPlanner,
     NodeTargetAdapter,
@@ -15,9 +17,15 @@ from rsve import (
     Operation,
     State,
     StateEquals,
+    Sort,
+    SymbolicTransition,
+    TraceEvent,
+    TransformSpec,
     TransitionModel,
+    Variable,
 )
 from rsve.differential import DifferentialAnalyzer, DivergenceKind
+from rsve.planner import BackwardRegressor
 from rsve.results import AnalysisStatus
 
 
@@ -110,6 +118,41 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(report.status, AnalysisStatus.SAT_CANDIDATE)
         self.assertFalse(report.witness.validated)
 
+    def test_symbolic_wp_and_solver_guide_forward_candidates(self):
+        operation = Operation(
+            name="state.mutation",
+            entry_point=EntryPoint("symbolic.increment"),
+            guard=lambda _state, request: 0 < request.get("amount", 0) <= 10,
+            apply=lambda state, request: state.with_updates(count=state["count"] + request["amount"]),
+            transforms=(TransformSpec("decode", "bytes", "text", information_loss=True),),
+            symbolic_transition=SymbolicTransition(
+                "symbolic-increment",
+                "symbolic.increment",
+                IntRange(Variable("input.amount", Sort.INT), 1, 10),
+                {"state.count": Add(Variable("state.count", Sort.INT), Variable("input.amount", Sort.INT))},
+            ),
+        )
+        model = TransitionModel(
+            target_id="symbolic-lab",
+            initial_state=State({"count": 0}),
+            inputs=(),
+            operations=(operation,),
+        )
+        objective = ObjectiveDefinition(
+            "symbolic-reach-two",
+            "symbolic-lab",
+            "node-lab",
+            (StateEquals("count", 2),),
+            budget=ObjectiveBudget(max_trace_length=1),
+        )
+        auth = Authorization("symbolic-tests", frozenset({"node-lab"}), frozenset({"symbolic-lab"}))
+        backward = BackwardRegressor().regress(model, objective)
+        self.assertIn(("symbolic.increment", {"amount": 2}), backward.required_actions)
+        self.assertIn("weakest_precondition+solver", backward.method)
+        report = HybridPlanner().plan(model, objective, auth)
+        self.assertEqual(report.status, AnalysisStatus.SAT_CANDIDATE)
+        self.assertEqual(report.witness.interactions[0]["request"], {"amount": 2})
+
     def test_planner_reports_bounded_unsat(self):
         objective = ObjectiveDefinition(
             "reach-nine",
@@ -167,12 +210,32 @@ class PlannerTests(unittest.TestCase):
         try:
             baseline = adapter.snapshot()
             adapter.reset(baseline)
-            observed = adapter.execute_trace(report.witness.interactions)
+            observed = adapter.execute_trace(report.witness.interactions, self.authorization)
         finally:
             adapter.teardown()
         refinement = DifferentialAnalyzer().refine(model, report.divergences, observed, invalidated_queries=("q-1",))
         self.assertIn("q-1", refinement.delta.invalidated_queries)
         self.assertFalse(refinement.model.allows(report.witness.interactions[0]["entry_point"], {"amount": 11}))
+
+    def test_unexpected_semantic_events_diverge_and_demote_assumptions(self):
+        before = State({"count": 0})
+        after = State({"count": 1})
+        expected = TraceEvent("state.mutation", "known", {}, before, after, component="fixture.state")
+        unexpected = TraceEvent("state.mutation", "phantom", {}, before, after, component="fixture.state")
+        analyzer = DifferentialAnalyzer()
+        divergences = analyzer.compare((expected,), (unexpected, expected))
+        self.assertEqual(divergences[0].kind, DivergenceKind.MODEL_TOO_STRICT.value)
+        self.assertEqual(divergences[0].observed_index, 0)
+        model = TransitionModel(
+            target_id="fixture",
+            initial_state=before,
+            inputs=(),
+            operations=(),
+            assumptions=("trusted declared surface",),
+        )
+        refinement = analyzer.refine(model, divergences, (unexpected, expected))
+        self.assertEqual(refinement.delta.demoted_assumptions, ("trusted declared surface",))
+        self.assertIn("trusted declared surface", refinement.model.demoted_assumptions)
 
     def test_objective_scope_and_sink_are_hard_constraints(self):
         objective = ObjectiveDefinition(

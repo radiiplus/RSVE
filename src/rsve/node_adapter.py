@@ -253,8 +253,7 @@ class NodeTargetAdapter:
         self._last_output = response
         return events
 
-    def execute_trace(self, interactions: Sequence[Mapping[str, Any]]) -> tuple[TraceEvent, ...]:
-        authorization = Authorization("node-adapter", frozenset({self.scope}), frozenset({self.target_id}))
+    def execute_trace(self, interactions: Sequence[Mapping[str, Any]], authorization: Authorization) -> tuple[TraceEvent, ...]:
         if not authorization.permits(self.target_id, self.scope):
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
@@ -304,7 +303,7 @@ class NodeTargetAdapter:
         limitations = list(self.capability_report().limitations)
         for _ in range(runs):
             self.reset(baseline)
-            events = self.execute_trace(interactions)
+            events = self.execute_trace(interactions, authorization)
             outcome = dict(self._last_output.get("outcome", {}))
             reports.append(ReplayRun(
                 run_id=events[0].run_id if events else f"run-{self._run_counter:06d}",

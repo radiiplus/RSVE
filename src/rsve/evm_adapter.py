@@ -240,9 +240,11 @@ class EvmTargetAdapter:
     def invoke(self, entry_point: str, request: Mapping[str, Any], authorization: Authorization) -> tuple[TraceEvent, ...]:
         if not authorization.permits(self.target_id, self.scope):
             raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
-        return self.execute_trace(({"entry_point": entry_point, "request": dict(request)},))
+        return self.execute_trace(({"entry_point": entry_point, "request": dict(request)},), authorization)
 
-    def execute_trace(self, interactions: Sequence[Mapping[str, Any]]) -> tuple[TraceEvent, ...]:
+    def execute_trace(self, interactions: Sequence[Mapping[str, Any]], authorization: Authorization) -> tuple[TraceEvent, ...]:
+        if not authorization.permits(self.target_id, self.scope):
+            raise PermissionError(f"authorization does not permit {self.target_id!r} in {self.scope!r}")
         self.prepare()
         self._run_counter += 1
         run_id = f"run-{self._run_counter:06d}"
@@ -296,7 +298,7 @@ class EvmTargetAdapter:
         reports: list[EvmReplayRun] = []
         for _ in range(runs):
             self.reset(baseline)
-            events = self.execute_trace(interactions)
+            events = self.execute_trace(interactions, authorization)
             outcome = dict(self._last_output.get("outcome", {}))
             reports.append(EvmReplayRun(events[0].run_id if events else f"run-{self._run_counter:06d}", events, outcome, self._digest(outcome)))
         signatures = {self._digest({"events": [self._semantic_event(event) for event in run.events], "outcome": run.outcome}) for run in reports}

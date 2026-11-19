@@ -1,6 +1,6 @@
 # RSVE Dependency Architecture Review
 
-Review date: 2026-11-19. Sources are primary project documentation or project repositories. The repository currently declares no runtime dependency and no lockfile. The Python environment happens to expose Z3 `4.12.6`, but that is not reproducible project state.
+Review date: 2026-11-19. Sources are primary project documentation or project repositories. The repository declares one runtime dependency, `z3-solver==4.12.6.0`, and records it in `requirements.lock`. Foundry and QEMU remain external, capability-gated tools rather than Python package dependencies.
 
 ## Decision summary
 

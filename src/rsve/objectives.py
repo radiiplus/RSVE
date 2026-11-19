@@ -74,6 +74,7 @@ class FlowToSink(Predicate):
     source_entry: str
     canary: str
     sink: str
+    require_lineage: bool = False
 
     def evaluate(self, state: State, trace: Sequence[TraceEvent]) -> bool:
         source_seen = False
@@ -85,11 +86,27 @@ class FlowToSink(Predicate):
                 or event.operation == self.sink
                 or event.observation.get("sink") == self.sink
             ):
+                if self.require_lineage:
+                    lineage = event.observation.get("data_lineage")
+                    if not isinstance(lineage, (tuple, list)):
+                        continue
+                    if not any(
+                        isinstance(item, Mapping)
+                        and item.get("source_entry") == self.source_entry
+                        and _contains(item.get("value"), self.canary)
+                        for item in lineage
+                    ):
+                        continue
                 return True
         return False
 
     def to_dict(self) -> dict[str, Any]:
-        return {"source_entry": self.source_entry, "canary": self.canary, "sink": self.sink}
+        return {
+            "source_entry": self.source_entry,
+            "canary": self.canary,
+            "sink": self.sink,
+            "require_lineage": self.require_lineage,
+        }
 
 
 @dataclass(frozen=True)
@@ -398,7 +415,12 @@ def _predicate_from_record(record: Mapping[str, Any]) -> Predicate:
     if kind == StateEquals.type_name:
         return StateEquals(payload["key"], payload["expected"])
     if kind == FlowToSink.type_name:
-        return FlowToSink(payload["source_entry"], payload["canary"], payload["sink"])
+        return FlowToSink(
+            payload["source_entry"],
+            payload["canary"],
+            payload["sink"],
+            bool(payload.get("require_lineage", False)),
+        )
     if kind == AllowedStateChanges.type_name:
         return AllowedStateChanges(frozenset(payload["keys"]))
     if kind == GuardInvariant.type_name:

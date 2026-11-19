@@ -69,6 +69,11 @@ class NodeAdapterTests(unittest.TestCase):
         self.assertTrue(any(event.guard_result is False for event in rejected))
         with self.assertRaises(PermissionError):
             self.adapter.invoke("increment", {"amount": 1}, Authorization("denied", frozenset()))
+        with self.assertRaises(PermissionError):
+            self.adapter.execute_trace(
+                ({"entry_point": "increment", "request": {"amount": 1}},),
+                Authorization("denied", frozenset()),
+            )
 
     def test_payload_evidence_is_hashed_and_redacted_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

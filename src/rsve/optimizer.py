@@ -137,7 +137,7 @@ class RealizationOptimizer:
         try:
             for interactions in candidates:
                 try:
-                    candidate = self._replay(adapter, baseline, interactions, objective, runs)
+                    candidate = self._replay(adapter, baseline, interactions, objective, authorization, runs)
                 except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
                     rejected.append(f"{self._candidate_id(interactions)}: {exc}")
                     continue
@@ -176,6 +176,7 @@ class RealizationOptimizer:
         baseline: Any,
         interactions: tuple[Mapping[str, Any], ...],
         objective: ObjectiveDefinition,
+        authorization: Authorization,
         runs: int,
     ) -> _ReplayCandidate | None:
         runs_events: list[tuple[TraceEvent, ...]] = []
@@ -185,7 +186,7 @@ class RealizationOptimizer:
         for _ in range(runs):
             adapter.reset(baseline)
             started = time.perf_counter()
-            events = tuple(adapter.execute_trace(interactions))
+            events = tuple(adapter.execute_trace(interactions, authorization))
             durations.append((time.perf_counter() - started) * 1000)
             output = dict(getattr(adapter, "collect_output", lambda: {})())
             final_state = events[-1].after if events else State()

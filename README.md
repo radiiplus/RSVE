@@ -15,7 +15,7 @@ The core deliberately does not claim global completeness. Every result carries i
 
 ```python
 from rsve import (
-    Authorization, Budget, Engine, EntryPoint, Objective, Operation,
+    AnalysisStatus, Authorization, Budget, Engine, EntryPoint, Objective, Operation,
     State, TransitionModel,
 )
 
@@ -44,7 +44,10 @@ report = Engine().analyze(
     Budget(max_depth=2),
 )
 assert report.witness is not None
+assert report.status is AnalysisStatus.MODEL_SAT
 ```
+
+`Engine` evaluates only the supplied transition model, so `MODEL_SAT` is not a runtime validation claim. Use `HybridPlanner` with a target adapter when the result must be replay-confirmed against a real controlled fixture.
 
 Run the tests with:
 

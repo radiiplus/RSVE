@@ -54,7 +54,12 @@ class Provenance:
 
 @dataclass(frozen=True)
 class TransformSpec:
-    """Description of a representation-changing operation."""
+    """Compatibility metadata for a modeled operation.
+
+    The authoritative serialized transform is :class:`rsve.ir.Transform`.
+    These conversion methods keep legacy operation definitions usable without
+    allowing the two representations to silently drift.
+    """
 
     name: str
     input_type: str
@@ -63,6 +68,35 @@ class TransformSpec:
     partial: bool = True
     information_loss: bool = False
     provenance: Provenance = field(default_factory=lambda: Provenance("unspecified"))
+
+    def to_ir(self) -> Any:
+        from .ir import InformationLoss, Invertibility, Partiality, RelationKind, Transform
+
+        relation = RelationKind(self.relation) if self.relation in {item.value for item in RelationKind} else RelationKind.UNKNOWN
+        return Transform(
+            transform_id=self.name,
+            input_representation=self.input_type,
+            output_representation=self.output_type,
+            semantics_ref=self.provenance.source,
+            semantics_version=self.provenance.version,
+            partiality=Partiality.PARTIAL if self.partial else Partiality.TOTAL,
+            relation=relation,
+            invertibility=Invertibility.NON_INVERTIBLE if self.information_loss else Invertibility.UNKNOWN,
+            information_loss=InformationLoss.CONFIRMED if self.information_loss else InformationLoss.NONE,
+            evidence=(),
+        )
+
+    @classmethod
+    def from_ir(cls, transform: Any) -> "TransformSpec":
+        return cls(
+            name=transform.transform_id,
+            input_type=transform.input_representation,
+            output_type=transform.output_representation,
+            relation=transform.relation.value,
+            partial=transform.partiality.value != "total",
+            information_loss=transform.information_loss.value != "none",
+            provenance=Provenance(transform.semantics_ref, transform.semantics_version),
+        )
 
 
 @dataclass(frozen=True)
@@ -76,6 +110,27 @@ class RecognizerSpec:
     state_dependencies: tuple[str, ...] = ()
     dominates_effect: bool = False
     provenance: Provenance = field(default_factory=lambda: Provenance("unspecified"))
+
+    def to_ir(self) -> Any:
+        from .ir import Evidence, Recognizer
+
+        evidence = Evidence(
+            evidence_id=f"recognizer:{self.name}",
+            tier=self.provenance.fidelity,
+            source=self.provenance.source,
+            reference=self.provenance.version,
+            conditions=self.provenance.evidence,
+        )
+        return Recognizer(
+            recognizer_id=self.name,
+            input_representation="unknown",
+            actual_predicate_ref=self.name,
+            intended_predicate_ref=self.name if self.intended is not None else None,
+            enforcement_point=self.enforcement_point,
+            state_dependencies=self.state_dependencies,
+            dominates_effect=self.dominates_effect,
+            evidence=(evidence,),
+        )
 
 
 @dataclass(frozen=True)
@@ -146,6 +201,7 @@ class Operation:
     effects: tuple[str, ...] = ()
     mode: ExecutionMode = ExecutionMode.ABSTRACT
     component: str = ""
+    symbolic_transition: Any | None = None
 
     def execute(self, state: State, request: Request) -> tuple[State, Mapping[str, Value]] | None:
         if not self.guard(state, request):
@@ -255,6 +311,7 @@ class TransitionModel:
     model_version: str = "1"
     assumptions: tuple[str, ...] = ()
     excluded_interactions: tuple[tuple[str, str], ...] = ()
+    demoted_assumptions: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.target_id:
@@ -295,4 +352,19 @@ class TransitionModel:
             model_version=f"{self.model_version}.refined{len(assumptions)}",
             assumptions=assumptions,
             excluded_interactions=tuple(sorted(set(self.excluded_interactions + (exclusion,)))),
+            demoted_assumptions=self.demoted_assumptions,
+        )
+
+    def with_demoted_assumptions(self, assumptions: Iterable[str]) -> "TransitionModel":
+        demoted = tuple(sorted(set(self.demoted_assumptions) | set(assumptions)))
+        return TransitionModel(
+            target_id=self.target_id,
+            initial_state=self.initial_state,
+            inputs=self.inputs,
+            operations=self.operations,
+            build_hash=self.build_hash,
+            model_version=f"{self.model_version}.demoted{len(demoted)}",
+            assumptions=self.assumptions,
+            excluded_interactions=self.excluded_interactions,
+            demoted_assumptions=demoted,
         )

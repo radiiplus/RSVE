@@ -11,6 +11,7 @@ from .model import State, TraceEvent, _canonical
 
 class AnalysisStatus(str, Enum):
     VALIDATED_WITNESS = "VALIDATED_WITNESS"
+    MODEL_SAT = "MODEL_SAT"
     SAT_CANDIDATE = "SAT_CANDIDATE"
     UNSAT_BOUNDED = "UNSAT_BOUNDED"
     UNKNOWN = "UNKNOWN"
@@ -39,6 +40,7 @@ class Witness:
     events: tuple[TraceEvent, ...]
     final_state: State
     validated: bool = True
+    model_aligned: bool | None = None
     predicted_events: tuple[TraceEvent, ...] = ()
     interactions: tuple[Mapping[str, Any], ...] = ()
     input_refs: tuple[str, ...] = ()
@@ -54,6 +56,7 @@ class Witness:
             "events": [event.canonical() for event in self.events],
             "final_state": self.final_state.canonical(),
             "validated": self.validated,
+            "model_aligned": self.model_aligned,
             "predicted_events": [event.canonical() for event in self.predicted_events],
             "interactions": [_canonical(interaction) for interaction in self.interactions],
             "input_refs": list(self.input_refs),
@@ -118,6 +121,7 @@ class AnalysisReport:
     environment: Mapping[str, str] = field(default_factory=dict)
     replay_runs: int = 0
     replay_stable: bool | None = None
+    model_aligned: bool | None = None
     evidence_refs: tuple[str, ...] = ()
     unresolved_uncertainty: tuple[str, ...] = ()
     model_revision: str = "unknown"
@@ -149,6 +153,7 @@ class AnalysisReport:
             "environment": _canonical(self.environment),
             "replay_runs": self.replay_runs,
             "replay_stable": self.replay_stable,
+            "model_aligned": self.model_aligned,
             "evidence_refs": list(self.evidence_refs),
             "unresolved_uncertainty": list(self.unresolved_uncertainty),
             "model_revision": self.model_revision,

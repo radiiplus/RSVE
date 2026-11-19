@@ -23,6 +23,7 @@ from rsve.results import AnalysisStatus, GapKind, SolverStatus
 from rsve.semantics import compare_acceptance, transform_domain_mismatch
 from rsve import (
     AllOf,
+    AnyOf,
     ConstraintQuery,
     Equal,
     Evidence,
@@ -36,6 +37,7 @@ from rsve import (
     Representation,
     ResultScope,
     Sort,
+    StateRelation,
     SolverLimits,
     SurfaceRegistry,
     TargetIdentity,
@@ -43,6 +45,7 @@ from rsve import (
     Transition,
     Variable,
     Z3SolverAdapter,
+    TransformSpec,
     transform_domain_residual,
 )
 from rsve.constraints import NamedAssumption
@@ -75,7 +78,8 @@ class EngineTests(unittest.TestCase):
 
     def test_deterministically_synthesizes_shortest_witness(self) -> None:
         report = self.engine.analyze(fixture_model(), self.objective, self.auth, Budget(max_depth=2))
-        self.assertEqual(report.status, AnalysisStatus.VALIDATED_WITNESS)
+        self.assertEqual(report.status, AnalysisStatus.MODEL_SAT)
+        self.assertFalse(report.witness.validated)
         self.assertEqual(report.proof.status, SolverStatus.SAT)
         self.assertIsNotNone(report.witness)
         assert report.witness is not None
@@ -105,7 +109,8 @@ class EngineTests(unittest.TestCase):
             effect_lemmas=(EffectLemma("reached-one", lambda state, _trace: state["count"] == 1),),
         )
         report = self.engine.analyze(fixture_model(), objective, self.auth, Budget(max_depth=2))
-        self.assertEqual(report.status, AnalysisStatus.VALIDATED_WITNESS)
+        self.assertEqual(report.status, AnalysisStatus.MODEL_SAT)
+        self.assertFalse(report.witness.validated)
         assert report.witness is not None
         self.assertEqual([event.request for event in report.witness.events], [{"amount": 1}, {"amount": 1}])
 
@@ -184,6 +189,20 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Transform.from_record({**record, "payload": {"transform_id": "bad"}})
 
+    def test_legacy_transform_spec_converts_to_canonical_ir(self) -> None:
+        legacy = TransformSpec(
+            "decode",
+            "bytes",
+            "text",
+            relation="function",
+            partial=True,
+            information_loss=True,
+            provenance=Provenance("fixture.decode", "1", ("trace-1",), Fidelity.OBSERVED),
+        )
+        canonical = legacy.to_ir()
+        self.assertEqual(canonical.information_loss, InformationLoss.CONFIRMED)
+        self.assertEqual(TransformSpec.from_ir(canonical).information_loss, True)
+
     def test_objective_ast_and_checkpoint_constraint_round_trip(self) -> None:
         predicate = Equal(Variable("count", Sort.INT), Literal(2, Sort.INT))
         objective = ObjectiveAst(
@@ -233,6 +252,27 @@ class EngineTests(unittest.TestCase):
         ))
         self.assertEqual(unknown.status.value, "UNKNOWN")
         self.assertIn("UNSUPPORTED", unknown.unknown_reason or "")
+
+    def test_z3_state_relations_translate_without_eager_failure(self) -> None:
+        query = ConstraintQuery(
+            "state-relation",
+            StateRelation(Variable("x", Sort.INT), "<", Literal(3, Sort.INT)),
+        )
+        result = Z3SolverAdapter().solve(query)
+        self.assertEqual(result.status.value, "SAT")
+        self.assertLess(result.model["x"], 3)
+
+    def test_nested_named_assumptions_preserve_formula_scope(self) -> None:
+        x = Variable("x", Sort.INT)
+        formula = AllOf((
+            AnyOf((NamedAssumption("left_branch", Equal(x, Literal(1, Sort.INT))), Equal(x, Literal(2, Sort.INT)))),
+            Equal(x, Literal(2, Sort.INT)),
+        ))
+        result = Z3SolverAdapter().solve(ConstraintQuery("nested-assumption", formula))
+        self.assertEqual(result.status.value, "SAT")
+        self.assertEqual(result.model["x"], 2)
+        self.assertEqual(result.named_assertions, ("left_branch",))
+        self.assertNotIn("left_branch", result.unsat_core)
 
     def test_incremental_scope_and_residual_queries(self) -> None:
         adapter = Z3SolverAdapter()

@@ -51,7 +51,7 @@ class HttpOpenDomainTests(unittest.TestCase):
             "http-lab",
             (
                 StateEquals("delivered", 1),
-                FlowToSink("http.import", "RSVE-CANARY", "controlled.local.sink"),
+                FlowToSink("http.import", "RSVE-CANARY", "controlled.local.sink", require_lineage=True),
                 GuardInvariant(),
             ),
             permitted_sinks=frozenset({"controlled.local.sink"}),

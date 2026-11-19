@@ -83,6 +83,7 @@ class Engine:
                     target_id=model.target_id,
                     events=trace,
                     final_state=state,
+                    validated=False,
                 )
                 proof = ProofResult(
                     status=SolverStatus.SAT,
@@ -94,7 +95,7 @@ class Engine:
                     assumptions=model.assumptions,
                 )
                 return AnalysisReport(
-                    status=AnalysisStatus.VALIDATED_WITNESS,
+                    status=AnalysisStatus.MODEL_SAT,
                     target_id=model.target_id,
                     objective=objective.name,
                     witness=witness,

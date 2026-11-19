@@ -196,23 +196,22 @@ class _Translator:
         if isinstance(node, StateRelation):
             left = self.expr(node.left)
             right = self.expr(node.right)
-            return {
-                "=": left == right,
-                "==": left == right,
-                "!=": left != right,
-                "<": left < right,
-                "<=": left <= right,
-                ">": left > right,
-                ">=": left >= right,
-            }.get(node.relation, self._unsupported_relation(node.relation))
+            if node.relation in {"=", "=="}:
+                return left == right
+            if node.relation == "!=":
+                return left != right
+            if node.relation == "<":
+                return left < right
+            if node.relation == "<=":
+                return left <= right
+            if node.relation == ">":
+                return left > right
+            if node.relation == ">=":
+                return left >= right
+            raise UnsupportedConstraint(f"relation {node.relation!r} is unsupported")
         if isinstance(node, NamedAssumption):
             return self.expr(node.term)
         raise UnsupportedConstraint(f"constraint node {type(node).__name__} is unsupported")
-
-    @staticmethod
-    def _unsupported_relation(relation: str) -> z3.ExprRef:
-        raise UnsupportedConstraint(f"relation {relation!r} is unsupported")
-
 
 def _smt2(node: Constraint) -> str:
     """Stable human-readable query form; backend translation remains authoritative."""
@@ -243,6 +242,33 @@ def _smt2(node: Constraint) -> str:
     if isinstance(node, NamedAssumption):
         return f"(! {_smt2(node.term)} :named {node.name})"
     raise UnsupportedConstraint(type(node).__name__)
+
+
+def _top_level_named_assertions(formula: Constraint) -> tuple[tuple[str, Constraint], ...]:
+    """Return only named conjuncts that can safely participate in an UNSAT core.
+
+    A named wrapper nested under ``AnyOf`` or ``Negate`` is part of the formula's
+    local logic. Tracking it as a separate solver assertion would turn a nested
+    disjunct into a global conjunct and change the query semantics.
+    """
+    terms = formula.terms if isinstance(formula, AllOf) else (formula,)
+    return tuple(
+        (term.name, term.term)
+        for term in terms
+        if isinstance(term, NamedAssumption)
+    )
+
+
+def _formula_without_top_level_named_terms(formula: Constraint) -> Constraint | None:
+    """Remove tracked top-level conjuncts while preserving nested formula logic."""
+    if isinstance(formula, NamedAssumption):
+        return None
+    if not isinstance(formula, AllOf):
+        return formula
+    remaining = tuple(term for term in formula.terms if not isinstance(term, NamedAssumption))
+    if not remaining:
+        return None
+    return remaining[0] if len(remaining) == 1 else AllOf(remaining)
 
 
 class Z3SolverAdapter:
@@ -278,18 +304,12 @@ class Z3SolverAdapter:
             from .constraints import named_assertions
 
             named = named_assertions(query.formula)
-            root_expression: z3.ExprRef | None = None
-            if named and isinstance(query.formula, AllOf):
-                unwrapped = tuple(term for term in query.formula.terms if not isinstance(term, NamedAssumption))
-                if unwrapped:
-                    root_expression = translator.expr(unwrapped[0] if len(unwrapped) == 1 else AllOf(unwrapped))
-                    solver.add(root_expression)
-            elif named and isinstance(query.formula, NamedAssumption):
-                pass
-            else:
-                root_expression = translator.expr(query.formula)
+            tracked = _top_level_named_assertions(query.formula)
+            root_formula = _formula_without_top_level_named_terms(query.formula)
+            root_expression = translator.expr(root_formula) if root_formula is not None else None
+            if root_expression is not None:
                 solver.add(root_expression)
-            for name, assertion in named:
+            for name, assertion in tracked:
                 solver.assert_and_track(translator.expr(assertion), name)
             for name in query.assumptions:
                 solver.assert_and_track(z3.Bool(name), name)

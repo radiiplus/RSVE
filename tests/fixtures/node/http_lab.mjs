@@ -78,7 +78,7 @@ async function invoke(entry, request, runId) {
   const guardResult = Boolean(result.accepted);
   const after = snapshotState();
   emit('guard.decision', entry, request, before, after, { accepted: guardResult, transport: 'loopback-http' }, guardResult, context);
-  if (entry === 'http.import' && guardResult) emit('state.mutation', entry, request, before, after, { sink: 'controlled.local.sink', canary: true, transport: 'loopback-http' }, true, context);
+  if (entry === 'http.import' && guardResult) emit('state.mutation', entry, request, before, after, { sink: 'controlled.local.sink', canary: true, transport: 'loopback-http', data_lineage: [{ source_entry: 'http.import', value: request.proof, representation: 'json.request' }] }, true, context);
   emit('entry.outcome', entry, request, before, after, { phase: 'end', delivered: after.delivered, transport: 'loopback-http' }, guardResult, context);
   return { events, state: after, outcome: { accepted: guardResult, delivered: after.delivered } };
 }

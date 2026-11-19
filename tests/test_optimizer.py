@@ -34,7 +34,7 @@ class RealizationOptimizerTests(unittest.TestCase):
             adapter.prepare()
             baseline = adapter.snapshot()
             adapter.reset(baseline)
-            events = adapter.execute_trace(original_interactions)
+            events = adapter.execute_trace(original_interactions, authorization)
             original = Witness(
                 objective=objective.objective_id,
                 target_id="node-fixture",

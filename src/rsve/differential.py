@@ -83,6 +83,17 @@ class DifferentialAnalyzer:
                         detail="the model permitted an interaction rejected by the runtime guard",
                         observed_index=observed_events.index(event, cursor),
                     ),)
+                unexpected = self._first_unexpected(observed_events, cursor)
+                if unexpected is not None:
+                    index, event = unexpected
+                    return (Divergence(
+                        index=cursor,
+                        kind=DivergenceKind.MODEL_TOO_STRICT.value,
+                        expected=expected_event.canonical(),
+                        observed=event.canonical(),
+                        detail="an unexpected semantic runtime event appeared before the predicted event",
+                        observed_index=index,
+                    ),)
                 return (Divergence(
                     index=cursor,
                     kind=DivergenceKind.MODEL_TOO_STRICT.value,
@@ -90,11 +101,33 @@ class DifferentialAnalyzer:
                     observed="no semantically matching runtime event",
                     detail="the predicted semantic operation was not observed",
                 ),)
+            unexpected = self._first_unexpected(observed_events, cursor, stop=match_index)
+            if unexpected is not None:
+                index, event = unexpected
+                return (Divergence(
+                    index=cursor,
+                    kind=DivergenceKind.MODEL_TOO_STRICT.value,
+                    expected=expected_event.canonical(),
+                    observed=event.canonical(),
+                    detail="an unexpected semantic runtime event appeared before the predicted event",
+                    observed_index=index,
+                ),)
             actual = observed_events[match_index]
             divergence = self._event_divergence(match_index, expected_event, actual)
             if divergence is not None:
                 return (divergence,)
             cursor = match_index + 1
+        unexpected = self._first_unexpected(observed_events, cursor)
+        if unexpected is not None:
+            index, event = unexpected
+            return (Divergence(
+                index=len(expected_events),
+                kind=DivergenceKind.MODEL_TOO_STRICT.value,
+                expected="end of predicted semantic trace",
+                observed=event.canonical(),
+                detail="the runtime produced an unexpected semantic event after the predicted trace",
+                observed_index=index,
+            ),)
         return ()
 
     def align(self, expected: Iterable[TraceEvent], observed: Iterable[TraceEvent]) -> tuple[Divergence, ...]:
@@ -116,6 +149,7 @@ class DifferentialAnalyzer:
         event = observed_events[observed_index] if observed_index < len(observed_events) else None
         next_model = model
         added: tuple[str, ...] = ()
+        demoted: tuple[str, ...] = ()
         promoted: tuple[str, ...] = ()
         if divergence.kind == DivergenceKind.MODEL_TOO_LOOSE.value and event is not None:
             request = dict(event.request)
@@ -126,7 +160,10 @@ class DifferentialAnalyzer:
             promoted = (f"observed:{event.operation}:{event.entry_point}",)
             description = "promote observed event only for the evidenced target/build region"
         else:
-            description = f"retain divergence {divergence.kind} as an explicit unresolved model gap"
+            demoted = model.assumptions
+            if demoted:
+                next_model = model.with_demoted_assumptions(demoted)
+            description = f"demote affected assumptions and retain divergence {divergence.kind} as an explicit unresolved model gap"
         revision = next_model.model_version
         delta_id = "delta-" + hashlib.sha256((revision + description).encode()).hexdigest()[:16]
         delta = ModelDelta(
@@ -136,6 +173,7 @@ class DifferentialAnalyzer:
             kind=DivergenceKind(divergence.kind) if divergence.kind in {item.value for item in DivergenceKind} else DivergenceKind.OPAQUE_SEMANTICS,
             description=description,
             added_constraints=added,
+            demoted_assumptions=demoted,
             promoted_evidence=promoted,
             invalidated_queries=tuple(invalidated_queries),
             evidence_refs=tuple(event.evidence_refs if event else ()),
@@ -193,6 +231,22 @@ class DifferentialAnalyzer:
             candidate = observed[index]
             if candidate.operation == expected.operation and candidate.entry_point == expected.entry_point:
                 return index
+        return None
+
+    @staticmethod
+    def _first_unexpected(observed: Sequence[TraceEvent], start: int, *, stop: int | None = None) -> tuple[int, TraceEvent] | None:
+        end = len(observed) if stop is None else stop
+        for index in range(start, end):
+            event = observed[index]
+            if event.operation not in {
+                "entry.invocation",
+                "guard.decision",
+                "entry.outcome",
+                "async.correlation",
+                "task.schedule",
+                "environment.observation",
+            }:
+                return index, event
         return None
 
     @staticmethod

@@ -17,7 +17,7 @@ Release scope: repository state after BATCH 10 and the BATCH 11 readiness pass.
 
 ## Verification
 
-The complete suite passes with 48 tests. `python -m pip check`, bytecode compilation, dependency-lock verification, wheel build, SQLite artifact tests, optimizer fixture, black-box detection regression, HTTP open-domain replay, and variant coverage pass. `pip-audit==2.9.0 --requirement requirements.lock` reports no known vulnerabilities. Run `python scripts/benchmark.py --rounds 20` for local measurements; benchmark values are host-dependent and are not proof artifacts.
+The complete suite passes with 53 tests. `python -m unittest discover -s tests -v` passes, including the QEMU guest lifecycle. `python -m pip check`, bytecode compilation, dependency-lock verification, wheel build, SQLite artifact tests, optimizer fixture, black-box detection regression, HTTP open-domain replay, symbolic planner guidance, canonical transform bridging, authorization enforcement, and variant coverage pass. `pip-audit==2.9.0 --requirement requirements.lock` reports no known vulnerabilities. Run `python scripts/benchmark.py --rounds 20` for local measurements; benchmark values are host-dependent and are not proof artifacts.
 
 ## Current benchmark
 
@@ -27,7 +27,7 @@ Measured in this workspace with 20 rounds on Python 3.14.2: modeled bounded anal
 
 ## Dependency footprint and platforms
 
-The Python package has one direct dependency: `z3-solver==4.12.6.0`. Supported development baseline is Python 3.11+ on Linux; Node 24 is used by the fixture CI job. Foundry and QEMU are optional external tools. The QEMU image is an external verified artifact from the [Ubuntu Server 26.04 release](https://cloud-images.ubuntu.com/releases/server/server/26.04/release/), not part of the wheel.
+The Python package has one direct dependency: `z3-solver==4.12.6.0`. Supported development baseline is Python 3.11+ on Linux; Node 24 is used by the local fixture suite. Foundry and QEMU are optional external tools. The QEMU image is an external verified artifact from the [Ubuntu Server 26.04 release](https://cloud-images.ubuntu.com/releases/server/server/26.04/release/), not part of the wheel. CI configuration is intentionally excluded from this repository snapshot.
 
 ## Limits and safety
 
