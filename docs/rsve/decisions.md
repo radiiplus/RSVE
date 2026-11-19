@@ -126,6 +126,24 @@ Solver results are valid only within their recorded model revision and execution
 
 **Rejected:** An ORM, server database, bespoke graph store, or treating external snapshot bytes as if SQLite owned their lifecycle.
 
+## ADR-0018: Lower supported graph semantics through the workspace boundary
+
+**Decision:** Keep `Graph` responsible for topology and use `Workspace` as the executable composition boundary. Supported graph transforms and recognizers are evaluated by `Interpreter.outcomes()` and lowered into canonical `Outcome` branches; operation and environment branches remain explicit. Unsupported graph semantics become `UNKNOWN` rather than identity.
+
+**Reason:** This connects topology to planner execution without creating a second transition vocabulary or making graph metadata look like runtime evidence. The lowering is intentionally scoped until graph effects have executable state semantics.
+
+## ADR-0019: Separate bounded possible and guaranteed reachability
+
+**Decision:** `Report.reachability` records `POSSIBLE`, `GUARANTEED`, or `UNKNOWN` over the exact bounded interaction sequence and workspace model. `GUARANTEED` requires every enumerated modeled successor to satisfy the objective; it does not claim concrete-target or global guarantee.
+
+**Reason:** A successful branch of a nondeterministic operation establishes possibility only. Keeping this classification separate from `Status` preserves replay and fidelity semantics.
+
+## ADR-0020: Reuse persistent solver sessions for symbolic regression
+
+**Decision:** `Regressor` runs symbolic action and sequence queries through one `Stack` session, using push/pop per query, stable named assertions, and retained UNSAT cores on `Plan` and `Report`.
+
+**Reason:** This makes incremental solving operational in the planner and gives conflict-directed search evidence without treating a core as blame or proof. Unsupported theories remain `UNKNOWN`.
+
 ## Unresolved items
 
 - Exact target/runtime identity and build-hash source are not defined.

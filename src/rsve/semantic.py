@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any, Callable, Iterable, Mapping
 
 from .graph import Graph
-from .model import State
+from .model import Decision, Fidelity, Mode, Outcome, State
 
 
 class Meaning(str, Enum):
@@ -97,6 +97,68 @@ class Interpreter:
                     checked.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations, branch.recognizer_results + ((recognizer_id, None),), branch.state, branch.reasons + (f"recognizer {recognizer_id} failed: {type(exc).__name__}",)))
             branches = tuple(checked)
         return branches
+
+    def outcomes(
+        self,
+        transition_id: str,
+        value: Any,
+        *,
+        state: State | None = None,
+    ) -> tuple[Outcome, ...]:
+        """Lower supported graph semantics into the canonical outcome model."""
+        transition = next(
+            (item for item in self.graph.transitions if item.transition_id == transition_id),
+            None,
+        )
+        branches = self.execute(transition_id, value, state=state)
+        if transition is None:
+            return tuple(
+                Outcome(
+                    Decision.UNKNOWN,
+                    branch.state,
+                    guard=None,
+                    fidelity=Fidelity.MODELED,
+                    mode=Mode.ABSTRACT,
+                    evidence=(transition_id,),
+                    uncertainty=branch.reasons,
+                )
+                for branch in branches
+            )
+        effect_ids = tuple(transition.effect_ids)
+        reads = frozenset(
+            dependency
+            for recognizer_id in transition.recognizer_ids
+            for recognizer in self.graph.recognizers
+            if recognizer.recognizer_id == recognizer_id
+            for dependency in recognizer.state_dependencies
+        )
+        writes = frozenset(transition.state_effects)
+        results: list[Outcome] = []
+        for branch in branches:
+            if branch.status is Meaning.ACCEPTED:
+                decision = Decision.ACCEPT
+            elif branch.status is Meaning.REJECTED:
+                decision = Decision.REJECT
+            else:
+                decision = Decision.UNKNOWN
+            guard_values = tuple(result for _name, result in branch.recognizer_results)
+            guard = None if not guard_values or any(value is None for value in guard_values) else all(guard_values)
+            results.append(
+                Outcome(
+                    decision=decision,
+                    after=branch.state,
+                    observation={"value": branch.value},
+                    effects=effect_ids,
+                    reads=reads,
+                    writes=writes,
+                    guard=guard,
+                    fidelity=Fidelity.MODELED,
+                    mode=Mode.ABSTRACT,
+                    evidence=(transition_id,),
+                    uncertainty=branch.reasons,
+                )
+            )
+        return tuple(results)
 
 
 def _relation_values(value: Any) -> tuple[Any, ...]:

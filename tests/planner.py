@@ -215,6 +215,24 @@ class Suite(unittest.TestCase):
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"amount": 2})
 
+    def test_symbolic_regression_reuses_incremental_session_and_records_cores(self):
+        operation = Operation(
+            "impossible",
+            Entry("impossible"),
+            symbolic_transition=Symbolic(
+                "impossible",
+                "impossible",
+                Range(Variable("input.amount", Sort.INT), 1, 2),
+                {"state.count": Add(Variable("state.count", Sort.INT), Variable("input.amount", Sort.INT))},
+            ),
+        )
+        model = Model("core-fixture", State({"count": 0}), (), (operation,))
+        objective = Objective("negative", "core-fixture", "lab", (Same("count", -1),), budget=Limits(max_trace_length=1))
+        plan = Regressor().regress(model, objective)
+        self.assertIn("preimage+solver", plan.method)
+        self.assertTrue(plan.cores)
+        self.assertTrue(any("pre:negative:impossible" in core for core in plan.cores))
+
     def test_multi_step_symbolic_regression_seeds_unsupplied_trace(self):
         def operation(name, variable):
             return Operation(

@@ -94,6 +94,7 @@ from .result import (
     Proof,
     Verdict,
     Witness,
+    Reach,
 )
 from .acceptance import Residual, compare, gap
 from .trace import Otel
@@ -160,6 +161,7 @@ from .graph import (
 
 __all__ = [
     "Report",
+    "Reach",
     "Status",
     "Residual",
     "All",

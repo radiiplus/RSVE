@@ -424,11 +424,18 @@ class Stack:
         self._solver.pop()
         del self._constraints[self._scopes.pop():]
 
-    def solve(self, query_id: str = "incremental", *, scope: Scope | None = None) -> Answer:
+    def solve(
+        self,
+        query_id: str = "incremental",
+        *,
+        timeout_ms: int | None = None,
+        scope: Scope | None = None,
+    ) -> Answer:
         if not self._constraints:
             raise ValueError("incremental query has no constraints")
         formula = Every(tuple(self._constraints)) if len(self._constraints) > 1 else self._constraints[0]
-        query = Query(query_id, formula, scope=scope)
+        query = Query(query_id, formula, scope=scope, limits=Quota(timeout_ms=timeout_ms))
+        self._solver.set(timeout=int(timeout_ms or 0))
         return _normalize_solver_result(
             self.adapter,
             self._solver,

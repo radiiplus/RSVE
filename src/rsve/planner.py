@@ -11,7 +11,7 @@ from itertools import product
 from typing import Any, Callable, Mapping, Sequence
 
 from .adapter import Target
-from .logic import Every, Constraint, Equal, Literal, Sort, Variable
+from .logic import Axiom, Every, Constraint, Equal, Literal, Sort, Variable
 from .diff import Analyzer
 from .index import Index
 from .model import Authorization, Decision, Operation, State, Event, Model
@@ -25,8 +25,9 @@ from .result import (
     Gap,
     Verdict,
     Witness,
+    Reach,
 )
-from .solver import Query, Zed
+from .solver import Answer, Query, Stack, Zed, Unknown
 from .wp import WP, Truth
 from .workspace import Frame, Workspace
 
@@ -39,6 +40,7 @@ class Plan:
     complete: bool
     uncertainty: tuple[str, ...] = ()
     required_traces: tuple[tuple[Mapping[str, Any], ...], ...] = ()
+    cores: tuple[tuple[str, ...], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -106,7 +108,10 @@ def _initial_state_constraints(state: State) -> list[Constraint]:
     for key, value in sorted(state.as_dict().items()):
         sort = _sort_for(value)
         if sort is not None:
-            constraints.append(Equal(Variable(f"state.{key}", sort), Literal(value, sort)))
+            constraints.append(Axiom(
+                f"state:{key}",
+                Equal(Variable(f"state.{key}", sort), Literal(value, sort)),
+            ))
     return constraints
 
 
@@ -143,6 +148,7 @@ class Regressor:
     ) -> Plan:
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
+        cores: list[tuple[str, ...]] = []
         index = Index.build(model)
         needed = self._keys(objective.postconditions)
         indexed = [item.operation for item in index.chain(needed)] if needed else []
@@ -157,18 +163,22 @@ class Regressor:
             for request in model.args():
                 if self.preimage(operation, request, objective)(model.initial_state):
                     actions.append((operation.entry_point.name, dict(request)))
-        symbolic_actions, symbolic_uncertainty = self._symbolic_actions(
-            model,
-            objective,
-            solver=solver or Zed(),
-            solver_timeout_ms=solver_timeout_ms,
-        )
-        symbolic_traces, sequence_uncertainty = self._symbolic_traces(
-            model,
-            objective,
-            solver=solver or Zed(),
-            solver_timeout_ms=solver_timeout_ms,
-        )
+        backend = solver or Zed()
+        with backend.incremental() as session:
+            symbolic_actions, symbolic_uncertainty, action_cores = self._symbolic_actions(
+                model,
+                objective,
+                solver=session,
+                solver_timeout_ms=solver_timeout_ms,
+            )
+            symbolic_traces, sequence_uncertainty, trace_cores = self._symbolic_traces(
+                model,
+                objective,
+                solver=session,
+                solver_timeout_ms=solver_timeout_ms,
+            )
+            cores.extend(action_cores)
+            cores.extend(trace_cores)
         for action in symbolic_actions:
             if (action[0], self._request_key(action[1])) not in {
                 (entry, self._request_key(request)) for entry, request in actions
@@ -191,10 +201,14 @@ class Regressor:
             objective_id=objective.objective_id,
             required_actions=tuple(actions),
             method=("preimage+solver+sequence+bounded_preimage"
-                    if symbolic_actions or symbolic_traces else "bounded_preimage_enumeration"),
+                    if symbolic_actions or symbolic_traces or any(
+                        operation.symbolic_transition is not None
+                        for operation in model.operations
+                    ) else "bounded_preimage_enumeration"),
             complete=False,
             uncertainty=tuple(uncertainty),
             required_traces=tuple(symbolic_traces),
+            cores=tuple(cores),
         )
 
     @staticmethod
@@ -212,36 +226,41 @@ class Regressor:
         model: Model,
         objective: Objective,
         *,
-        solver: Zed,
+        solver: Zed | Stack,
         solver_timeout_ms: int | None,
-    ) -> tuple[list[tuple[Mapping[str, Any], ...]], list[str]]:
+    ) -> tuple[list[tuple[Mapping[str, Any], ...]], list[str], list[tuple[str, ...]]]:
         symbolic_operations = tuple(
             operation for operation in model.ops()
             if operation.symbolic_transition is not None
         )
         if len(symbolic_operations) < 1 or objective.budget.max_trace_length < 2:
-            return [], []
+            return [], [], []
         postcondition = _symbolic_postcondition(objective)
         if postcondition is None:
-            return [], ["multi-step symbolic regression supports Same postconditions only"]
+            return [], ["multi-step symbolic regression supports Same postconditions only"], []
         initial_constraints = _initial_state_constraints(model.initial_state)
         traces: list[tuple[Mapping[str, Any], ...]] = []
         uncertainty: list[str] = []
+        cores: list[tuple[str, ...]] = []
         examined = 0
         for length in range(2, objective.budget.max_trace_length + 1):
             for sequence in product(symbolic_operations, repeat=length):
                 examined += 1
                 if examined > min(objective.budget.max_states, 256):
                     uncertainty.append("multi-step symbolic sequence bound reached")
-                    return traces, uncertainty
+                    return traces, uncertainty, cores
                 transitions = tuple(operation.symbolic_transition for operation in sequence)
                 result = WP().derive(postcondition, transitions)
                 if result.status is not Truth.EXACT or result.precondition is None:
                     continue
                 formula: Constraint = result.precondition
                 if initial_constraints:
-                    formula = Every(tuple(initial_constraints) + (formula,))
-                solved = solver.solve(
+                    formula = Every(tuple(initial_constraints) + (Axiom(
+                        f"route:{objective.objective_id}:{length}:{examined}",
+                        formula,
+                    ),))
+                solved = _solve(
+                    solver,
                     Query(
                         f"wp-sequence:{objective.objective_id}:{length}:{examined}",
                         formula,
@@ -252,6 +271,8 @@ class Regressor:
                     uncertainty.append(solved.unknown_reason or "multi-step symbolic query returned UNKNOWN")
                     continue
                 if solved.status is not Verdict.SAT:
+                    if solved.status is Verdict.UNSAT_BOUNDED and solved.unsat_core:
+                        cores.append(solved.unsat_core)
                     continue
                 interactions = tuple(
                     {
@@ -262,23 +283,24 @@ class Regressor:
                 )
                 if all(interaction["request"] or operation.symbolic_transition is not None for interaction, operation in zip(interactions, sequence)):
                     traces.append(interactions)
-        return traces, uncertainty
+        return traces, uncertainty, cores
 
     def _symbolic_actions(
         self,
         model: Model,
         objective: Objective,
         *,
-        solver: Zed,
+        solver: Zed | Stack,
         solver_timeout_ms: int | None,
-    ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str]]:
+    ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str], list[tuple[str, ...]]]:
         if not any(operation.symbolic_transition is not None for operation in model.operations):
-            return [], []
+            return [], [], []
         postcondition = _symbolic_postcondition(objective)
         if postcondition is None:
-            return [], ["symbolic backward planning supports Same postconditions only"]
+            return [], ["symbolic backward planning supports Same postconditions only"], []
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
+        cores: list[tuple[str, ...]] = []
         wp_engine = WP()
         for operation in model.ops():
             transition = operation.symbolic_transition
@@ -297,8 +319,12 @@ class Regressor:
             ]
             formula: Constraint = result.precondition
             if initial_constraints:
-                formula = Every(tuple(initial_constraints) + (formula,))
-            solved = solver.solve(
+                formula = Every(tuple(initial_constraints) + (Axiom(
+                    f"pre:{objective.objective_id}:{operation.entry_point.name}",
+                    formula,
+                ),))
+            solved = _solve(
+                solver,
                 Query(
                     f"wp:{objective.objective_id}:{operation.entry_point.name}",
                     formula,
@@ -311,6 +337,8 @@ class Regressor:
                 )
                 continue
             if solved.status is not Verdict.SAT:
+                if solved.status is Verdict.UNSAT_BOUNDED and solved.unsat_core:
+                    cores.append(solved.unsat_core)
                 continue
             request = {
                 name.removeprefix("input.").removeprefix("request."): value
@@ -319,7 +347,7 @@ class Regressor:
             }
             if request:
                 actions.append((operation.entry_point.name, request))
-        return actions, uncertainty
+        return actions, uncertainty, cores
 
     @staticmethod
     def _request_key(request: Mapping[str, Any]) -> str:
@@ -350,6 +378,30 @@ class Regressor:
                 if outcome.decision is not Decision.UNKNOWN
             )
         return precondition
+
+
+def _solve(solver: Zed | Stack, query: Query, *, timeout_ms: int | None) -> Answer:
+    """Run one query in a persistent session when one was supplied."""
+    if not isinstance(solver, Stack):
+        return solver.solve(query, timeout_ms=timeout_ms)
+    solver.push()
+    try:
+        solver.add(query.formula)
+        return solver.solve(query.query_id, timeout_ms=timeout_ms, scope=query.scope)
+    except Unknown as exc:
+        return Answer(
+            status=Verdict.UNKNOWN,
+            query_id=query.query_id,
+            backend=solver.adapter.backend_name,
+            backend_version="z3",
+            options={"timeout_ms": timeout_ms},
+            query=repr(query.formula),
+            assumptions=query.assumptions,
+            unknown_reason=f"UNSUPPORTED: {exc}",
+            scope=query.scope,
+        )
+    finally:
+        solver.pop()
 
 
 class Planner:
@@ -405,6 +457,7 @@ class Planner:
                 0,
                 backward,
                 environment or adapter_environment,
+                reachability=Reach.POSSIBLE,
             )
         preferred = {(entry, self._request_key(request)) for entry, request in backward.required_actions}
         started = time.monotonic()
@@ -482,6 +535,7 @@ class Planner:
                         explored_events,
                         backward,
                         environment or adapter_environment,
+                        reachability=self._reachability(workspace, objective, trace),
                     )
 
                 if not attempt.replayed:
@@ -495,6 +549,7 @@ class Planner:
                         explored_events,
                         backward,
                         environment or adapter_environment,
+                        reachability=self._reachability(workspace, objective, trace),
                     )
                 if attempt.divergences and attempt.objective_observed is not True:
                     return self._report(
@@ -507,6 +562,7 @@ class Planner:
                         explored_events,
                         backward,
                         environment or adapter_environment,
+                        reachability=self._reachability(workspace, objective, trace),
                     )
 
             if trace and trace[-1].terminal:
@@ -632,6 +688,7 @@ class Planner:
         environment: Mapping[str, str],
         *,
         gaps: Sequence[Gap] = (),
+        reachability: Reach = Reach.UNKNOWN,
     ) -> Report:
         witness = None
         witness_events = attempt.observed_events if status is Status.VALIDATED_WITNESS and attempt.observed_events else tuple(predicted)
@@ -669,6 +726,7 @@ class Planner:
             scope=objective.authorization_scope,
             query=json.dumps(objective.to_record(), sort_keys=True, default=str),
             assumptions=objective.assumptions + backward.uncertainty,
+            named_core=tuple(sorted({name for core in backward.cores for name in core})),
             backend="bounded-hybrid-planner",
             options={"max_time_ms": objective.budget.max_time_ms, "max_events": objective.budget.max_events},
             fidelity_limitations=("bounded surface and trace length", "runtime replay depends on adapter capabilities"),
@@ -698,7 +756,38 @@ class Planner:
             unresolved_uncertainty=backward.uncertainty,
             model_revision=model.model_version,
             execution_profile_id=environment.get("profile_id", "unknown"),
+            reachability=reachability,
+            solver_cores=backward.cores,
         )
+
+    @classmethod
+    def _reachability(
+        cls,
+        workspace: Workspace,
+        objective: Objective,
+        trace: Sequence[Event],
+    ) -> Reach:
+        """Classify all bounded modeled successors of one interaction trace.
+
+        This is deliberately scoped to the workspace model and the exact
+        interaction sequence. It does not claim that a concrete target will
+        realize every modeled branch.
+        """
+        interactions = tuple(
+            {"entry_point": event.entry_point, "request": dict(event.request)}
+            for event in trace
+        )
+        alternatives = cls._model_traces(workspace.model, interactions, workspace=workspace)
+        if not alternatives:
+            return Reach.UNKNOWN
+        if all(
+            not uncertain
+            and objective.evaluate(frame.target, events)
+            and objective.satisfy(workspace.model.initial_state, events)
+            for frame, events, uncertain in alternatives
+        ):
+            return Reach.GUARANTEED
+        return Reach.POSSIBLE
 
     @staticmethod
     def _request_key(request: Mapping[str, Any]) -> str:

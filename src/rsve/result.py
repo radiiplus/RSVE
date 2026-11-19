@@ -19,6 +19,14 @@ class Status(str, Enum):
     MODEL_DIVERGENCE = "MODEL_DIVERGENCE"
 
 
+class Reach(str, Enum):
+    """Bounded model reachability, separate from replay/result status."""
+
+    POSSIBLE = "POSSIBLE"
+    GUARANTEED = "GUARANTEED"
+    UNKNOWN = "UNKNOWN"
+
+
 class Verdict(str, Enum):
     SAT = "SAT"
     UNSAT_BOUNDED = "UNSAT_BOUNDED"
@@ -127,6 +135,9 @@ class Report:
     unresolved_uncertainty: tuple[str, ...] = ()
     model_revision: str = "unknown"
     execution_profile_id: str = "unknown"
+    reachability: Reach = Reach.UNKNOWN
+    reachability_scope: str = "bounded workspace model"
+    solver_cores: tuple[tuple[str, ...], ...] = ()
 
     def canonical(self) -> dict[str, Any]:
         proof = {
@@ -159,4 +170,7 @@ class Report:
             "unresolved_uncertainty": list(self.unresolved_uncertainty),
             "model_revision": self.model_revision,
             "execution_profile_id": self.execution_profile_id,
+            "reachability": self.reachability.value,
+            "reachability_scope": self.reachability_scope,
+            "solver_cores": [list(core) for core in self.solver_cores],
         })
