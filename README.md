@@ -35,7 +35,7 @@ model = Model(
 
 report = Engine().analyze(
     model,
-    Objective(
+    Goal(
         name="reach-two",
         scope="fixture-lab",
         postcondition=lambda state, trace: state["count"] == 2,

@@ -65,6 +65,26 @@ class Index:
                 found[(item.entry, item.operation.name)] = item
         return tuple(found[key] for key in sorted(found))
 
+    def chain(self, keys: Iterable[str]) -> tuple[Item, ...]:
+        """Return the bounded causal writer closure for the requested keys.
+
+        A writer is only a candidate predecessor. Its reads become the next
+        requirements, so callers can regress through non-adjacent operations
+        without treating the dependency summary as proof of reachability.
+        """
+        needed = set(keys)
+        found: dict[tuple[str, str], Item] = {}
+        while needed:
+            current = set(needed)
+            needed.clear()
+            for item in self.predecessors(current):
+                identity = (item.entry, item.operation.name)
+                if identity in found:
+                    continue
+                found[identity] = item
+                needed.update(item.reads)
+        return tuple(found[key] for key in sorted(found))
+
     def readers(self, keys: Iterable[str]) -> tuple[Item, ...]:
         return self.collect(self.read, keys)
 

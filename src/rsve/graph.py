@@ -602,6 +602,18 @@ class Graph(Schema):
         for edge in self.connections:
             if edge.source_port_id not in port_ids or edge.destination_port_id not in port_ids:
                 errors.append(f"connection {edge.connection_id} references an unknown port")
+            if edge.transform_id:
+                bridge = next((item for item in self.transforms if item.transform_id == edge.transform_id), None)
+                if bridge is None:
+                    errors.append(f"connection {edge.connection_id} references an unknown transform")
+                elif (
+                    bridge.input_representation != edge.output_representation
+                    or bridge.output_representation != edge.input_representation
+                ):
+                    errors.append(
+                        f"connection {edge.connection_id} transform {edge.transform_id} does not bridge "
+                        f"{edge.output_representation} to {edge.input_representation}"
+                    )
             if edge.status is Fit.UNVERIFIED:
                 unverified.append(edge.connection_id)
                 warnings.append(f"connection {edge.connection_id} has no verified representation bridge")

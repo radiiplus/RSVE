@@ -12,7 +12,7 @@ from statistics import mean
 from typing import Any, Mapping, Sequence
 
 from .adapter import Target
-from .model import Authorization, Decision, State, Event, Model
+from .model import Authorization, Decision, Operation, State, Event, Model
 from .objective import Objective
 from .result import Witness
 from .planner import Regressor
@@ -251,16 +251,28 @@ class Optimizer:
     @staticmethod
     def _events_for(model: Model, interactions: Sequence[Mapping[str, Any]]) -> tuple[Event, ...]:
         state = model.initial_state
-        operations = {operation.entry_point.name: operation for operation in model.ops()}
+        operations: dict[str, tuple[Operation, ...]] = {}
+        for operation in model.ops():
+            operations.setdefault(operation.entry_point.name, ())
+            operations[operation.entry_point.name] += (operation,)
         events: list[Event] = []
         for interaction in interactions:
-            operation = operations.get(str(interaction["entry_point"]))
+            candidates = operations.get(str(interaction["entry_point"]), ())
             request = dict(interaction.get("request", {}))
-            if operation is None:
+            if not candidates:
                 return ()
-            outcome = operation.execute(state, request)
-            if outcome.decision is Decision.UNKNOWN:
+            choices = [
+                (operation, outcome)
+                for operation in candidates
+                for outcome in operation.branches(state, request)
+                if outcome.decision is not Decision.UNKNOWN
+            ]
+            if not choices:
                 return ()
+            operation, outcome = next(
+                (item for item in choices if item[1].decision is Decision.ACCEPT),
+                choices[0],
+            )
             event = outcome.event(
                 operation.name,
                 operation.entry_point.name,

@@ -2,7 +2,9 @@ import unittest
 
 from rsve import (
     Authorization,
+    Budget,
     Decision,
+    Engine,
     Entry,
     Guard,
     Planner,
@@ -11,6 +13,7 @@ from rsve import (
     Objective,
     Operation,
     Outcome,
+    Goal,
     State,
     Same,
     Model,
@@ -62,6 +65,32 @@ class Causal(unittest.TestCase):
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual([event.decision for event in report.witness.events], [Decision.REJECT, Decision.ACCEPT])
 
+    def testdeny(self):
+        op = Operation(
+            "deny",
+            Entry("deny"),
+            guard=lambda _state, _request: False,
+            deny=lambda state, _request: state.update(ready=True),
+            effects=("accepted-effect",),
+            writes=frozenset({"accepted"}),
+            deny_effects=("rejected-effect",),
+            deny_writes=frozenset({"ready"}),
+        )
+        outcome = op.execute(State({"ready": False}), {})
+        self.assertEqual(outcome.effects, ("rejected-effect",))
+        self.assertEqual(outcome.writes, frozenset({"ready"}))
+
+    def testunknown(self):
+        op = Operation(
+            "opaque",
+            Entry("opaque"),
+            relation=lambda state, _request: (Outcome(Decision.UNKNOWN, state.update(goal=True), terminal=True),),
+        )
+        model = Model("target", State({"goal": False}), ({},), (op,))
+        goal = Goal("goal", "lab", lambda state, _trace: state.get("goal") is True)
+        report = Engine().analyze(model, goal, self.auth(), Budget(max_depth=1))
+        self.assertEqual(report.status, Status.UNKNOWN)
+
     def testguard(self):
         self.assertFalse(Guard("check", False).evaluate(State(), ()))
 
@@ -70,12 +99,21 @@ class Causal(unittest.TestCase):
             "write",
             Entry("early"),
             apply=lambda state, _request: state.update(goal=True),
+            reads=frozenset({"ready"}),
             writes=frozenset({"goal"}),
         )
-        filler = Operation("fill", Entry("middle"))
-        model = Model("target", State({"goal": False}), ({},), (writer, filler))
-        found = Index.build(model).predecessors(("goal",))
+        filler = Operation(
+            "fill",
+            Entry("middle"),
+            apply=lambda state, _request: state.update(ready=True),
+            writes=frozenset({"ready"}),
+        )
+        model = Model("target", State({"goal": False, "ready": False}), ({},), (writer, filler))
+        index = Index.build(model)
+        found = index.predecessors(("goal",))
         self.assertEqual([item.entry for item in found], ["early"])
+        chain = index.chain(("goal",))
+        self.assertEqual({item.entry for item in chain}, {"early", "middle"})
 
     def testbranch(self):
         def route(state, _request):

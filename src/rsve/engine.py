@@ -45,8 +45,8 @@ class Engine:
                 f"{model.target_id!r} in scope {objective.scope!r}"
             )
 
-        queue: deque[tuple[int, State, tuple[Event, ...], bool]] = deque(
-            [(0, model.initial_state, (), False)]
+        queue: deque[tuple[int, State, tuple[Event, ...], bool, bool]] = deque(
+            [(0, model.initial_state, (), False, False)]
         )
         visited: set[tuple[int, str, tuple[tuple[str, str], ...]]] = set()
         operations = model.ops()
@@ -55,6 +55,7 @@ class Engine:
         explored_events = 0
         state_budget_hit = False
         event_budget_hit = False
+        unknown_seen = False
 
         def reach(state: State, trace: tuple[Event, ...]) -> bool:
             if not objective.postcondition(state, trace):
@@ -69,7 +70,7 @@ class Engine:
             )
 
         while queue:
-            depth, state, trace, halted = queue.popleft()
+            depth, state, trace, halted, uncertain = queue.popleft()
             trace_key = tuple((event.operation, repr(event.request)) for event in trace)
             visit_key = (depth, repr(state.canonical()), trace_key)
             if visit_key in visited:
@@ -77,7 +78,7 @@ class Engine:
             visited.add(visit_key)
             explored_states += 1
 
-            if reach(state, trace):
+            if not uncertain and reach(state, trace):
                 witness = Witness(
                     objective=objective.name,
                     target_id=model.target_id,
@@ -124,8 +125,9 @@ class Engine:
                         break
                     explored_events += 1
                     for outcome in operation.branches(state, request):
+                        branch_unknown = uncertain or outcome.decision is Decision.UNKNOWN
                         if outcome.decision is Decision.UNKNOWN:
-                            continue
+                            unknown_seen = True
                         event = outcome.event(
                             operation.name,
                             operation.entry_point.name,
@@ -138,7 +140,7 @@ class Engine:
                             state_budget_hit = True
                             continue
                         next_trace = trace + (event,)
-                        queue.append((depth + 1, outcome.after, next_trace, outcome.terminal))
+                        queue.append((depth + 1, outcome.after, next_trace, outcome.terminal, branch_unknown))
                 if event_budget_hit:
                     break
             if event_budget_hit:
@@ -152,6 +154,14 @@ class Engine:
                 gaps.append(Gap(Grade.EVENT_BUDGET, "event exploration budget was exhausted"))
             if state_budget_hit:
                 gaps.append(Gap(Grade.STATE_BUDGET, "state exploration budget was exhausted"))
+        elif unknown_seen:
+            status = Status.UNKNOWN
+            solver_status = Verdict.UNKNOWN
+            gaps = [Gap(
+                Grade.UNKNOWN,
+                "an unresolved transition outcome may affect bounded reachability",
+                {"unknown_branches": True},
+            )]
         else:
             status = Status.UNSAT_BOUNDED
             solver_status = Verdict.UNSAT_BOUNDED

@@ -130,7 +130,7 @@ class Regressor:
         uncertainty: list[str] = []
         index = Index.build(model)
         needed = self._keys(objective.postconditions)
-        indexed = [item.operation for item in index.predecessors(needed)] if needed else []
+        indexed = [item.operation for item in index.chain(needed)] if needed else []
         seen = {(item.entry_point.name, item.name) for item in indexed}
         operations = tuple(indexed) + tuple(
             item for item in model.ops()
@@ -381,15 +381,13 @@ class Planner:
         preferred = {(entry, self._request_key(request)) for entry, request in backward.required_actions}
         started = time.monotonic()
         budget = objective.budget
-        queue: list[tuple[int, int, int, State, tuple[Event, ...]]] = []
+        queue: list[tuple[int, int, int, State, tuple[Event, ...], bool]] = []
         serial = 0
-        heapq.heappush(queue, (0, serial, 0, model.initial_state, ()))
+        heapq.heappush(queue, (0, serial, 0, model.initial_state, (), False))
         for interactions in backward.required_traces:
-            seeded = self._model_trace(model, interactions)
-            if seeded is not None:
-                state, trace = seeded
+            for state, trace, uncertain in self._model_traces(model, interactions):
                 serial += 1
-                heapq.heappush(queue, (-1, serial, len(trace), state, trace))
+                heapq.heappush(queue, (-1, serial, len(trace), state, trace, uncertain))
         input_candidates = list(model.args())
         for _entry, request in backward.required_actions:
             if self._request_key(request) not in {self._request_key(item) for item in input_candidates}:
@@ -400,19 +398,20 @@ class Planner:
         explored_events = 0
         attempts: list[Attempt] = []
         budget_hit = False
+        unknown_seen = False
 
         while queue:
             if (time.monotonic() - started) * 1000 > budget.max_time_ms:
                 budget_hit = True
                 break
-            _, _, depth, state, trace = heapq.heappop(queue)
+            _, _, depth, state, trace, uncertain = heapq.heappop(queue)
             key = (depth, json.dumps(state.canonical(), sort_keys=True), tuple((event.entry_point, repr(event.request)) for event in trace))
             if key in visited:
                 continue
             visited.add(key)
             explored_states += 1
 
-            if objective.evaluate(state, trace) and objective.satisfy(model.initial_state, trace):
+            if not uncertain and objective.evaluate(state, trace) and objective.satisfy(model.initial_state, trace):
                 attempt = self._replay_candidate(
                     adapter,
                     objective,
@@ -474,8 +473,9 @@ class Planner:
                         continue
                     explored_events += 1
                     for outcome in operation.branches(state, request):
+                        branch_unknown = uncertain or outcome.decision is Decision.UNKNOWN
                         if outcome.decision is Decision.UNKNOWN:
-                            continue
+                            unknown_seen = True
                         if explored_states + len(queue) >= budget.max_states:
                             budget_hit = True
                             continue
@@ -490,17 +490,17 @@ class Planner:
                         next_trace = trace + (event,)
                         preference = 0 if (operation.entry_point.name, self._request_key(request)) in preferred else depth + 1
                         serial += 1
-                        heapq.heappush(queue, (preference, serial, depth + 1, outcome.after, next_trace))
+                        heapq.heappush(queue, (preference, serial, depth + 1, outcome.after, next_trace, branch_unknown))
                 if budget_hit:
                     break
             if budget_hit:
                 break
 
-        status = Status.BUDGET_EXHAUSTED if budget_hit else (Status.UNKNOWN if attempts else Status.UNSAT_BOUNDED)
+        status = Status.BUDGET_EXHAUSTED if budget_hit else (Status.UNKNOWN if (attempts or unknown_seen) else Status.UNSAT_BOUNDED)
         gaps = [Gap(
-            Grade.EVENT_BUDGET if budget_hit else (Grade.ASSUMPTION if attempts else Grade.BOUND),
-            "bounded hybrid search exhausted its event/time/state budget" if budget_hit else ("candidate replay did not satisfy the objective or stability policy" if attempts else "no witness exists in the encoded bounded model/surface"),
-            {"max_trace_length": budget.max_trace_length, "attempts": len(attempts)},
+            Grade.EVENT_BUDGET if budget_hit else (Grade.UNKNOWN if (attempts or unknown_seen) else Grade.BOUND),
+            "bounded hybrid search exhausted its event/time/state budget" if budget_hit else ("candidate replay did not satisfy the objective or stability policy" if attempts else "an unresolved transition outcome may affect bounded reachability" if unknown_seen else "no witness exists in the encoded bounded model/surface"),
+            {"max_trace_length": budget.max_trace_length, "attempts": len(attempts), "unknown_branches": unknown_seen},
         )]
         return self._report(
             status,
@@ -651,33 +651,40 @@ class Planner:
         return json.dumps(dict(request), sort_keys=True, separators=(",", ":"), default=str)
 
     @staticmethod
-    def _model_trace(
+    def _model_traces(
         model: Model,
         interactions: Sequence[Mapping[str, Any]],
-    ) -> tuple[State, tuple[Event, ...]] | None:
-        operations = {operation.entry_point.name: operation for operation in model.ops()}
-        state = model.initial_state
-        events: list[Event] = []
+    ) -> tuple[tuple[State, tuple[Event, ...], bool], ...]:
+        frontier: list[tuple[State, tuple[Event, ...], bool]] = [(model.initial_state, (), False)]
         for index, interaction in enumerate(interactions):
             entry = str(interaction["entry_point"])
-            operation = operations.get(entry)
             request = dict(interaction.get("request", {}))
-            if operation is None or not model.allows(entry, request):
-                return None
-            outcome = operation.execute(state, request)
-            event = outcome.event(
-                operation.name,
-                entry,
-                request,
-                state,
-                component=operation.component,
-                order=len(events),
-            )
-            events.append(event)
-            state = outcome.after
-            if outcome.terminal and index != len(interactions) - 1:
-                return None
-        return state, tuple(events)
+            operations = tuple(item for item in model.ops() if item.entry_point.name == entry)
+            if not operations or not model.allows(entry, request):
+                return ()
+            next_frontier: list[tuple[State, tuple[Event, ...], bool]] = []
+            for state, events, uncertain in frontier:
+                for operation in operations:
+                    for outcome in operation.branches(state, request):
+                        event = outcome.event(
+                            operation.name,
+                            entry,
+                            request,
+                            state,
+                            component=operation.component,
+                            order=len(events),
+                        )
+                        if outcome.terminal and index != len(interactions) - 1:
+                            continue
+                        next_frontier.append((
+                            outcome.after,
+                            events + (event,),
+                            uncertain or outcome.decision is Decision.UNKNOWN,
+                        ))
+            frontier = next_frontier
+            if not frontier:
+                return ()
+        return tuple(frontier)
 
     @staticmethod
     def _probe_phantom_entries(

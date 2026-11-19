@@ -197,6 +197,14 @@ class Operation:
     deny: Change | None = None
     watch: View | None = None
     loss: tuple[str, ...] = ()
+    deny_effects: tuple[str, ...] = ()
+    deny_reads: frozenset[str] = frozenset()
+    deny_writes: frozenset[str] = frozenset()
+    deny_must: frozenset[str] = frozenset()
+    deny_may: frozenset[str] = frozenset()
+    deny_keep: frozenset[str] = frozenset()
+    deny_unknown: frozenset[str] = frozenset()
+    deny_env: Mapping[str, Value] = field(default_factory=dict)
     env: Mapping[str, Value] = field(default_factory=dict)
     stop: bool = True
     reads: frozenset[str] = frozenset()
@@ -236,14 +244,14 @@ class Operation:
                 decision=Decision.REJECT,
                 after=next_state,
                 observation=observation,
-                effects=self.loss,
-                reads=self.reads,
-                writes=self.writes | self.must | self.may,
-                must=self.must,
-                may=self.may,
-                keep=self.keep,
-                unknown=self.unknown,
-                environment=dict(self.env),
+                effects=self.deny_effects,
+                reads=self.deny_reads,
+                writes=self.deny_writes | self.deny_must | self.deny_may,
+                must=self.deny_must,
+                may=self.deny_may,
+                keep=self.deny_keep,
+                unknown=self.deny_unknown,
+                environment=dict(self.deny_env),
                 terminal=self.stop,
                 guard=False,
                 fidelity=self.fidelity,

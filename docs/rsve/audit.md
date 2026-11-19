@@ -27,7 +27,7 @@ Status meanings: EXISTS is implemented and tested; PARTIAL is an explicit contra
 
 | RSVE component or milestone capability | Status | File/test evidence and gap |
 | --- | --- | --- |
-| Typed state and transition model | PARTIAL | `src/rsve/model.py`: `State`, `Operation`, `Model`, `Event`; graph is implicit in operations and not a persisted component graph |
+| Typed state and transition model | PARTIAL | `src/rsve/model.py`: `State`, `Operation`, `Outcome`, `Model`, `Event`; rejection, partial, error and unknown branches are explicit, but the graph interpreter is not yet the planner's authoritative execution model |
 | Entry-point registry/discovery | PARTIAL | `Entry`, `Surface`, and `Node.discover()` exist; framework-wide discovery is intentionally unsupported |
 | Transducers and representation semantics | EXISTS within supported semantics | `ir.Transform` is canonical; `Interpreter` composes supported transforms and recognizers, preserves representation lineage, and returns UNKNOWN for opaque semantics. General runtime semantics remain extension-provided |
 | Recognizers and intended contracts | PARTIAL | Canonical `ir.Recognizer`, `Interpreter`, and `acceptance.py` finite-domain residual helpers exist; enforcement trace, dominance analysis, and independent contract source remain partial |
@@ -40,14 +40,14 @@ Status meanings: EXISTS is implemented and tested; PARTIAL is an explicit contra
 | Solver adapter | EXISTS within supported subset | `src/rsve/solver.py` translates the typed constraint subset to Z3; unsupported theories return UNKNOWN; proof capture remains optional |
 | Reactive environment model | EXISTS within core scope | `src/rsve/environment.py` models target/environment state together, predicts reactions, and reconciles observed reactions; concrete Linux facts remain extension-provided |
 | Composable workspace graph | EXISTS within tested graph scope | `src/rsve/graph.py` provides profiles, extension instances, bindings, typed regions/ports/connections, nested graphs, capability resolution, correlation evidence, composite snapshots, budgets, and cycle-safe traversal |
-| Layer/profile identity | EXISTS within graph scope | `Profile` and `Need` in `src/rsve/graph.py` support multiple implementations, versions, configurations, execution scopes, and shared-dependency comparisons |
+| Layer/profile identity | EXISTS within graph scope | `Persona` and `Need` in `src/rsve/graph.py` support multiple implementations, versions, configurations, execution scopes, and shared-dependency comparisons |
 | Realization optimization | EXISTS within bounded candidate scope | `src/rsve/optimize.py` replays caller-supplied alternatives from one clean snapshot and compares explicit costs; it does not synthesize new primitives or replace the planner |
-| Black-box vulnerability-style detection | EXISTS in synthetic lab scope | `tests/blackbox.py`, `tests/variants.py`, and `tests/http.py` observe canary-only controlled sinks, compute actual-minus-intended acceptance, expand an HTTP interaction domain, and replay-validate objectives without relying on source-location disclosure |
+| Black-box vulnerability-style detection | EXISTS in synthetic lab scope | `tests/blackbox.py`, `tests/variants.py`, and `tests/web.py` observe canary-only controlled sinks, compute actual-minus-intended acceptance, expand an HTTP interaction domain, and replay-validate objectives without relying on source-location disclosure |
 | Black-box variant coverage | EXISTS in bounded fixture scope | `tests/variants.py` covers decoding, coercion, duplicate-field parsing, and stateful sequence boundaries; variants remain synthetic, local-only, finite, and independently specified |
-| QEMU OS/ISA substrate | EXISTS within controlled guest scope | `src/rsve/extensions/node.py` boots the SHA256-pinned Ubuntu Server 26.04 amd64 image with QEMU TCG, captures serial boot evidence, and recreates qcow2 overlays for reset; guest command execution requires a separate guest-agent extension, while host hardware, scheduler, entropy, clock, external services, and exact whole-system replay remain unknown |
+| QEMU OS/ISA substrate | EXISTS within controlled guest scope | `src/rsve/extensions/qemu.py` boots the SHA256-pinned Ubuntu Server 26.04 amd64 image with QEMU TCG, captures serial boot evidence, and recreates qcow2 overlays for reset; guest command execution requires a separate guest-agent extension, while host hardware, scheduler, entropy, clock, external services, and exact whole-system replay remain unknown |
 | Artifact store | EXISTS within local SQLite scope | `src/rsve/sqlite.py` adds content-addressed redacted artifacts, WAL-backed transactions, schema versioning, solver-result indexes, snapshot metadata, and model/profile-aware stale-query invalidation; JSONL remains the lightweight export/debug store |
 | Deterministic bounded planning | EXISTS | `Engine.analyze()` performs canonical-order breadth-first search with depth, state, and event budgets; `src/rsve/search.py` expands an open interaction frontier under explicit candidate/time/trace budgets and reports budget exhaustion |
-| Backward planning | PARTIAL | `src/rsve/wp.py` is exact for deterministic guarded assignments and `Planner` now consumes supported WP/Z3 assignments; multi-step symbolic sequence regression and runtime-specific relations remain incomplete |
+| Backward planning | PARTIAL | `src/rsve/wp.py` is exact for deterministic guarded assignments, `Planner` consumes supported WP/Z3 assignments, and `Index.chain()` follows bounded read/write writer closure; graph-level relational regression and runtime-specific relations remain incomplete |
 | Forward/concolic execution | PARTIAL | Forward model execution exists; no concrete target execution, symbolic values, or concolic feedback |
 | Validated witness | PARTIAL | `Planner` requires adapter replay and objective observation before `VALIDATED_WITNESS`; the legacy `Engine` now returns `MODEL_SAT` with `Witness.validated=False` |
 | Bounded proof result | PARTIAL | `UNSAT_BOUNDED`, `UNKNOWN`, models, and cores are explicit and tested; solver proof bytes are optional and there is no fidelity proof |
@@ -75,11 +75,13 @@ Status meanings: EXISTS is implemented and tested; PARTIAL is an explicit contra
 
 7. **Repository governance.** Local Git metadata and a lockfile exist, but CI is intentionally excluded from this repository snapshot. Build, test, and advisory checks must therefore be run explicitly by maintainers or an external pipeline.
 
-8. **Dependency drift.** The environment contains packages not declared by the project. Import success is not evidence that a dependency is available to a clean build.
+8. **Unknown transition branches.** Unknown outcomes are retained as uncertain trace branches and force `UNKNOWN` when they can affect the bounded conclusion; they are not treated as rejection, identity, or bounded UNSAT.
 
-9. **Optimization scope.** Realization optimization is intentionally finite and replay-gated. It cannot discover a better realization outside the supplied candidate set, and unknown resource metrics remain explicit rather than estimated as zero.
+9. **Dependency drift.** The environment contains packages not declared by the project. Import success is not evidence that a dependency is available to a clean build.
 
-10. **Artifact durability.** SQLite provides local transactional durability and query invalidation, but external snapshot bytes remain adapter-owned and filesystem permissions/backup/retention policy are deployment responsibilities.
+10. **Optimization scope.** Realization optimization is intentionally finite and replay-gated. It cannot discover a better realization outside the supplied candidate set, and unknown resource metrics remain explicit rather than estimated as zero.
+
+11. **Artifact durability.** SQLite provides local transactional durability and query invalidation, but external snapshot bytes remain adapter-owned and filesystem permissions/backup/retention policy are deployment responsibilities.
 
 ## Audit conclusion
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from rsve import (
     Add,
     Authorization,
+    Decision,
     Order,
     Entry,
     Flow,
@@ -14,6 +15,7 @@ from rsve import (
     Objective,
     Limits,
     Operation,
+    Outcome,
     State,
     Same,
     Sort,
@@ -67,6 +69,41 @@ def fixture_model(*, max_amount: int = 10, inputs=None) -> Model:
 class Suite(unittest.TestCase):
     def setUp(self):
         self.authorization = Authorization("planner-tests", frozenset({"node-lab"}), frozenset({"node-fixture"}))
+
+    def test_seeded_trace_keeps_same_entry_alternatives(self):
+        first = Operation(
+            "first",
+            Entry("shared"),
+            guard=lambda _state, request: request.get("kind") == "first",
+            apply=lambda state, _request: state.update(value="first"),
+        )
+        second = Operation(
+            "second",
+            Entry("shared"),
+            guard=lambda _state, request: request.get("kind") == "second",
+            apply=lambda state, _request: state.update(value="second"),
+        )
+        model = Model("node-fixture", State({"value": "none"}), (), (first, second))
+        traces = Planner._model_traces(model, ({"entry_point": "shared", "request": {"kind": "second"}},))
+        self.assertEqual(len(traces), 2)
+        self.assertEqual({trace[1][0].operation for trace in traces}, {"first", "second"})
+
+    def test_unknown_branch_does_not_become_bounded_unsat(self):
+        operation = Operation(
+            "opaque",
+            Entry("opaque"),
+            relation=lambda state, _request: (Outcome(Decision.UNKNOWN, state.update(goal=True), terminal=True),),
+        )
+        model = Model("node-fixture", State({"goal": False}), ({},), (operation,))
+        objective = Objective(
+            "opaque-goal",
+            "node-fixture",
+            "node-lab",
+            (Same("goal", True),),
+            budget=Limits(max_trace_length=1),
+        )
+        report = Planner().plan(model, objective, self.authorization)
+        self.assertEqual(report.status, Status.UNKNOWN)
 
     def test_single_entry_is_replay_validated(self):
         objective = Objective(
