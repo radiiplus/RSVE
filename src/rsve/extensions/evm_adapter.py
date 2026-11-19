@@ -15,12 +15,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .adapters import CapabilityReport, Capabilities
+from ..adapters import CapabilityReport, Capabilities
 from .environment import LinuxEnvironmentAdapter
-from .ir import EnvironmentObservation, Evidence, TargetIdentity
-from .model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
+from ..ir import EnvironmentObservation, Evidence, TargetIdentity
+from ..model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
 from .runtime_contracts import EvmCapabilities, EvmExecutionContext
-from .profile import ExecutionProfile, LayerPin
+from ..graph import AnalysisGraph, CapabilityManifest, PortDirection, ProfileInstance, Provenance as GraphProvenance, TypedPort
 
 
 @dataclass(frozen=True)
@@ -114,6 +114,51 @@ class EvmTargetAdapter:
             side_effects=("local Anvil process and in-memory chain state",),
         )
 
+    def capability_manifest(self) -> CapabilityManifest:
+        report = self.capability_report()
+        return CapabilityManifest(
+            extension_id="rsve.evm",
+            namespace="rsve.evm/local-execution",
+            version="1",
+            provides=frozenset(report.supported_event_hooks) | frozenset({"transaction.execution", "state.snapshot", "chain.context"}),
+            limitations=report.limitations,
+            evidence_quality="observed-local-chain",
+            provenance=GraphProvenance("evm-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
+        )
+
+    def analysis_profile(self) -> ProfileInstance:
+        identity = self.identity()
+        observation = self.environment_observation()
+        scope = dict(observation.facts)
+        scope["target_id"] = identity["target_id"]
+        scope["forge_version"] = self._tool_version(self.forge_command)
+        return ProfileInstance(
+            profile_id=f"{identity['target_id']}:{identity['build_hash']}",
+            family="blockchain",
+            component="evm.execution",
+            implementation=identity["adapter"],
+            version=identity["runtime_version"],
+            build_digest=identity["build_hash"],
+            execution_scope=scope,
+            feature_set=frozenset(self.capability_report().supported_event_hooks),
+            provenance=GraphProvenance("evm-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
+        )
+
+    def analysis_graph(self) -> AnalysisGraph:
+        identity = self.identity()
+        profile = self.analysis_profile()
+        graph = AnalysisGraph.for_profile(
+            profile,
+            graph_id=f"evm:{identity['target_id']}",
+            region_id="evm.target",
+            region_name="EVM target",
+            capabilities=(self.capability_manifest(),),
+        )
+        for entry in self.discover_entries():
+            graph = graph.add_port(TypedPort(f"entry:{entry.name}:input", "evm.target", entry.name, PortDirection.INPUT, "transaction-call", "EvmCall"))
+            graph = graph.add_port(TypedPort(f"entry:{entry.name}:output", "evm.target", entry.name, PortDirection.OUTPUT, "transaction-result", "EvmResult"))
+        return graph
+
     def identity(self) -> Mapping[str, str]:
         self._detect_runtime()
         return {
@@ -140,15 +185,6 @@ class EvmTargetAdapter:
             adapter_version=identity["adapter_version"],
             capabilities=frozenset({"transaction", "call", "storage", "logs", "snapshot"}),
             provenance=Provenance("evm-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
-        )
-
-    def execution_profile(self) -> ExecutionProfile:
-        return ExecutionProfile.from_target(
-            self.identity(),
-            self.environment_observation(),
-            extra_pins=(
-                LayerPin("tool", "forge", self._tool_version(self.forge_command), source="evm.toolchain"),
-            ),
         )
 
     def environment_observation(self) -> EnvironmentObservation:

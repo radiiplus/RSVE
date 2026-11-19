@@ -1,32 +1,37 @@
 import unittest
 
-from rsve import ExecutionProfile, LayerPin, ProfileStatus
+from rsve import ProfileInstance, ProfileMatchStatus, ProfileRequirement
 
 
-class ExecutionProfileTests(unittest.TestCase):
+class ProfileRequirementTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.profile = ExecutionProfile(
-            pins=(
-                LayerPin("runtime", "node", "24.21.0", source="runtime.version"),
-                LayerPin("os", "linux", "6.8", "image-hash", "image.manifest"),
-            )
+        self.profile = ProfileInstance(
+            "node-a",
+            "runtime",
+            "node.js",
+            "rsve.node",
+            "24.21.0",
+            build_digest="build",
+            execution_scope={"target_id": "fixture", "os": "linux"},
         )
 
-    def test_profile_round_trips_and_matches_observation(self):
-        record = self.profile.to_record()
-        self.assertEqual(ExecutionProfile.from_record(record), self.profile)
-        result = self.profile.verify(self.profile.pins)
-        self.assertEqual(result.status, ProfileStatus.MATCH)
-        self.assertEqual(result.drifted, ())
+    def test_requirement_round_trips_and_matches_scoped_profile(self):
+        requirement = ProfileRequirement(
+            "node-runtime",
+            "runtime",
+            "node.js",
+            "rsve.node",
+            "24.21.0",
+            execution_scope={"target_id": "fixture"},
+        )
+        self.assertEqual(ProfileRequirement.from_record(requirement.to_record()), requirement)
+        self.assertEqual(requirement.verify(self.profile).status, ProfileMatchStatus.MATCH)
 
     def test_drift_and_unknown_are_distinct(self):
-        drift = self.profile.verify((LayerPin("runtime", "node", "25.0.0"), LayerPin("os", "linux", "6.8")))
-        self.assertEqual(drift.status, ProfileStatus.DRIFT)
-        self.assertIn("runtime:node", drift.drifted)
-
-        unknown = self.profile.verify((LayerPin("runtime", "node", "24.21.0"),))
-        self.assertEqual(unknown.status, ProfileStatus.UNKNOWN)
-        self.assertIn("os:linux", unknown.unknown)
+        drift = ProfileRequirement("node-runtime", "runtime", "node.js", "rsve.node", "25.0").verify(self.profile)
+        self.assertEqual(drift.status, ProfileMatchStatus.DRIFT)
+        unknown = ProfileRequirement("node-runtime", "runtime", "node.js", "rsve.node", "unknown", execution_scope={"kernel": "6"}).verify(self.profile)
+        self.assertEqual(unknown.status, ProfileMatchStatus.UNKNOWN)
 
 
 if __name__ == "__main__":

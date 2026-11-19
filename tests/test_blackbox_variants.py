@@ -10,7 +10,6 @@ from rsve import (
     FlowToSink,
     GuardInvariant,
     HybridPlanner,
-    NodeTargetAdapter,
     ObjectiveBudget,
     ObjectiveDefinition,
     Operation,
@@ -18,6 +17,7 @@ from rsve import (
     StateEquals,
     TransitionModel,
 )
+from rsve.extensions import NodeTargetAdapter
 from rsve.results import AnalysisStatus
 from rsve.semantics import compare_acceptance
 

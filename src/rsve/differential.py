@@ -6,9 +6,9 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from .model import State, TraceEvent, TransitionModel
+from .model import LearnedExclusion, State, TraceEvent, TransitionModel
 from .results import Divergence
 
 
@@ -140,6 +140,8 @@ class DifferentialAnalyzer:
         observed: Iterable[TraceEvent],
         *,
         invalidated_queries: Sequence[str] = (),
+        probe: Callable[[str, Mapping[str, Any]], bool] | None = None,
+        probe_radius: int = 2,
     ) -> RefinementResult:
         if not divergences:
             raise ValueError("a refinement requires at least one divergence")
@@ -156,6 +158,18 @@ class DifferentialAnalyzer:
             description = f"exclude {event.entry_point} request {json.dumps(request, sort_keys=True, default=str)} after runtime rejection"
             next_model = model.with_exclusion(event.entry_point, request, assumption=description)
             added = (description,)
+            if probe is not None:
+                learned = self._learn_numeric_exclusion(
+                    event.entry_point,
+                    request,
+                    probe,
+                    radius=probe_radius,
+                    evidence=event.evidence_refs,
+                )
+                if learned is not None:
+                    next_model = next_model.with_learned_exclusion(learned)
+                    added = added + (learned.describe(),)
+                    description += f"; promoted only the probed rejection region {learned.describe()}"
         elif divergence.kind == DivergenceKind.INSTRUMENTATION_GAP.value and event is not None:
             promoted = (f"observed:{event.operation}:{event.entry_point}",)
             description = "promote observed event only for the evidenced target/build region"
@@ -182,6 +196,42 @@ class DifferentialAnalyzer:
 
     def refine_model(self, *args: Any, **kwargs: Any) -> RefinementResult:
         return self.refine(*args, **kwargs)
+
+    @staticmethod
+    def _learn_numeric_exclusion(
+        entry_point: str,
+        request: Mapping[str, Any],
+        probe: Callable[[str, Mapping[str, Any]], bool],
+        *,
+        radius: int,
+        evidence: Sequence[str],
+    ) -> LearnedExclusion | None:
+        for key, value in request.items():
+            if isinstance(value, bool) or not isinstance(value, int):
+                continue
+            samples: dict[int, bool] = {}
+            for candidate in range(value - radius, value + radius + 1):
+                candidate_request = dict(request)
+                candidate_request[key] = candidate
+                try:
+                    samples[candidate] = bool(probe(entry_point, candidate_request))
+                except (OSError, RuntimeError, TimeoutError, ValueError):
+                    continue
+            if samples.get(value, True):
+                continue
+            rejected = sorted(item for item, accepted in samples.items() if not accepted)
+            accepted = sorted(item for item, accepted in samples.items() if accepted)
+            if not rejected:
+                continue
+            lower = min(rejected)
+            upper = max(rejected)
+            if accepted and min(accepted) < lower and all(not samples.get(item, True) for item in range(lower, upper + 1)):
+                return LearnedExclusion(entry_point, key, ">=", lower, min(samples), max(samples), tuple(evidence) + ("bounded-neighbor-probes",))
+            if accepted and max(accepted) > upper and all(not samples.get(item, True) for item in range(lower, upper + 1)):
+                return LearnedExclusion(entry_point, key, "<=", upper, min(samples), max(samples), tuple(evidence) + ("bounded-neighbor-probes",))
+            if all(samples.get(item) is False for item in (value - 1, value, value + 1) if item in samples):
+                return LearnedExclusion(entry_point, key, "=", value, min(samples), max(samples), tuple(evidence) + ("bounded-neighbor-probes",))
+        return None
 
     def experiment(
         self,

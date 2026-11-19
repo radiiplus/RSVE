@@ -392,29 +392,104 @@ class Z3SolverAdapter:
 class IncrementalZ3Session:
     def __init__(self, adapter: Z3SolverAdapter) -> None:
         self.adapter = adapter
+        self._solver = z3.Solver()
+        self._translator = _Translator()
         self._constraints: list[Constraint] = []
         self._scopes: list[int] = []
+        self._closed = False
 
     def add(self, constraint: Constraint) -> None:
+        if self._closed:
+            raise RuntimeError("incremental solver session is closed")
+        tracked = _top_level_named_assertions(constraint)
+        root_formula = _formula_without_top_level_named_terms(constraint)
+        try:
+            if root_formula is not None:
+                self._solver.add(self._translator.expr(root_formula))
+            for name, assertion in tracked:
+                self._solver.assert_and_track(self._translator.expr(assertion), name)
+        except (UnsupportedConstraint, z3.Z3Exception) as exc:
+            raise UnsupportedConstraint(str(exc)) from exc
         self._constraints.append(constraint)
 
     def push(self) -> None:
+        if self._closed:
+            raise RuntimeError("incremental solver session is closed")
+        self._solver.push()
         self._scopes.append(len(self._constraints))
 
     def pop(self) -> None:
         if not self._scopes:
             raise IndexError("incremental solver scope underflow")
+        self._solver.pop()
         del self._constraints[self._scopes.pop():]
 
     def solve(self, query_id: str = "incremental", *, scope: ResultScope | None = None) -> SolverResult:
         if not self._constraints:
             raise ValueError("incremental query has no constraints")
         formula = AllOf(tuple(self._constraints)) if len(self._constraints) > 1 else self._constraints[0]
-        return self.adapter.solve(ConstraintQuery(query_id, formula, scope=scope))
+        query = ConstraintQuery(query_id, formula, scope=scope)
+        return _normalize_solver_result(
+            self.adapter,
+            self._solver,
+            self._translator,
+            query,
+            {"timeout_ms": query.limits.timeout_ms},
+            _smt2(formula),
+            tuple(name for constraint in self._constraints for name, _ in _top_level_named_assertions(constraint)),
+        )
 
     def close(self) -> None:
+        if self._closed:
+            return
         self._constraints.clear()
         self._scopes.clear()
+        self._solver = z3.Solver()
+        self._translator = _Translator()
+        self._closed = True
+
+
+def _normalize_solver_result(
+    adapter: Z3SolverAdapter,
+    solver: z3.Solver,
+    translator: _Translator,
+    query: ConstraintQuery,
+    options: Mapping[str, Any],
+    query_text: str,
+    named: tuple[str, ...],
+) -> SolverResult:
+    status = solver.check()
+    common = {
+        "query_id": query.query_id,
+        "backend": adapter.backend_name,
+        "backend_version": z3.get_version_string(),
+        "options": dict(options),
+        "query": query_text,
+        "assumptions": query.assumptions,
+        "named_assertions": named,
+        "scope": query.scope,
+    }
+    if status == z3.sat:
+        model = solver.model()
+        return SolverResult(
+            status=SolverStatus.SAT,
+            model={name: _model_value(model.eval(variable, model_completion=True)) for name, variable in sorted(translator.variables.items())},
+            **common,
+        )
+    if status == z3.unsat:
+        proof = None
+        if adapter.capture_proofs:
+            try:
+                proof = str(solver.proof()).encode("utf-8")
+            except z3.Z3Exception:
+                proof = None
+        return SolverResult(
+            status=SolverStatus.UNSAT_BOUNDED,
+            unsat_core=tuple(sorted(str(item) for item in solver.unsat_core())),
+            proof_artifact=proof,
+            **common,
+        )
+    return SolverResult(status=SolverStatus.UNKNOWN, unknown_reason=solver.reason_unknown(), **common)
 
 
 def _model_value(value: z3.ExprRef) -> Any:

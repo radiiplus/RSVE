@@ -1,7 +1,7 @@
 import platform
 import unittest
 
-from rsve import LinuxEnvironmentAdapter, LinuxEnvironmentProfile
+from rsve.extensions import LinuxEnvironmentAdapter, LinuxEnvironmentProfile
 
 
 class LinuxEnvironmentTests(unittest.TestCase):

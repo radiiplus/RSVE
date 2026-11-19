@@ -10,8 +10,7 @@ from rsve import (
     IntRange,
     GuardInvariant,
     HybridPlanner,
-    NodeTargetAdapter,
-    LayerPin,
+    ProfileRequirement,
     ObjectiveDefinition,
     ObjectiveBudget,
     Operation,
@@ -20,10 +19,15 @@ from rsve import (
     Sort,
     SymbolicTransition,
     TraceEvent,
-    TransformSpec,
+    InformationLoss,
+    Invertibility,
+    Partiality,
+    RelationKind,
+    Transform,
     TransitionModel,
     Variable,
 )
+from rsve.extensions import NodeTargetAdapter
 from rsve.differential import DifferentialAnalyzer, DivergenceKind
 from rsve.planner import BackwardRegressor
 from rsve.results import AnalysisStatus
@@ -80,7 +84,7 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(report.status, AnalysisStatus.VALIDATED_WITNESS)
         self.assertTrue(report.witness.validated)
         self.assertEqual(report.replay_runs, 2)
-        self.assertTrue(report.execution_profile_id.startswith("profile-"))
+        self.assertTrue(report.execution_profile_id.startswith("node-fixture:"))
         self.assertEqual(report.witness.final_state["count"], 2)
         self.assertTrue(any(event.operation == "entry.outcome" for event in report.witness.events))
 
@@ -124,7 +128,7 @@ class PlannerTests(unittest.TestCase):
             entry_point=EntryPoint("symbolic.increment"),
             guard=lambda _state, request: 0 < request.get("amount", 0) <= 10,
             apply=lambda state, request: state.with_updates(count=state["count"] + request["amount"]),
-            transforms=(TransformSpec("decode", "bytes", "text", information_loss=True),),
+            transforms=(Transform("decode", "bytes", "text", "fixture.decode", "1", Partiality.PARTIAL, RelationKind.FUNCTION, Invertibility.NON_INVERTIBLE, InformationLoss.CONFIRMED),),
             symbolic_transition=SymbolicTransition(
                 "symbolic-increment",
                 "symbolic.increment",
@@ -153,6 +157,67 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(report.status, AnalysisStatus.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"amount": 2})
 
+    def test_multi_step_symbolic_regression_seeds_unsupplied_trace(self):
+        def operation(name, variable):
+            return Operation(
+                name="state.mutation",
+                entry_point=EntryPoint(name),
+                guard=lambda _state, request: 0 < request.get("amount", 0) <= 10,
+                apply=lambda state, request: state.with_updates(count=state["count"] + request["amount"]),
+                symbolic_transition=SymbolicTransition(
+                    f"{name}-symbolic",
+                    name,
+                    IntRange(Variable(variable, Sort.INT), 1, 10),
+                    {"state.count": Add(Variable("state.count", Sort.INT), Variable(variable, Sort.INT))},
+                ),
+            )
+
+        model = TransitionModel(
+            target_id="sequence-lab",
+            initial_state=State({"count": 0}),
+            inputs=(),
+            operations=(operation("step.one", "input.0.amount"), operation("step.two", "input.1.amount")),
+        )
+        objective = ObjectiveDefinition(
+            "symbolic-reach-three",
+            "sequence-lab",
+            "node-lab",
+            (StateEquals("count", 3),),
+            budget=ObjectiveBudget(max_trace_length=2),
+        )
+        auth = Authorization("sequence-tests", frozenset({"node-lab"}), frozenset({"sequence-lab"}))
+        backward = BackwardRegressor().regress(model, objective)
+        self.assertTrue(backward.required_traces)
+        self.assertEqual(len(backward.required_traces[0]), 2)
+        report = HybridPlanner().plan(model, objective, auth)
+        self.assertEqual(report.status, AnalysisStatus.SAT_CANDIDATE)
+        self.assertEqual(len(report.witness.interactions), 2)
+        self.assertEqual(sum(item["request"]["amount"] for item in report.witness.interactions), 3)
+
+    def test_observed_phantom_entry_is_probed_before_model_search(self):
+        model = TransitionModel(
+            target_id="node-fixture",
+            initial_state=State({"count": 0, "history": []}),
+            inputs=(),
+            operations=(),
+        )
+        objective = ObjectiveDefinition(
+            "reach-phantom",
+            "node-fixture",
+            "node-lab",
+            (EntrySequence(("dynamic_debug",)),),
+            budget=ObjectiveBudget(max_trace_length=1, replay_runs=2),
+        )
+        adapter = NodeTargetAdapter(FIXTURE, target_id="node-fixture")
+        try:
+            report = HybridPlanner().plan(model, objective, self.authorization, adapter=adapter)
+        finally:
+            adapter.teardown()
+        self.assertEqual(report.status, AnalysisStatus.VALIDATED_WITNESS)
+        self.assertEqual(report.witness.interactions[0]["entry_point"], "dynamic_debug")
+        self.assertIsNone(report.witness.model_aligned)
+        self.assertIn("dynamic_debug", report.surface_scope)
+
     def test_planner_reports_bounded_unsat(self):
         objective = ObjectiveDefinition(
             "reach-nine",
@@ -173,7 +238,7 @@ class PlannerTests(unittest.TestCase):
             "node-lab",
             (EntrySequence(("increment", "async_increment")), GuardInvariant("increment")),
             permitted_sinks=frozenset({"fixture.state"}),
-            profile_pins=(LayerPin("runtime", "node", "24.21.0"),),
+            profile_requirements=(ProfileRequirement("node-runtime", "runtime", "node.js", "rsve.node", "24.21.0"),),
             budget=ObjectiveBudget(max_trace_length=3, replay_runs=2),
         )
         self.assertEqual(ObjectiveDefinition.from_record(objective.to_record()), objective)
@@ -184,10 +249,10 @@ class PlannerTests(unittest.TestCase):
             "node-fixture",
             "node-lab",
             (StateEquals("count", 2),),
-            profile_pins=(LayerPin("runtime", "node", "0.0.0"),),
+            profile_requirements=(ProfileRequirement("node-runtime", "runtime", "node.js", "rsve.node", "0.0.0"),),
         )
         adapter = NodeTargetAdapter(FIXTURE, target_id="node-fixture")
-        with self.assertRaisesRegex(ValueError, "execution profile is DRIFT"):
+        with self.assertRaisesRegex(ValueError, "profile requirements are unresolved"):
             HybridPlanner().plan(fixture_model(), objective, self.authorization, adapter=adapter)
         adapter.teardown()
 
@@ -236,6 +301,27 @@ class PlannerTests(unittest.TestCase):
         refinement = analyzer.refine(model, divergences, (unexpected, expected))
         self.assertEqual(refinement.delta.demoted_assumptions, ("trusted declared surface",))
         self.assertIn("trusted declared surface", refinement.model.demoted_assumptions)
+
+    def test_counterexample_probes_promote_only_bounded_numeric_region(self):
+        before = State({"count": 0})
+        expected = TraceEvent("state.mutation", "increment", {"amount": 11}, before, before, guard_result=True)
+        observed = TraceEvent("guard.decision", "increment", {"amount": 11}, before, before, guard_result=False)
+        analyzer = DifferentialAnalyzer()
+        divergences = analyzer.compare((expected,), (observed,))
+        model = fixture_model(max_amount=100, inputs=({"amount": 11},))
+        refinement = analyzer.refine(
+            model,
+            divergences,
+            (observed,),
+            probe=lambda _entry, request: request["amount"] <= 10,
+            probe_radius=2,
+        )
+        learned = refinement.model.learned_exclusions[0]
+        self.assertEqual(learned.operator, ">=")
+        self.assertEqual(learned.value, 11)
+        self.assertFalse(refinement.model.allows("increment", {"amount": 12}))
+        self.assertTrue(refinement.model.allows("increment", {"amount": 100}))
+        self.assertIn("bounded-neighbor-probes", learned.evidence)
 
     def test_objective_scope_and_sink_are_hard_constraints(self):
         objective = ObjectiveDefinition(

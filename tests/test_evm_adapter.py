@@ -4,7 +4,6 @@ from pathlib import Path
 from rsve import (
     Authorization,
     EntryPoint,
-    EvmTargetAdapter,
     FlowToSink,
     GuardInvariant,
     HybridPlanner,
@@ -15,6 +14,7 @@ from rsve import (
     StateEquals,
     TransitionModel,
 )
+from rsve.extensions import EvmTargetAdapter
 from rsve.results import AnalysisStatus
 
 

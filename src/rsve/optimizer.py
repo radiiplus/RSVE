@@ -5,15 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections import deque
 from dataclasses import dataclass
 from enum import Enum
 from statistics import mean
 from typing import Any, Mapping, Sequence
 
 from .adapters import TargetAdapter
-from .model import Authorization, State, TraceEvent
+from .model import Authorization, State, TraceEvent, TransitionModel
 from .objectives import ObjectiveDefinition
 from .results import Witness
+from .planner import BackwardRegressor
 
 
 class OptimizationStatus(str, Enum):
@@ -123,7 +125,7 @@ class RealizationOptimizer:
         objective.validate(
             authorization,
             environment=dict(getattr(adapter.environment_observation(), "facts", {})),
-            execution_profile=getattr(adapter, "execution_profile", lambda: None)(),
+            execution_profile=getattr(adapter, "analysis_profile", lambda: None)(),
         )
         runs = replay_runs or objective.budget.replay_runs
         if runs <= 0:
@@ -169,6 +171,116 @@ class RealizationOptimizer:
             ),
             rejected_candidates=tuple(rejected),
         )
+
+    def synthesize_alternatives(
+        self,
+        model: TransitionModel,
+        objective: ObjectiveDefinition,
+        authorization: Authorization,
+        *,
+        max_candidates: int = 64,
+    ) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+        """Generate bounded model realizations for later replay comparison."""
+        objective.validate(authorization)
+        if max_candidates <= 0:
+            raise ValueError("max_candidates must be positive")
+        backward = BackwardRegressor().regress(
+            model,
+            objective,
+            solver_timeout_ms=objective.budget.solver_timeout_ms,
+        )
+        inputs = list(model.ordered_inputs())
+        known_inputs = {self._key(item) for item in inputs}
+        for _entry, request in backward.required_actions:
+            if self._key(request) not in known_inputs:
+                inputs.append(dict(request))
+                known_inputs.add(self._key(request))
+        queue: deque[tuple[State, tuple[Mapping[str, Any], ...]]] = deque()
+        queue.append((model.initial_state, ()))
+        candidates: list[tuple[Mapping[str, Any], ...]] = []
+        seen: set[str] = set()
+        while queue and len(candidates) < max_candidates and len(seen) < objective.budget.max_states:
+            state, interactions = queue.popleft()
+            key = self._key(interactions) + ":" + self._key(state.canonical())
+            if key in seen:
+                continue
+            seen.add(key)
+            if interactions and objective.evaluate(state, self._events_for(model, interactions)) and objective.checkpoints_satisfied(model.initial_state, self._events_for(model, interactions)):
+                candidates.append(interactions)
+            if len(interactions) >= objective.budget.max_trace_length:
+                continue
+            for operation in model.ordered_operations():
+                for request in inputs:
+                    if not model.allows(operation.entry_point.name, request):
+                        continue
+                    result = operation.execute(state, request)
+                    if result is None:
+                        continue
+                    next_state, _observation = result
+                    queue.append((next_state, interactions + ({"entry_point": operation.entry_point.name, "request": dict(request)},)))
+        return tuple(candidates)
+
+    def optimize_synthesized(
+        self,
+        original: Witness,
+        model: TransitionModel,
+        objective: ObjectiveDefinition,
+        authorization: Authorization,
+        *,
+        adapter: TargetAdapter,
+        weights: CostWeights = CostWeights(),
+        replay_runs: int | None = None,
+        max_candidates: int = 64,
+    ) -> OptimizationResult:
+        alternatives = self.synthesize_alternatives(
+            model,
+            objective,
+            authorization,
+            max_candidates=max_candidates,
+        )
+        return self.optimize(
+            original,
+            alternatives,
+            objective,
+            authorization,
+            adapter=adapter,
+            weights=weights,
+            replay_runs=replay_runs,
+        )
+
+    @staticmethod
+    def _events_for(model: TransitionModel, interactions: Sequence[Mapping[str, Any]]) -> tuple[TraceEvent, ...]:
+        state = model.initial_state
+        operations = {operation.entry_point.name: operation for operation in model.ordered_operations()}
+        events: list[TraceEvent] = []
+        for interaction in interactions:
+            operation = operations.get(str(interaction["entry_point"]))
+            request = dict(interaction.get("request", {}))
+            if operation is None:
+                return ()
+            result = operation.execute(state, request)
+            if result is None:
+                return ()
+            after, observation = result
+            events.append(TraceEvent(
+                operation=operation.name,
+                entry_point=operation.entry_point.name,
+                request=request,
+                before=state,
+                after=after,
+                observation=dict(observation),
+                fidelity=operation.fidelity,
+                mode=operation.mode,
+                component=operation.component,
+                guard_result=True,
+                ordering=len(events),
+            ))
+            state = after
+        return tuple(events)
+
+    @staticmethod
+    def _key(value: Any) -> str:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
     def _replay(
         self,

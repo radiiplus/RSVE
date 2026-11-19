@@ -8,6 +8,7 @@ from typing import Any, Iterable, Mapping, Protocol, Sequence
 from .model import Authorization, EntryPoint, State, TraceEvent, TransitionModel
 from .ir import EnvironmentObservation
 from .results import AnalysisReport, SolverStatus
+from .graph import AnalysisGraph, CapabilityManifest
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,11 @@ class TargetAdapter(Protocol):
 
     def teardown(self) -> None: ...
 
-    def execution_profile(self) -> Any: ...
+    def analysis_profile(self) -> Any: ...
+
+    def capability_manifest(self) -> CapabilityManifest: ...
+
+    def analysis_graph(self) -> AnalysisGraph: ...
 
 
 class InstrumentationAdapter(Protocol):

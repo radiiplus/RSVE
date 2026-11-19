@@ -7,11 +7,11 @@ from rsve import (
     DomainSearchBudget,
     FlowToSink,
     GuardInvariant,
-    NodeTargetAdapter,
     ObjectiveBudget,
     ObjectiveDefinition,
     StateEquals,
 )
+from rsve.extensions import NodeTargetAdapter
 from rsve.results import AnalysisStatus
 from rsve.semantics import compare_acceptance
 

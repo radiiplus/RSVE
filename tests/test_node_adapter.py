@@ -2,7 +2,8 @@ import unittest
 from pathlib import Path
 import tempfile
 
-from rsve import Authorization, Fidelity, JsonlArtifactStore, NodeTargetAdapter, OpenTelemetryAdapter
+from rsve import Authorization, Fidelity, JsonlArtifactStore, OpenTelemetryAdapter
+from rsve.extensions import NodeTargetAdapter
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "node" / "fixture.mjs"
@@ -28,9 +29,9 @@ class NodeAdapterTests(unittest.TestCase):
         self.assertEqual([item.entry_point.name for item in registry.phantom_entries()], ["dynamic_debug"])
         self.assertTrue(registry.phantom_entries()[0].evidence)
 
-        profile = self.adapter.execution_profile()
-        self.assertIn("target:node-fixture", {pin.key for pin in profile.pins})
-        self.assertEqual(profile.verify(profile.pins).status.value, "MATCH")
+        profile = self.adapter.analysis_profile()
+        self.assertEqual(profile.execution_scope["target_id"], "node-fixture")
+        self.assertEqual(profile.component, "node.js")
 
     def test_stateful_async_trace_and_clean_replay(self) -> None:
         self.adapter.prepare()

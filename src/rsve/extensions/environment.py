@@ -10,9 +10,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
-from .adapters import Capabilities
-from .ir import EnvironmentObservation
-from .schema import SCHEMA_VERSION, SchemaMixin
+from ..adapters import Capabilities
+from ..ir import EnvironmentObservation
+from ..schema import SCHEMA_VERSION, SchemaMixin
 
 
 @dataclass(frozen=True)

@@ -19,7 +19,7 @@ from .constraints import (
     Variable,
 )
 from .model import Authorization, State, TraceEvent, _canonical
-from .profile import ExecutionProfile, LayerPin, ProfileStatus, ProfileVerification
+from .graph import ProfileInstance, ProfileRequirement, ProfileVerification
 from .schema import SCHEMA_VERSION, SchemaMixin, encode
 
 
@@ -232,7 +232,7 @@ class ObjectiveDefinition(SchemaMixin):
     allowed_state_changes: frozenset[str] = frozenset()
     checkpoints: tuple[Predicate, ...] = ()
     assumptions: tuple[str, ...] = ()
-    profile_pins: tuple[LayerPin, ...] = ()
+    profile_requirements: tuple[ProfileRequirement, ...] = ()
     budget: ObjectiveBudget = field(default_factory=ObjectiveBudget)
     version: str = "1"
 
@@ -260,7 +260,7 @@ class ObjectiveDefinition(SchemaMixin):
         *,
         harness_sinks: set[str] | frozenset[str] = frozenset(),
         environment: Mapping[str, str] | None = None,
-        execution_profile: ExecutionProfile | None = None,
+        execution_profile: ProfileInstance | None = None,
     ) -> None:
         if not authorization.permits(self.target_id, self.authorization_scope):
             raise ObjectiveValidationError("objective is outside the authorized target/scope")
@@ -275,26 +275,23 @@ class ObjectiveDefinition(SchemaMixin):
                 if environment.get(key) != expected:
                     raise ObjectiveValidationError(f"environment boundary does not match: {key}")
         if execution_profile is not None:
-            target_pin = next((pin for pin in execution_profile.pins if pin.layer == "target"), None)
-            if target_pin is not None and target_pin.name != self.target_id:
+            observed_target = execution_profile.execution_scope.get("target_id")
+            if observed_target is not None and observed_target != self.target_id:
                 raise ObjectiveValidationError("objective target does not match the observed target profile")
-        if self.profile_pins:
+        if self.profile_requirements:
             if execution_profile is None:
-                raise ObjectiveValidationError("objective requires layer pins but no execution profile was observed")
-            expected = ExecutionProfile(self.profile_pins)
-            verification = expected.verify(execution_profile.pins)
-            if verification.status is not ProfileStatus.MATCH:
-                detail = ", ".join(verification.drifted or verification.unknown)
+                raise ObjectiveValidationError("objective requires profiles but no profile was observed")
+            verifications = tuple(requirement.verify(execution_profile) for requirement in self.profile_requirements)
+            if any(item.status.value != "MATCH" for item in verifications):
+                detail = ", ".join(sorted({item.requirement_id for item in verifications if item.status.value != "MATCH"}))
                 raise ObjectiveValidationError(
-                    f"objective execution profile is {verification.status.value}: {detail}"
+                    f"objective profile requirements are unresolved: {detail}"
                 )
 
-    def verify_profile(self, execution_profile: ExecutionProfile | None) -> ProfileVerification | None:
-        if not self.profile_pins:
+    def verify_profile(self, execution_profile: ProfileInstance | None) -> tuple[ProfileVerification, ...] | None:
+        if not self.profile_requirements:
             return None
-        if execution_profile is None:
-            return ProfileVerification("unknown", ProfileStatus.UNKNOWN, unknown=tuple(pin.key for pin in self.profile_pins))
-        return ExecutionProfile(self.profile_pins).verify(execution_profile.pins)
+        return tuple(requirement.verify(execution_profile) for requirement in self.profile_requirements)
 
     def evaluate(self, final_state: State, trace: Sequence[TraceEvent]) -> bool:
         if not all(predicate.evaluate(final_state, trace) for predicate in self.postconditions):
@@ -337,7 +334,7 @@ class ObjectiveDefinition(SchemaMixin):
                 "allowed_state_changes": sorted(self.allowed_state_changes),
                 "checkpoints": [predicate.to_record() for predicate in self.checkpoints],
                 "assumptions": list(self.assumptions),
-                "profile_pins": [pin.to_record() for pin in self.profile_pins],
+                "profile_requirements": [requirement.to_record() for requirement in self.profile_requirements],
                 "budget": self.budget.to_record(),
                 "version": self.version,
             },
@@ -360,7 +357,7 @@ class ObjectiveDefinition(SchemaMixin):
             allowed_state_changes=frozenset(payload.get("allowed_state_changes", ())),
             checkpoints=tuple(_predicate_from_record(item) for item in payload.get("checkpoints", ())),
             assumptions=tuple(payload.get("assumptions", ())),
-            profile_pins=tuple(LayerPin.from_record(item) for item in payload.get("profile_pins", ())),
+            profile_requirements=tuple(ProfileRequirement.from_record(item) for item in payload.get("profile_requirements", ())),
             budget=ObjectiveBudget.from_record(payload.get("budget", ObjectiveBudget().to_record())),
             version=payload.get("version", "1"),
         )

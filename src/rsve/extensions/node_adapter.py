@@ -13,12 +13,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .adapters import ArtifactStore, CapabilityReport, Capabilities
+from ..adapters import ArtifactStore, CapabilityReport, Capabilities
 from .environment import LinuxEnvironmentAdapter
-from .ir import EnvironmentObservation, Evidence, TargetIdentity
-from .model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
-from .registry import ObservedEntry, SurfaceRegistry
-from .profile import ExecutionProfile
+from ..ir import EnvironmentObservation, Evidence, TargetIdentity
+from ..model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
+from ..registry import ObservedEntry, SurfaceRegistry
+from ..graph import AnalysisGraph, CapabilityManifest, PortDirection, ProfileInstance, Provenance as GraphProvenance, TypedPort
 
 
 @dataclass(frozen=True)
@@ -101,6 +101,52 @@ class NodeTargetAdapter:
             side_effects=("target-local diagnostics_channel subscribers",),
         )
 
+    def capability_manifest(self) -> CapabilityManifest:
+        report = self.capability_report()
+        return CapabilityManifest(
+            extension_id="rsve.node",
+            namespace="rsve.node/runtime-observation",
+            version="1",
+            provides=frozenset(report.supported_event_hooks) | frozenset({"entry.discovery", "state.snapshot"}),
+            limitations=report.limitations,
+            evidence_quality="observed-with-target-emitted-events",
+            provenance=GraphProvenance("node-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
+        )
+
+    def analysis_profile(self) -> ProfileInstance:
+        identity = self.identity()
+        observation = self.environment_observation()
+        scope = dict(observation.facts)
+        scope["target_id"] = identity["target_id"]
+        return ProfileInstance(
+            profile_id=f"{identity['target_id']}:{identity['build_hash']}",
+            family="runtime",
+            component="node.js",
+            implementation=identity["adapter"],
+            version=identity["runtime_version"],
+            build_digest=identity["build_hash"],
+            configuration_digest="",
+            execution_scope=scope,
+            feature_set=frozenset(self.capability_report().supported_event_hooks),
+            provenance=GraphProvenance("node-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
+        )
+
+    def analysis_graph(self) -> AnalysisGraph:
+        identity = self.identity()
+        profile = self.analysis_profile()
+        graph = AnalysisGraph.for_profile(
+            profile,
+            graph_id=f"node:{identity['target_id']}",
+            region_id="node.target",
+            region_name="Node target",
+            capabilities=(self.capability_manifest(),),
+        )
+        entries = self.discover_entries()
+        for entry in entries:
+            graph = graph.add_port(TypedPort(f"entry:{entry.name}:input", "node.target", entry.name, PortDirection.INPUT, "request", "EntryRequest"))
+            graph = graph.add_port(TypedPort(f"entry:{entry.name}:output", "node.target", entry.name, PortDirection.OUTPUT, "outcome", "EntryOutcome"))
+        return graph
+
     def identity(self) -> Mapping[str, str]:
         self._detect_runtime()
         return {
@@ -128,9 +174,6 @@ class NodeTargetAdapter:
             capabilities=frozenset(self.capability_report().supported_event_hooks),
             provenance=Provenance("node-adapter", "1", (str(self.fixture),), Fidelity.OBSERVED),
         )
-
-    def execution_profile(self) -> ExecutionProfile:
-        return ExecutionProfile.from_target(self.identity(), self.environment_observation())
 
     def environment_observation(self) -> EnvironmentObservation:
         self._detect_runtime()

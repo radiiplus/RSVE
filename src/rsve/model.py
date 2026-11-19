@@ -53,87 +53,6 @@ class Provenance:
 
 
 @dataclass(frozen=True)
-class TransformSpec:
-    """Compatibility metadata for a modeled operation.
-
-    The authoritative serialized transform is :class:`rsve.ir.Transform`.
-    These conversion methods keep legacy operation definitions usable without
-    allowing the two representations to silently drift.
-    """
-
-    name: str
-    input_type: str
-    output_type: str
-    relation: str = "unknown"
-    partial: bool = True
-    information_loss: bool = False
-    provenance: Provenance = field(default_factory=lambda: Provenance("unspecified"))
-
-    def to_ir(self) -> Any:
-        from .ir import InformationLoss, Invertibility, Partiality, RelationKind, Transform
-
-        relation = RelationKind(self.relation) if self.relation in {item.value for item in RelationKind} else RelationKind.UNKNOWN
-        return Transform(
-            transform_id=self.name,
-            input_representation=self.input_type,
-            output_representation=self.output_type,
-            semantics_ref=self.provenance.source,
-            semantics_version=self.provenance.version,
-            partiality=Partiality.PARTIAL if self.partial else Partiality.TOTAL,
-            relation=relation,
-            invertibility=Invertibility.NON_INVERTIBLE if self.information_loss else Invertibility.UNKNOWN,
-            information_loss=InformationLoss.CONFIRMED if self.information_loss else InformationLoss.NONE,
-            evidence=(),
-        )
-
-    @classmethod
-    def from_ir(cls, transform: Any) -> "TransformSpec":
-        return cls(
-            name=transform.transform_id,
-            input_type=transform.input_representation,
-            output_type=transform.output_representation,
-            relation=transform.relation.value,
-            partial=transform.partiality.value != "total",
-            information_loss=transform.information_loss.value != "none",
-            provenance=Provenance(transform.semantics_ref, transform.semantics_version),
-        )
-
-
-@dataclass(frozen=True)
-class RecognizerSpec:
-    """Actual and intended acceptance predicates at a named enforcement point."""
-
-    name: str
-    enforcement_point: str
-    actual: Callable[[Any], bool]
-    intended: Callable[[Any], bool] | None = None
-    state_dependencies: tuple[str, ...] = ()
-    dominates_effect: bool = False
-    provenance: Provenance = field(default_factory=lambda: Provenance("unspecified"))
-
-    def to_ir(self) -> Any:
-        from .ir import Evidence, Recognizer
-
-        evidence = Evidence(
-            evidence_id=f"recognizer:{self.name}",
-            tier=self.provenance.fidelity,
-            source=self.provenance.source,
-            reference=self.provenance.version,
-            conditions=self.provenance.evidence,
-        )
-        return Recognizer(
-            recognizer_id=self.name,
-            input_representation="unknown",
-            actual_predicate_ref=self.name,
-            intended_predicate_ref=self.name if self.intended is not None else None,
-            enforcement_point=self.enforcement_point,
-            state_dependencies=self.state_dependencies,
-            dominates_effect=self.dominates_effect,
-            evidence=(evidence,),
-        )
-
-
-@dataclass(frozen=True)
 class EffectLemma:
     """A separately testable intermediate predicate for a larger objective."""
 
@@ -196,12 +115,22 @@ class Operation:
     observe: Observation = lambda _before, _request, _after: {}
     fidelity: Fidelity = Fidelity.MODELED
     provenance: str = "model"
-    transforms: tuple[TransformSpec, ...] = ()
-    recognizers: tuple[RecognizerSpec, ...] = ()
+    transforms: tuple[Any, ...] = ()
+    recognizers: tuple[Any, ...] = ()
     effects: tuple[str, ...] = ()
     mode: ExecutionMode = ExecutionMode.ABSTRACT
     component: str = ""
     symbolic_transition: Any | None = None
+
+    def __post_init__(self) -> None:
+        for transform in self.transforms:
+            required = ("transform_id", "input_representation", "output_representation", "partiality", "relation", "information_loss")
+            if any(not hasattr(transform, field_name) for field_name in required):
+                raise TypeError("operation transforms must use canonical ir.Transform records")
+        for recognizer in self.recognizers:
+            required = ("recognizer_id", "input_representation", "actual_predicate_ref", "enforcement_point")
+            if any(not hasattr(recognizer, field_name) for field_name in required):
+                raise TypeError("operation recognizers must use canonical ir.Recognizer records")
 
     def execute(self, state: State, request: Request) -> tuple[State, Mapping[str, Value]] | None:
         if not self.guard(state, request):
@@ -302,6 +231,43 @@ class Budget:
 
 
 @dataclass(frozen=True)
+class LearnedExclusion:
+    """A bounded, evidence-backed request region rejected by the target."""
+
+    entry_point: str
+    key: str
+    operator: str
+    value: Any
+    domain_min: Any | None = None
+    domain_max: Any | None = None
+    evidence: tuple[str, ...] = ()
+
+    def matches(self, entry_point: str, request: Mapping[str, Any]) -> bool:
+        if entry_point != self.entry_point or self.key not in request:
+            return False
+        actual = request[self.key]
+        if self.domain_min is not None and actual < self.domain_min:
+            return False
+        if self.domain_max is not None and actual > self.domain_max:
+            return False
+        try:
+            return {
+                "=": actual == self.value,
+                "!=": actual != self.value,
+                "<": actual < self.value,
+                "<=": actual <= self.value,
+                ">": actual > self.value,
+                ">=": actual >= self.value,
+            }[self.operator]
+        except (KeyError, TypeError):
+            return False
+
+    def describe(self) -> str:
+        scope = f" within [{self.domain_min}, {self.domain_max}]" if self.domain_min is not None or self.domain_max is not None else ""
+        return f"{self.entry_point}.{self.key} {self.operator} {self.value}{scope}"
+
+
+@dataclass(frozen=True)
 class TransitionModel:
     target_id: str
     initial_state: State
@@ -312,6 +278,7 @@ class TransitionModel:
     assumptions: tuple[str, ...] = ()
     excluded_interactions: tuple[tuple[str, str], ...] = ()
     demoted_assumptions: tuple[str, ...] = ()
+    learned_exclusions: tuple[LearnedExclusion, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.target_id:
@@ -338,7 +305,9 @@ class TransitionModel:
 
     def allows(self, entry_point: str, request: Request) -> bool:
         """Apply explicit counterexample restrictions from model refinement."""
-        return (entry_point, repr(_canonical(dict(request)))) not in self.excluded_interactions
+        if (entry_point, repr(_canonical(dict(request)))) in self.excluded_interactions:
+            return False
+        return not any(item.matches(entry_point, request) for item in self.learned_exclusions)
 
     def with_exclusion(self, entry_point: str, request: Request, *, assumption: str | None = None) -> "TransitionModel":
         exclusion = (entry_point, repr(_canonical(dict(request))))
@@ -353,6 +322,7 @@ class TransitionModel:
             assumptions=assumptions,
             excluded_interactions=tuple(sorted(set(self.excluded_interactions + (exclusion,)))),
             demoted_assumptions=self.demoted_assumptions,
+            learned_exclusions=self.learned_exclusions,
         )
 
     def with_demoted_assumptions(self, assumptions: Iterable[str]) -> "TransitionModel":
@@ -367,4 +337,20 @@ class TransitionModel:
             assumptions=self.assumptions,
             excluded_interactions=self.excluded_interactions,
             demoted_assumptions=demoted,
+            learned_exclusions=self.learned_exclusions,
+        )
+
+    def with_learned_exclusion(self, exclusion: LearnedExclusion) -> "TransitionModel":
+        learned = tuple(item for item in self.learned_exclusions if item != exclusion) + (exclusion,)
+        return TransitionModel(
+            target_id=self.target_id,
+            initial_state=self.initial_state,
+            inputs=self.inputs,
+            operations=self.operations,
+            build_hash=self.build_hash,
+            model_version=f"{self.model_version}.learned{len(learned)}",
+            assumptions=self.assumptions,
+            excluded_interactions=self.excluded_interactions,
+            demoted_assumptions=self.demoted_assumptions,
+            learned_exclusions=learned,
         )

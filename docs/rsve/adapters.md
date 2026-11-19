@@ -1,10 +1,10 @@
 # Cross-Runtime Adapter Contracts
 
-The core consumes `TargetAdapter`, `TraceEvent`, `State`, `Authorization`, and `AnalysisReport` without branching on runtime. Runtime-specific capability records live in `runtime_contracts.py` and describe the evidence boundary rather than changing core planning.
+The core consumes `TargetAdapter`, `TraceEvent`, `State`, `Authorization`, and `AnalysisReport` without branching on runtime. Concrete runtime and environment implementations are optional extension modules under `rsve.extensions`; the core public namespace does not eagerly import them. Extensions contribute `CapabilityManifest`, `ProfileInstance`, `AnalysisGraph`, and evidence through the common contracts.
 
 ## Linux Environment Default
 
-`LinuxEnvironmentAdapter` is the default environment profile for host-local Unix fixtures. It records kernel, architecture, libc, ABI, syscall-surface, namespace/cgroup visibility, resource limits, filesystem fixture, virtual-memory assumptions, clock/randomness, scheduler, network, and snapshot scope. The profile ID and capabilities are carried in `EnvironmentObservation` and merged into Node/EVM trace evidence.
+`LinuxEnvironmentAdapter` is an optional host-local Unix extension. It records kernel, architecture, libc, ABI, syscall-surface, namespace/cgroup visibility, resource limits, filesystem fixture, virtual-memory assumptions, clock/randomness, scheduler, network, and snapshot scope. `ReactiveEnvironment` is the core state model; the Linux extension supplies observations and capabilities but does not define core semantics.
 
 This is a default profile, not a universal Linux proof. Hardware memory ordering, scheduler behavior, host entropy, external services, and exact host replay remain explicit unknowns. A QEMU or other substrate adapter can replace the host profile with a guest profile without changing the planner or trace schema.
 
@@ -32,6 +32,6 @@ The same `ObjectiveDefinition`, `HybridPlanner`, `AnalysisStatus`, `Witness`, an
 
 ## Execution profiles and layer pins
 
-`ExecutionProfile` is the stack scope for a run. It can pin the target/build, runtime, platform, OS/kernel, ISA/ABI, adapter, and runtime-specific tools or image digests. Node contributes target/runtime/platform/adapter pins; EVM adds Forge; QEMU adds the Ubuntu image digest and QEMU version. `ProfileVerification` returns `MATCH`, `DRIFT`, or `UNKNOWN`; an unobserved layer is never treated as matching. The planner carries the resulting profile ID into `AnalysisReport` and `ProofResult`, so a solver result is tied to the exact observed stack scope.
+`ProfileInstance` is the graph-owned scope for a run. It can identify a target, runtime, platform, OS/kernel, ISA/ABI, adapter, toolchain, image digest, configuration, and execution context without flattening them into one layer key. `ProfileRequirement` returns `MATCH`, `DRIFT`, or `UNKNOWN`; an unobserved field is never treated as matching. The planner carries the observed profile ID into `AnalysisReport` and `ProofResult`, so a solver result is tied to the exact graph scope.
 
-Applications can add package-lock, framework, compiler, loader, firmware, container, or configuration pins through `ExecutionProfile.from_target(..., extra_pins=...)`. Pinning identifies the evidence scope; it does not claim that an unobserved internal dependency or external service is deterministic.
+Applications can add package-lock, framework, compiler, loader, firmware, container, or configuration fields to a scoped `ProfileInstance` or bind a separate profile for that component. Profile identity identifies the evidence scope; it does not claim that an unobserved internal dependency or external service is deterministic.

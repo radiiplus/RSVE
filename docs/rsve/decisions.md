@@ -100,13 +100,13 @@
 
 ## ADR-0014: Pin the guest artifact separately from Python dependencies
 
-**Decision:** Keep the Ubuntu cloud image outside the Python package and pin its SHA256 in `src/rsve/qemu_adapter.py` and the dependency record. Do not add a large guest image to the source distribution.
+**Decision:** Keep the Ubuntu cloud image outside the Python package and pin its SHA256 in `src/rsve/extensions/qemu_adapter.py` and the dependency record. Do not add a large guest image to the source distribution.
 
 **Reason:** The guest is a reproducible fixture artifact, not a Python library. Separating it keeps package installs small while allowing the adapter to reject an altered image before execution.
 
 ## ADR-0015: Scope solver evidence with a layered execution profile
 
-**Decision:** Use `ExecutionProfile` and `LayerPin` for independently pinned target, runtime, platform, OS, ISA, adapter, tool, and image layers. Runtime adapters construct profiles from their observed identity/environment and may add package-lock, framework, compiler, loader, or configuration pins. `ProfileVerification` reports `MATCH`, `DRIFT`, or `UNKNOWN`; missing or unobserved pins never match by assumption.
+**Decision:** Use graph-owned `ProfileInstance` and `ProfileRequirement` records for independently scoped target, runtime, platform, OS, ISA, adapter, tool, image, configuration, and execution-context identities. Multiple profiles may coexist. `ProfileVerification` reports `MATCH`, `DRIFT`, or `UNKNOWN`; missing or unobserved fields never match by assumption. Runtime implementations are optional extensions and contribute profiles through workspace bindings.
 
 **Reason:** A target build hash alone does not identify the runtime stack that produced an observation. The solver and planner need a stable scope identifier so a bounded result is not reused across Node, kernel, ABI, emulator, toolchain, or image drift.
 

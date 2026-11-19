@@ -7,7 +7,9 @@ Release scope: repository state after BATCH 10 and the BATCH 11 readiness pass.
 - Platform-neutral typed IR, evidence/fidelity axes, surface registries, and schema round-trips.
 - Bounded Z3 solving, residual queries, named cores, explicit UNKNOWN handling, and exact supported weakest-precondition rules.
 - Node and EVM controlled fixtures with replay, state reset, observed traces, and objective validation.
-- Layered execution profiles with target, runtime, platform, OS/ISA, adapter, toolchain, and image pins.
+- Graph-owned profile instances and requirements with target, runtime, platform, OS/ISA, adapter, toolchain, image, configuration, and execution-scope fields.
+- Composable workspace graph with typed bindings, representations, transforms, recognizers, state slots, correlation evidence, nested graphs, capability resolution, composite snapshot contracts, and budgets.
+- Executable semantic graph traversal and reactive environment prediction/reconciliation.
 - Minimal QEMU/Ubuntu Linux substrate with verified image, TCG launch, serial evidence, and qcow2 reset.
 - Optional bounded realization optimization over caller-supplied candidates.
 - Transactional SQLite evidence storage with schema versioning and stale solver-query invalidation.
@@ -17,7 +19,7 @@ Release scope: repository state after BATCH 10 and the BATCH 11 readiness pass.
 
 ## Verification
 
-The complete suite passes with 53 tests. `python -m unittest discover -s tests -v` passes, including the QEMU guest lifecycle. `python -m pip check`, bytecode compilation, dependency-lock verification, wheel build, SQLite artifact tests, optimizer fixture, black-box detection regression, HTTP open-domain replay, symbolic planner guidance, canonical transform bridging, authorization enforcement, and variant coverage pass. `pip-audit==2.9.0 --requirement requirements.lock` reports no known vulnerabilities. Run `python scripts/benchmark.py --rounds 20` for local measurements; benchmark values are host-dependent and are not proof artifacts.
+The complete suite passes with 68 tests. `python -m unittest discover -s tests -p 'test_*.py' -v` passes, including the QEMU serial/snapshot lifecycle. `python -m compileall -q src tests` and `git diff --check` pass. The focused graph, semantic interpreter, reactive environment, profile requirement, persistent solver, Node, EVM, planner, optimizer, and artifact tests pass. CI is intentionally excluded and no new dependency was added.
 
 ## Current benchmark
 
@@ -31,7 +33,7 @@ The Python package has one direct dependency: `z3-solver==4.12.6.0`. Supported d
 
 ## Limits and safety
 
-Results remain bounded by target/build, surface, state, trace, environment, profile pins, solver, and replay budgets. UNSAT is never a global target proof. QEMU TCG is an OS/ISA substrate boundary, not exact hardware or scheduler replay. Fixtures are local and synthetic; payloads are redacted by default. No automatic unauthorized execution, secret extraction, or external exfiltration path is provided.
+Results remain bounded by target/build, workspace graph, surface, state, trace, environment, profile, solver, and replay budgets. UNSAT is never a global target proof. QEMU TCG is an OS/ISA substrate boundary, not exact hardware or scheduler replay, and the current substrate intentionally has no guest command channel. Fixtures are local and synthetic; payloads are redacted by default. No automatic unauthorized execution, secret extraction, or external exfiltration path is provided.
 
 ## Next highest-value work
 

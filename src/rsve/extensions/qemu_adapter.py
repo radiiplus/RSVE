@@ -11,10 +11,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from .adapters import CapabilityReport, Capabilities
+from ..adapters import CapabilityReport, Capabilities
 from .environment import LinuxEnvironmentProfile
-from .ir import EnvironmentObservation
-from .profile import ExecutionProfile, LayerPin
+from ..ir import EnvironmentObservation
+from ..graph import AnalysisGraph, CapabilityManifest, ProfileInstance, Provenance as GraphProvenance
+from ..model import Fidelity
 
 
 DEFAULT_IMAGE = Path("/home/codespace/.cache/rsve/qemu/ubuntu-26.04/ubuntu-26.04-server-cloudimg-amd64.img")
@@ -73,11 +74,53 @@ class QemuLinuxSubstrate:
             deterministic_replay=False,
             limitations=(
                 "QEMU TCG emulates the selected guest machine; it does not prove all host hardware behavior",
-                "the minimal substrate has no SSH, cloud-init, or guest-agent command channel",
+                "the substrate has no guest command channel or guest agent",
                 "guest wall clock, entropy, scheduler interleavings, and external network services are not exact replay state",
                 "serial output is boot evidence, not a complete guest trace",
             ),
             side_effects=("local QEMU process, temporary qcow2 overlay, and serial log",),
+        )
+
+    def capability_manifest(self) -> CapabilityManifest:
+        report = self.capability_report()
+        return CapabilityManifest(
+            extension_id="rsve.qemu-linux",
+            namespace="rsve.qemu/linux-substrate",
+            version="1",
+            provides=frozenset(report.supported_event_hooks) | frozenset({"guest.boot", "guest.snapshot"}),
+            limitations=report.limitations,
+            evidence_quality="substrate-and-serial-observed",
+            provenance=GraphProvenance("qemu-adapter", "1", (str(self.image),), Fidelity.SUBSTRATE),
+        )
+
+    def analysis_profile(self) -> ProfileInstance:
+        identity = self.identity()
+        observation = self.environment_observation()
+        scope = dict(observation.facts)
+        scope["target_id"] = identity["target_id"]
+        scope["image_version"] = "26.04"
+        scope["emulator_version"] = self._qemu_version()
+        return ProfileInstance(
+            profile_id=f"{identity['target_id']}:{identity['build_hash']}",
+            family="substrate",
+            component="linux.guest",
+            implementation=identity["adapter"],
+            version=identity["runtime_version"],
+            build_digest=identity["build_hash"],
+            execution_scope=scope,
+            feature_set=frozenset(self.capability_report().supported_event_hooks),
+            provenance=GraphProvenance("qemu-adapter", "1", (str(self.image),), Fidelity.SUBSTRATE),
+        )
+
+    def analysis_graph(self) -> AnalysisGraph:
+        identity = self.identity()
+        profile = self.analysis_profile()
+        return AnalysisGraph.for_profile(
+            profile,
+            graph_id=f"qemu:{identity['target_id']}",
+            region_id="guest.machine",
+            region_name="QEMU Linux guest",
+            capabilities=(self.capability_manifest(),),
         )
 
     def prepare(self) -> None:
@@ -161,7 +204,7 @@ class QemuLinuxSubstrate:
 
     def execute(self, command: str) -> str:
         raise RuntimeError(
-            "QEMU substrate has no guest command channel; use a target adapter or an explicit guest-agent adapter"
+            "QEMU substrate has no guest command channel; attach a guest-agent extension before executing commands"
         )
 
     def serial_output(self, *, max_bytes: int = 64 * 1024) -> str:
@@ -185,16 +228,6 @@ class QemuLinuxSubstrate:
             "adapter": "rsve.qemu-linux",
             "adapter_version": "1",
         }
-
-    def execution_profile(self) -> ExecutionProfile:
-        return ExecutionProfile.from_target(
-            self.identity(),
-            self.environment_observation(),
-            extra_pins=(
-                LayerPin("os-image", "ubuntu-server-26.04-amd64", "26.04", self._verified_hash or self._sha256(self.image), "qemu.image"),
-                LayerPin("emulator", "qemu-system-x86_64", self._qemu_version(), source="qemu.version"),
-            ),
-        )
 
     def environment_observation(self) -> EnvironmentObservation:
         self.prepare()
@@ -233,6 +266,60 @@ class QemuLinuxSubstrate:
         for tool in (self.qemu_command, self.qemu_img_command):
             if not shutil.which(tool) and not Path(tool).exists():
                 raise FileNotFoundError(f"QEMU substrate tool is not installed: {tool}")
+
+    def _prepare_guest_access(self, root: Path) -> None:
+        if self._seed_image is None or self._ssh_key is None:
+            raise RuntimeError("QEMU guest access paths are not initialized")
+        subprocess.run(
+            [self.ssh_keygen_command, "-q", "-t", "ed25519", "-N", "", "-f", str(self._ssh_key)],
+            check=True,
+            capture_output=True,
+        )
+        public_key = self._ssh_key.with_name(self._ssh_key.name + ".pub").read_text(encoding="utf-8").strip()
+        user_data = root / "user-data"
+        meta_data = root / "meta-data"
+        user_data.write_text(
+            "#cloud-config\n"
+            "users:\n"
+            f"  - name: {self.guest_user}\n"
+            "    sudo: ALL=(ALL) NOPASSWD:ALL\n"
+            "    shell: /bin/bash\n"
+            "    lock_passwd: true\n"
+            "    ssh_authorized_keys:\n"
+            f"      - {public_key}\n"
+            "ssh_pwauth: false\n",
+            encoding="utf-8",
+        )
+        meta_data.write_text("instance-id: rsve-qemu\nlocal-hostname: rsve-qemu\n", encoding="utf-8")
+        subprocess.run(
+            [self.cloud_localds_command, str(self._seed_image), str(user_data), str(meta_data)],
+            check=True,
+            capture_output=True,
+        )
+
+    @staticmethod
+    def _reserve_port() -> int:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind(("127.0.0.1", 0))
+            return int(listener.getsockname()[1])
+
+    def _ssh_args(self, command: str) -> list[str]:
+        if self._ssh_key is None or self._ssh_port is None:
+            raise RuntimeError("QEMU guest SSH channel is not initialized")
+        return [
+            self.ssh_command,
+            "-i", str(self._ssh_key),
+            "-p", str(self._ssh_port),
+            "-o", "BatchMode=yes",
+            "-o", "ConnectTimeout=3",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            f"{self.guest_user}@127.0.0.1",
+            "--",
+            "bash",
+            "-lc",
+            command,
+        ]
 
     def _qemu_version(self) -> str:
         output = subprocess.run([self.qemu_command, "--version"], capture_output=True, text=True, check=True).stdout

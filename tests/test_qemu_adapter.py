@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from rsve import QemuLinuxSubstrate
+from rsve.extensions import QemuLinuxSubstrate
 
 
 IMAGE = Path("/home/codespace/.cache/rsve/qemu/ubuntu-26.04/ubuntu-26.04-server-cloudimg-amd64.img")

@@ -45,7 +45,6 @@ from rsve import (
     Transition,
     Variable,
     Z3SolverAdapter,
-    TransformSpec,
     transform_domain_residual,
 )
 from rsve.constraints import NamedAssumption
@@ -189,19 +188,12 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Transform.from_record({**record, "payload": {"transform_id": "bad"}})
 
-    def test_legacy_transform_spec_converts_to_canonical_ir(self) -> None:
-        legacy = TransformSpec(
-            "decode",
-            "bytes",
-            "text",
-            relation="function",
-            partial=True,
-            information_loss=True,
-            provenance=Provenance("fixture.decode", "1", ("trace-1",), Fidelity.OBSERVED),
+    def test_canonical_transform_round_trips_without_legacy_conversion(self) -> None:
+        transform = Transform(
+            "decode", "bytes", "text", "fixture.decode", "1", Partiality.PARTIAL,
+            RelationKind.FUNCTION, Invertibility.NON_INVERTIBLE, InformationLoss.CONFIRMED,
         )
-        canonical = legacy.to_ir()
-        self.assertEqual(canonical.information_loss, InformationLoss.CONFIRMED)
-        self.assertEqual(TransformSpec.from_ir(canonical).information_loss, True)
+        self.assertEqual(Transform.from_record(transform.to_record()), transform)
 
     def test_objective_ast_and_checkpoint_constraint_round_trip(self) -> None:
         predicate = Equal(Variable("count", Sort.INT), Literal(2, Sort.INT))

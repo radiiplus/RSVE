@@ -2,7 +2,7 @@
 
 `ObjectiveDefinition` is the versioned, extensional objective boundary. It names the target and authorization scope, limits permitted sinks and environment facts, and carries trace/state/replay budgets. Predicates currently cover:
 
-An objective may also carry `profile_pins` for hard execution-stack requirements such as runtime version, OS/kernel, ISA/ABI, framework, toolchain, image, or application build. The planner verifies those pins against the adapter's observed `ExecutionProfile` before backward or forward search begins. A mismatch or missing observation rejects the objective; it never becomes a successful or silently broadened analysis.
+An objective may also carry graph-owned `profile_requirements` for hard scoped requirements such as runtime version, OS/kernel, ISA/ABI, framework, toolchain, image, or application build. The planner verifies them against the extension's observed `ProfileInstance` before backward or forward search begins. A mismatch or missing observation rejects the objective; it never becomes a successful or silently broadened analysis.
 
 - state equality and the existing typed constraint subset;
 - synthetic-canary flow to a named controlled sink;
