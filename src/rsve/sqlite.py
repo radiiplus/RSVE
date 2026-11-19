@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
-from .results import AnalysisReport
+from .result import AnalysisReport
 
 
 STORE_SCHEMA_VERSION = 1

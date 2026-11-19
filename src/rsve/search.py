@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from .results import AnalysisStatus
+from .result import AnalysisStatus
 
 
 @dataclass(frozen=True)

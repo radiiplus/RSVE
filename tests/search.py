@@ -1,7 +1,7 @@
 import unittest
 
 from rsve import DeterministicDomainExplorer, DomainSearchBudget
-from rsve.results import AnalysisStatus
+from rsve.result import AnalysisStatus
 
 
 class DomainSearchTests(unittest.TestCase):

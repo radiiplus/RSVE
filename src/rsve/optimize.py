@@ -11,10 +11,10 @@ from enum import Enum
 from statistics import mean
 from typing import Any, Mapping, Sequence
 
-from .adapters import TargetAdapter
+from .adapter import TargetAdapter
 from .model import Authorization, Decision, State, TraceEvent, TransitionModel
-from .objectives import ObjectiveDefinition
-from .results import Witness
+from .objective import ObjectiveDefinition
+from .result import Witness
 from .planner import BackwardRegressor
 
 

@@ -28,9 +28,9 @@ from rsve import (
     Variable,
 )
 from rsve.extensions import NodeTargetAdapter
-from rsve.differential import DifferentialAnalyzer, DivergenceKind
+from rsve.diff import DifferentialAnalyzer, DivergenceKind
 from rsve.planner import BackwardRegressor
-from rsve.results import AnalysisStatus
+from rsve.result import AnalysisStatus
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "node" / "fixture.mjs"

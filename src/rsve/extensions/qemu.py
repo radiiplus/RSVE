@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from ..adapters import CapabilityReport, Capabilities
-from .environment import LinuxEnvironmentProfile
+from ..adapter import CapabilityReport, Capabilities
+from .linux import LinuxEnvironmentProfile
 from ..ir import EnvironmentObservation
 from ..graph import AnalysisGraph, CapabilityManifest, ProfileInstance, Provenance as GraphProvenance
 from ..model import Fidelity

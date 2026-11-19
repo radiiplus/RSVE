@@ -9,7 +9,7 @@ RSVE is a deterministic, bounded program-analysis core for building an evidence-
 - model/reality trace divergence localization; and
 - JSON Lines artifact persistence with default secret redaction.
 
-The core deliberately does not claim global completeness. Every result carries its search budget, model provenance, and fidelity boundary. Runtime, instrumentation, solver, environment, and storage integrations implement the protocols in `rsve.adapters`.
+The core deliberately does not claim global completeness. Every result carries its search budget, model provenance, and fidelity boundary. Runtime, instrumentation, solver, environment, and storage integrations implement the protocols in `rsve.adapter`.
 
 ## Quick start
 
@@ -52,9 +52,9 @@ assert report.status is AnalysisStatus.MODEL_SAT
 Run the tests with:
 
 ```bash
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -p "*.py" -v
 ```
 
 The first solver backend is pinned as `z3-solver==4.12.6.0`. The adapter records its version, options, query, model, unsat core, optional proof bytes, and limitations in the artifact ledger; unsupported theories remain `UNKNOWN`.
 
-For release checks, run `python scripts/check_dependencies.py`, `python -m unittest discover -s tests -v`, and `python scripts/benchmark.py --rounds 20`. Optional Foundry and QEMU integrations are capability-gated and are not installed by the Python package. Layered execution profiles pin observed target, runtime, OS/ISA, toolchain, image, and adapter identities; objective `profile_pins` are checked before planning.
+For release checks, run `python scripts/check.py`, `python -m unittest discover -s tests -p "*.py" -v`, and `python scripts/benchmark.py --rounds 20`. Optional Foundry and QEMU integrations are capability-gated and are not installed by the Python package. Layered execution profiles pin observed target, runtime, OS/ISA, toolchain, image, and adapter identities; objective `profile_pins` are checked before planning.

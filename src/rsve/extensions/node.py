@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from ..adapters import ArtifactStore, CapabilityReport, Capabilities
-from .environment import LinuxEnvironmentAdapter
+from ..adapter import ArtifactStore, CapabilityReport, Capabilities
+from .linux import LinuxEnvironmentAdapter
 from ..ir import EnvironmentObservation, Evidence, TargetIdentity
 from ..model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
 from ..registry import ObservedEntry, SurfaceRegistry

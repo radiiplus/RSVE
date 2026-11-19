@@ -3,8 +3,8 @@ import unittest
 from pathlib import Path
 
 from rsve import ResultScope, SqliteArtifactStore
-from rsve.differential import DivergenceKind, ModelDelta
-from rsve.results import SolverStatus
+from rsve.diff import DivergenceKind, ModelDelta
+from rsve.result import SolverStatus
 from rsve.solver import SolverResult
 
 

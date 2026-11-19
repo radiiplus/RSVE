@@ -10,13 +10,13 @@ from dataclasses import dataclass
 from itertools import product
 from typing import Any, Callable, Mapping, Sequence
 
-from .adapters import TargetAdapter
-from .constraints import AllOf, Constraint, Equal, Literal, Sort, Variable
-from .differential import DifferentialAnalyzer
+from .adapter import TargetAdapter
+from .logic import AllOf, Constraint, Equal, Literal, Sort, Variable
+from .diff import DifferentialAnalyzer
 from .index import Index
 from .model import Authorization, Decision, Operation, State, TraceEvent, TransitionModel
-from .objectives import AllPredicates, AnyPredicate, ObjectiveDefinition, StateEquals
-from .results import (
+from .objective import AllPredicates, AnyPredicate, ObjectiveDefinition, StateEquals
+from .result import (
     AnalysisReport,
     AnalysisStatus,
     Divergence,
@@ -27,7 +27,7 @@ from .results import (
     Witness,
 )
 from .solver import ConstraintQuery, Z3SolverAdapter
-from .weakest_precondition import WeakestPreconditionEngine, WeakestPreconditionStatus
+from .wp import WeakestPreconditionEngine, WeakestPreconditionStatus
 
 
 @dataclass(frozen=True)

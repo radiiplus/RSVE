@@ -1,6 +1,6 @@
 """RSVE's platform-neutral analysis contracts and deterministic engine."""
 
-from .adapters import (
+from .adapter import (
     ArtifactStore,
     CapabilityReport,
     EnvironmentAdapter,
@@ -10,11 +10,11 @@ from .adapters import (
     TargetAdapter,
     TransactionalArtifactStore,
 )
-from .artifacts import JsonlArtifactStore
-from .artifacts_sqlite import SqliteArtifactStore
+from .store import JsonlArtifactStore
+from .sqlite import SqliteArtifactStore
 from .engine import Engine
 from .engine import AuthorizationError
-from .constraints import (
+from .logic import (
     Add,
     AllOf,
     AnyOf,
@@ -56,7 +56,7 @@ from .ir import (
     RelationKind,
 )
 from .registry import ObservedEntry, SurfaceRegistry
-from .residuals import (
+from .residual import (
     CandidateRegion,
     ResidualKind,
     ResidualResult,
@@ -86,7 +86,7 @@ from .model import (
     TransitionModel,
 )
 from .index import Entry, Index
-from .results import (
+from .result import (
     AnalysisReport,
     AnalysisStatus,
     Divergence,
@@ -95,9 +95,9 @@ from .results import (
     SolverStatus,
     Witness,
 )
-from .semantics import AcceptanceResidual, compare_acceptance, transform_domain_mismatch
+from .acceptance import AcceptanceResidual, compare_acceptance, transform_domain_mismatch
 from .trace import OpenTelemetryAdapter
-from .objectives import (
+from .objective import (
     AllPredicates,
     AllowedStateChanges,
     AnyPredicate,
@@ -112,17 +112,17 @@ from .objectives import (
     StateEquals,
 )
 from .planner import BackwardPlan, BackwardRegressor, CandidateAttempt, HybridPlanner
-from .differential import DifferentialAnalyzer, DivergenceKind, ExperimentRecord, ModelDelta, RefinementResult
-from .weakest_precondition import (
+from .diff import DifferentialAnalyzer, DivergenceKind, ExperimentRecord, ModelDelta, RefinementResult
+from .wp import (
     SymbolicTransition,
     WeakestPreconditionEngine,
     WeakestPreconditionResult,
     WeakestPreconditionStatus,
 )
-from .semantic_graph import SemanticBranch, SemanticInterpreter, SemanticStatus
-from .environment_model import EnvironmentDivergence, EnvironmentResultStatus, EnvironmentStep, ReactiveEnvironment, ReactiveEnvironmentState
-from .optimizer import CostWeights, OptimizationResult, OptimizationStatus, RealizationCost, RealizationOptimizer
-from .domain_search import DeterministicDomainExplorer, DomainSearchBudget, DomainSearchResult
+from .semantic import SemanticBranch, SemanticInterpreter, SemanticStatus
+from .environment import EnvironmentDivergence, EnvironmentResultStatus, EnvironmentStep, ReactiveEnvironment, ReactiveEnvironmentState
+from .optimize import CostWeights, OptimizationResult, OptimizationStatus, RealizationCost, RealizationOptimizer
+from .search import DeterministicDomainExplorer, DomainSearchBudget, DomainSearchResult
 from .graph import (
     AnalysisGraph,
     BudgetUsage,

@@ -18,12 +18,12 @@ from rsve import (
     TransitionModel,
 )
 from rsve.extensions import NodeTargetAdapter
-from rsve.results import AnalysisStatus
-from rsve.semantics import compare_acceptance
+from rsve.result import AnalysisStatus
+from rsve.acceptance import compare_acceptance
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "node" / "variant_lab.mjs"
-MANIFEST = Path(__file__).parent / "fixtures" / "node" / "variant_manifest.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "node" / "variant.mjs"
+MANIFEST = Path(__file__).parent / "fixtures" / "node" / "variant.json"
 SINK = "controlled.local.sink"
 
 

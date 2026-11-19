@@ -8,7 +8,7 @@ from typing import Any, Iterable, Iterator, Mapping
 
 import z3
 
-from .constraints import (
+from .logic import (
     AllOf,
     AnyOf,
     Arithmetic,
@@ -23,9 +23,9 @@ from .constraints import (
     StateRelation,
     Variable,
 )
-from .adapters import Capabilities
+from .adapter import Capabilities
 from .ir import ResultScope
-from .results import SolverStatus
+from .result import SolverStatus
 from .schema import SCHEMA_VERSION, encode
 
 
@@ -301,7 +301,7 @@ class Z3SolverAdapter:
         if self.capture_proofs:
             solver.set(proof=True)
         try:
-            from .constraints import named_assertions
+            from .logic import named_assertions
 
             named = named_assertions(query.formula)
             tracked = _top_level_named_assertions(query.formula)

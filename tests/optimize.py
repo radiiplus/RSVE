@@ -68,7 +68,7 @@ class RealizationOptimizerTests(unittest.TestCase):
         self.assertLess(result.selected_cost.interaction_count, result.original_cost.interaction_count)
         self.assertEqual(len(result.equivalence_evidence), 3)
 
-    def test_optimizer_synthesizes_model_alternatives(self):
+    def test_optimize_synthesizes_model_alternatives(self):
         adapter = NodeTargetAdapter(FIXTURE, target_id="node-fixture")
         authorization = Authorization("optimizer-synthesis", frozenset({"node-lab"}), frozenset({"node-fixture"}))
         objective = ObjectiveDefinition(

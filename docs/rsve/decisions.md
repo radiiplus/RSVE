@@ -10,7 +10,7 @@
 
 ## ADR-0002: Keep runtime dependencies minimal and pin the first solver
 
-**Decision:** Use Python `ast` and `sqlite3` where their standard-library capabilities fit. Use Node's built-in `node:inspector` and `node:diagnostics_channel` for the first Node adapter. Add only `z3-solver==4.12.6.0` for Batch 3 and record the same pin in `requirements.lock`.
+**Decision:** Use Python `ast` and `sqlite3` where their standard-library capabilities fit. Use Node's built-in `node:inspector` and `node:diagnostics_channel` for the first Node adapter. Add only `z3-solver==4.12.6.0` for Batch 3 and record the same pin in `lock`.
 
 **Reason:** Batch 2 needs no external package. Batch 3 requires a real backend for model extraction, incremental solving, timeout/unknown handling, and unsat cores. The exact Z3 package is already available and verified in the environment; the pin prevents an undeclared ambient import from becoming the implementation contract.
 
@@ -100,7 +100,7 @@
 
 ## ADR-0014: Pin the guest artifact separately from Python dependencies
 
-**Decision:** Keep the Ubuntu cloud image outside the Python package and pin its SHA256 in `src/rsve/extensions/qemu_adapter.py` and the dependency record. Do not add a large guest image to the source distribution.
+**Decision:** Keep the Ubuntu cloud image outside the Python package and pin its SHA256 in `src/rsve/extensions/node.py` and the dependency record. Do not add a large guest image to the source distribution.
 
 **Reason:** The guest is a reproducible fixture artifact, not a Python library. Separating it keeps package installs small while allowing the adapter to reject an altered image before execution.
 

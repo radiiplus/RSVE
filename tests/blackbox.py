@@ -15,12 +15,12 @@ from rsve import (
     TransitionModel,
 )
 from rsve.extensions import NodeTargetAdapter
-from rsve.semantics import compare_acceptance
-from rsve.results import AnalysisStatus
+from rsve.acceptance import compare_acceptance
+from rsve.result import AnalysisStatus
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "node" / "blackbox_lab.mjs"
-MANIFEST = Path(__file__).parent / "fixtures" / "node" / "blackbox_manifest.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "node" / "blackbox.mjs"
+MANIFEST = Path(__file__).parent / "fixtures" / "node" / "blackbox.json"
 UNAUTHORIZED = {"role": "analyst", "token": "RSVE-CANARY"}
 AUTHORIZED = {"role": "admin", "token": "RSVE-CANARY"}
 

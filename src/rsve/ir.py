@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping
 
-from .constraints import Constraint
+from .logic import Constraint
 from .model import ExecutionMode, Fidelity, Provenance
 from .schema import SchemaMixin
 

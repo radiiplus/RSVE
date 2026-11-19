@@ -18,7 +18,7 @@ manifest = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 declared = {normalize(item) for item in manifest["project"].get("dependencies", ())}
 locked = {
     normalize(line.strip())
-    for line in (ROOT / "requirements.lock").read_text(encoding="utf-8").splitlines()
+    for line in (ROOT / "lock").read_text(encoding="utf-8").splitlines()
     if line.strip() and not line.lstrip().startswith("#")
 }
 if declared != locked:

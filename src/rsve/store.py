@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from .results import AnalysisReport
+from .result import AnalysisReport
 
 
 class JsonlArtifactStore:

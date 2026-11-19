@@ -15,8 +15,8 @@ from rsve import (
     StateEquals,
     TransitionModel,
 )
-from rsve.residuals import CandidateRegion, ResidualKind, mismatch
-from rsve.results import AnalysisStatus
+from rsve.residual import CandidateRegion, ResidualKind, mismatch
+from rsve.result import AnalysisStatus
 
 
 class Causal(unittest.TestCase):

@@ -1,6 +1,6 @@
 # Node Adapter Contract
 
-`rsve.node_adapter.NodeTargetAdapter` accepts an explicit local Node fixture and manifest. It exposes the generic target lifecycle:
+`rsve.node.NodeTargetAdapter` accepts an explicit local Node fixture and manifest. It exposes the generic target lifecycle:
 
 `prepare` -> `snapshot` -> `invoke`/`execute_trace` -> `collect_output` -> `reset`/`replay` -> `teardown`.
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence
 
-from ..adapters import TargetAdapter
+from ..adapter import TargetAdapter
 
 
 @dataclass(frozen=True)

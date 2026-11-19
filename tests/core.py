@@ -19,8 +19,8 @@ from rsve import (
     TransitionModel,
 )
 from rsve.engine import AuthorizationError
-from rsve.results import AnalysisStatus, GapKind, SolverStatus
-from rsve.semantics import compare_acceptance, transform_domain_mismatch
+from rsve.result import AnalysisStatus, GapKind, SolverStatus
+from rsve.acceptance import compare_acceptance, transform_domain_mismatch
 from rsve import (
     AllOf,
     AnyOf,
@@ -47,7 +47,7 @@ from rsve import (
     Z3SolverAdapter,
     transform_domain_residual,
 )
-from rsve.constraints import NamedAssumption
+from rsve.logic import NamedAssumption
 from rsve.ir import ObjectiveAst, ObjectiveCheckpoint
 from rsve.model import Fidelity, Provenance
 

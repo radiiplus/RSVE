@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Iterable
 
-from .constraints import AllOf, Constraint
+from .logic import AllOf, Constraint
 from .ir import ResultScope
-from .results import SolverStatus
+from .result import SolverStatus
 from .solver import ConstraintQuery, SolverResult, Z3SolverAdapter
 
 

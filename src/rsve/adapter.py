@@ -7,7 +7,7 @@ from typing import Any, Iterable, Mapping, Protocol, Sequence
 
 from .model import Authorization, EntryPoint, State, TraceEvent, TransitionModel
 from .ir import EnvironmentObservation
-from .results import AnalysisReport, SolverStatus
+from .result import AnalysisReport, SolverStatus
 from .graph import AnalysisGraph, CapabilityManifest
 
 

@@ -15,11 +15,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from ..adapters import CapabilityReport, Capabilities
-from .environment import LinuxEnvironmentAdapter
+from ..adapter import CapabilityReport, Capabilities
+from .linux import LinuxEnvironmentAdapter
 from ..ir import EnvironmentObservation, Evidence, TargetIdentity
 from ..model import Authorization, EntryPoint, ExecutionMode, Fidelity, Provenance, State, TraceEvent
-from .runtime_contracts import EvmCapabilities, EvmExecutionContext
+from .contract import EvmCapabilities, EvmExecutionContext
 from ..graph import AnalysisGraph, CapabilityManifest, PortDirection, ProfileInstance, Provenance as GraphProvenance, TypedPort
 
 

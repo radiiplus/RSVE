@@ -15,7 +15,7 @@ from rsve import (
     TransitionModel,
 )
 from rsve.extensions import EvmTargetAdapter
-from rsve.results import AnalysisStatus
+from rsve.result import AnalysisStatus
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "evm" / "src" / "Counter.sol"

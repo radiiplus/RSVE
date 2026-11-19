@@ -7,7 +7,7 @@ from dataclasses import replace
 from typing import Iterable
 
 from .model import Authorization, Budget, Decision, Objective, State, TraceEvent, TransitionModel
-from .results import (
+from .result import (
     AnalysisReport,
     AnalysisStatus,
     Divergence,

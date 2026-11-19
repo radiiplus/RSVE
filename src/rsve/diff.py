@@ -9,7 +9,7 @@ from enum import Enum
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from .model import LearnedExclusion, State, TraceEvent, TransitionModel
-from .results import Divergence
+from .result import Divergence
 
 
 class DivergenceKind(str, Enum):
