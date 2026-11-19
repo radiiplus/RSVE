@@ -144,6 +144,24 @@ Solver results are valid only within their recorded model revision and execution
 
 **Reason:** This makes incremental solving operational in the planner and gives conflict-directed search evidence without treating a core as blame or proof. Unsupported theories remain `UNKNOWN`.
 
+## ADR-0021: Execute graph semantics before operation semantics
+
+**Decision:** `Workspace` evaluates matching graph transforms and recognizers first, maps accepted transformed values into operation requests, applies registered graph effects, and preserves rejection, unknown, and empty-relation outcomes without falling back to the original operation.
+
+**Reason:** A graph connection is part of execution only when its representation change affects the operation input. Graph metadata must not become a post-hoc annotation or an identity fallback.
+
+## ADR-0022: Mark declared uncontrolled environment outcomes as unknown
+
+**Decision:** `World.options()` marks every branch of a transition declared nondeterministic as `UNKNOWN`. Explicit alternative branches without that declaration remain modelled alternatives and support bounded POSSIBLE/GUARANTEED classification.
+
+**Reason:** An uncontrolled environment transition cannot support a guarantee merely because one predicted successor reaches the objective.
+
+## ADR-0023: Use workspace semantics for concrete backward preimages
+
+**Decision:** `Regressor` accepts an optional `Workspace`; concrete preimage checks execute through that workspace, including graph lowering and environment reactions. Symbolic WP remains limited to explicit symbolic relations and does not infer inverses for runtime callables.
+
+**Reason:** Forward and concrete backward checks must evaluate the same composed semantics. Full graph-level symbolic regression remains an explicit limitation until those relations have symbolic contracts.
+
 ## Unresolved items
 
 - Exact target/runtime identity and build-hash source are not defined.

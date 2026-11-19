@@ -84,8 +84,14 @@ class World:
             values = _reactions(result)
         except Exception as exc:
             return (Step(transition_id, state, state, status=Signal.UNKNOWN, reasons=(f"environment transition failed: {type(exc).__name__}",)),)
+        status = Signal.UNKNOWN if transition_id in self.nondeterministic else Signal.PREDICTED
+        reasons = (
+            ("environment transition has uncontrolled outcomes",)
+            if status is Signal.UNKNOWN
+            else ()
+        )
         return tuple(
-            Step(transition_id, state, Context(target, environment, state.scope), outputs, Signal.PREDICTED)
+            Step(transition_id, state, Context(target, environment, state.scope), outputs, status, reasons)
             for target, environment, outputs in values
         )
 

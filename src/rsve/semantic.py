@@ -28,6 +28,7 @@ class Branch:
 
 TransformEvaluator = Callable[[Any, State], Any | Iterable[Any]]
 RecognizerEvaluator = Callable[[Any, State], bool]
+EffectEvaluator = Callable[[State, Any], State]
 
 
 class Interpreter:
@@ -39,10 +40,12 @@ class Interpreter:
         *,
         transforms: Mapping[str, TransformEvaluator] | None = None,
         recognizers: Mapping[str, RecognizerEvaluator] | None = None,
+        effects: Mapping[str, EffectEvaluator] | None = None,
     ) -> None:
         self.graph = graph
         self.transforms = dict(transforms or {})
         self.recognizers = dict(recognizers or {})
+        self.effects = dict(effects or {})
 
     def execute(
         self,
@@ -96,6 +99,31 @@ class Interpreter:
                 except Exception as exc:
                     checked.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations, branch.recognizer_results + ((recognizer_id, None),), branch.state, branch.reasons + (f"recognizer {recognizer_id} failed: {type(exc).__name__}",)))
             branches = tuple(checked)
+        for effect_id in transition.effect_ids:
+            evaluator = self.effects.get(effect_id)
+            if evaluator is None:
+                continue
+            applied: list[Branch] = []
+            for branch in branches:
+                try:
+                    applied.append(Branch(
+                        branch.value,
+                        branch.status,
+                        branch.representations,
+                        branch.recognizer_results,
+                        evaluator(branch.state, branch.value),
+                        branch.reasons,
+                    ))
+                except Exception as exc:
+                    applied.append(Branch(
+                        branch.value,
+                        Meaning.UNKNOWN,
+                        branch.representations,
+                        branch.recognizer_results,
+                        branch.state,
+                        branch.reasons + (f"effect {effect_id} failed: {type(exc).__name__}",),
+                    ))
+            branches = tuple(applied)
         return branches
 
     def outcomes(

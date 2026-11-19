@@ -145,10 +145,12 @@ class Regressor:
         *,
         solver: Zed | None = None,
         solver_timeout_ms: int | None = None,
+        workspace: Workspace | None = None,
     ) -> Plan:
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
         cores: list[tuple[str, ...]] = []
+        workspace = workspace or Workspace.flat(model)
         index = Index.build(model)
         needed = self._keys(objective.postconditions)
         indexed = [item.operation for item in index.chain(needed)] if needed else []
@@ -161,7 +163,7 @@ class Regressor:
             uncertainty.append("no indexed writer was found for the objective state keys")
         for operation in operations:
             for request in model.args():
-                if self.preimage(operation, request, objective)(model.initial_state):
+                if self.preimage(operation, request, objective, workspace=workspace)(model.initial_state):
                     actions.append((operation.entry_point.name, dict(request)))
         backend = solver or Zed()
         with backend.incremental() as session:
@@ -358,6 +360,8 @@ class Regressor:
         operation: Operation,
         request: Mapping[str, Any],
         objective: Objective,
+        *,
+        workspace: Workspace | None = None,
     ) -> Callable[[State], bool]:
         """Return the exact concrete preimage predicate for a modeled relation.
 
@@ -365,17 +369,31 @@ class Regressor:
         and request. It is intentionally a concrete relational preimage, not a
         claimed inverse for the underlying runtime transform.
         """
+        if workspace is None:
+            def precondition(state: State) -> bool:
+                return any(
+                    objective.evaluate(outcome.after, (outcome.event(
+                        operation.name,
+                        operation.entry_point.name,
+                        request,
+                        state,
+                        component=operation.component,
+                    ),))
+                    for outcome in operation.branches(state, request)
+                    if outcome.decision is not Decision.UNKNOWN
+                )
+            return precondition
+
         def precondition(state: State) -> bool:
             return any(
-                objective.evaluate(outcome.after, (outcome.event(
-                    operation.name,
+                objective.evaluate(move.after.target, (move.event,))
+                for move in workspace.moves(
+                    Frame(state, workspace.start().environment, regions=workspace.start().regions),
                     operation.entry_point.name,
                     request,
-                    state,
-                    component=operation.component,
-                ),))
-                for outcome in operation.branches(state, request)
-                if outcome.decision is not Decision.UNKNOWN
+                    operation=operation,
+                )
+                if move.outcome.decision is not Decision.UNKNOWN and not move.after.uncertain
             )
         return precondition
 
@@ -444,6 +462,7 @@ class Planner:
             model,
             objective,
             solver_timeout_ms=objective.budget.solver_timeout_ms,
+            workspace=workspace,
         )
         phantom_attempt = self._probe_phantom_entries(adapter, objective, authorization)
         if phantom_attempt is not None and phantom_attempt.objective_observed and phantom_attempt.replay_stable:
@@ -491,6 +510,10 @@ class Planner:
                 depth,
                 json.dumps(state.canonical(), sort_keys=True),
                 json.dumps(frame.environment.canonical(), sort_keys=True),
+                json.dumps(
+                    {name: value.canonical() for name, value in sorted(frame.regions.items())},
+                    sort_keys=True,
+                ),
                 uncertain,
                 tuple(
                     (

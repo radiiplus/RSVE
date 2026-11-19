@@ -19,6 +19,7 @@ class Frame:
     environment: State = State()
     uncertain: bool = False
     reasons: tuple[str, ...] = ()
+    regions: Mapping[str, State] = field(default_factory=dict)
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -26,6 +27,7 @@ class Frame:
             "environment": self.environment.canonical(),
             "uncertain": self.uncertain,
             "reasons": self.reasons,
+            "regions": {key: value.canonical() for key, value in sorted(self.regions.items())},
         }
 
 
@@ -50,6 +52,7 @@ class Workspace:
     initial: Frame | None = None
     transforms: Mapping[str, Callable[[Any, State], Any | tuple[Any, ...]]] = field(default_factory=dict)
     recognizers: Mapping[str, Callable[[Any, State], bool]] = field(default_factory=dict)
+    effects: Mapping[str, Callable[[State, Any], State]] = field(default_factory=dict)
 
     @classmethod
     def flat(
@@ -61,6 +64,8 @@ class Workspace:
         environment: State | None = None,
         transforms: Mapping[str, Callable[[Any, State], Any | tuple[Any, ...]]] | None = None,
         recognizers: Mapping[str, Callable[[Any, State], bool]] | None = None,
+        regions: Mapping[str, State] | None = None,
+        effects: Mapping[str, Callable[[State, Any], State]] | None = None,
     ) -> "Workspace":
         initial_environment = (
             environment
@@ -73,9 +78,10 @@ class Workspace:
             model,
             graph,
             world,
-            Frame(model.initial_state, initial_environment),
+            Frame(model.initial_state, initial_environment, regions=dict(regions or {})),
             dict(transforms or {}),
             dict(recognizers or {}),
+            dict(effects or {}),
         )
 
     def start(self) -> Frame:
@@ -102,53 +108,75 @@ class Workspace:
         )
         moves: list[Move] = []
         for item in operations:
-            for original in item.branches(frame.target, request):
-                for outcome in self._graph(item, frame, request, original):
-                    yield_move = self._move(item, outcome, frame, entry, request)
-                    moves.extend(yield_move)
+            if not self._transitions(item):
+                for outcome in item.branches(frame.target, request):
+                    moves.extend(self._move(item, outcome, frame, entry, request))
+                continue
+            for outcome, transformed in self._outcomes(item, frame, request):
+                if outcome.decision is Decision.ACCEPT:
+                    for branch in item.branches(outcome.after, transformed):
+                        combined = self._combine(outcome, branch)
+                        moves.extend(self._move(item, combined, frame, entry, transformed))
+                else:
+                    moves.extend(self._move(item, outcome, frame, entry, request))
         return tuple(moves)
 
-    def _graph(
-        self,
-        operation: Operation,
-        frame: Frame,
-        request: Mapping[str, Any],
-        original: Outcome,
-    ) -> tuple[Outcome, ...]:
+    def _transitions(self, operation: Operation) -> tuple[Any, ...]:
         if self.graph is None:
-            return (original,)
-        transitions = tuple(
+            return ()
+        return tuple(
             transition
             for transition in self.graph.transitions
             if transition.transition_id == operation.name
             or transition.entry_point == operation.entry_point.name
         )
-        if not transitions:
-            return (original,)
+
+    def _outcomes(
+        self,
+        operation: Operation,
+        frame: Frame,
+        request: Mapping[str, Any],
+    ) -> tuple[tuple[Outcome, Mapping[str, Any]], ...]:
+        transitions = self._transitions(operation)
         interpreter = Interpreter(
             self.graph,
             transforms=self.transforms,
             recognizers=self.recognizers,
+            effects=self.effects,
         )
         value: Any = request
-        lowered: list[Outcome] = []
+        lowered: list[tuple[Outcome, Mapping[str, Any]]] = []
         for transition in transitions:
-            for graph_outcome in interpreter.outcomes(transition.transition_id, value, state=frame.target):
-                if graph_outcome.decision is Decision.UNKNOWN:
-                    lowered.append(replace(
-                        original,
-                        decision=Decision.UNKNOWN,
-                        uncertainty=tuple(original.uncertainty) + graph_outcome.uncertainty,
-                        evidence=tuple(original.evidence) + graph_outcome.evidence,
-                    ))
-                elif graph_outcome.decision is Decision.REJECT:
-                    lowered.append(graph_outcome)
+            graph_outcomes = interpreter.outcomes(transition.transition_id, value, state=frame.target)
+            for graph_outcome in graph_outcomes:
+                if graph_outcome.decision is Decision.ACCEPT:
+                    transformed = _request(graph_outcome.observation.get("value"), request)
+                    lowered.append((graph_outcome, transformed))
                 else:
-                    lowered.append(replace(
-                        original,
-                        evidence=tuple(original.evidence) + graph_outcome.evidence,
-                    ))
-        return tuple(lowered) or (original,)
+                    lowered.append((graph_outcome, request))
+        return tuple(lowered)
+
+    @staticmethod
+    def _combine(graph: Outcome, operation: Outcome) -> Outcome:
+        if graph.decision is Decision.UNKNOWN:
+            return replace(
+                graph,
+                after=operation.after,
+                observation=operation.observation,
+                effects=graph.effects + operation.effects,
+                reads=graph.reads | operation.reads,
+                writes=graph.writes | operation.writes,
+                uncertainty=graph.uncertainty + operation.uncertainty,
+            )
+        if graph.decision is Decision.REJECT:
+            return graph
+        return replace(
+            operation,
+            effects=graph.effects + operation.effects,
+            reads=graph.reads | operation.reads,
+            writes=graph.writes | operation.writes,
+            evidence=graph.evidence + operation.evidence,
+        )
 
     def _move(
         self,
@@ -188,7 +216,10 @@ class Workspace:
                     branch_reasons.extend(reaction.reasons)
                     branch = replace(branch, decision=Decision.UNKNOWN, uncertainty=tuple(branch_reasons))
                 branch = replace(branch, environment=dict(reaction.outputs))
-            after = Frame(successor, current, branch_uncertain, tuple(branch_reasons))
+            regions = dict(frame.regions)
+            if item.component in regions:
+                regions[item.component] = successor
+            after = Frame(successor, current, branch_uncertain, tuple(branch_reasons), regions)
             event = branch.event(
                 item.name,
                 entry,
@@ -208,3 +239,13 @@ def _merge(state: State, values: Mapping[str, Any]) -> State:
     merged = state.as_dict()
     merged.update(values)
     return State(merged)
+
+
+def _request(value: Any, original: Mapping[str, Any]) -> dict[str, Any]:
+    """Map a transformed value back to an operation request explicitly."""
+    if isinstance(value, Mapping):
+        return dict(value)
+    if len(original) == 1:
+        key = next(iter(original))
+        return {key: value}
+    return {**dict(original), "value": value}

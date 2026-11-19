@@ -30,8 +30,10 @@ from rsve import (
     Recognizer,
     Transform,
     Transition,
+    Effect,
 )
 from rsve.result import Status
+from rsve.planner import Regressor
 
 
 class Suite(unittest.TestCase):
@@ -130,6 +132,76 @@ class Suite(unittest.TestCase):
         self.assertEqual(moves[0].outcome.decision, Decision.REJECT)
         self.assertFalse(moves[0].event.guard_result)
         self.assertFalse(moves[0].after.target.get("done"))
+
+    def test_graph_transform_feeds_operation_and_effect_state(self):
+        operation = Operation(
+            "check",
+            Entry("check"),
+            guard=lambda _state, request: isinstance(request.get("amount"), int),
+            apply=lambda state, request: state.update(done=request["amount"] == 10),
+            effects=("operation",),
+        )
+        model = Model("transform-fixture", State({"done": False}), ({"amount": "10"},), (operation,))
+        profile = Persona("fixture", "test", "target", "graph", "1")
+        graph = Graph("transform-workspace").persona(profile).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("raw", "text"))
+        graph = graph.value(Representation("number", "integer"))
+        graph = graph.transform(Transform(
+            "parse",
+            "raw",
+            "number",
+            "fixture.parse",
+            "1",
+            Partiality.PARTIAL,
+            Relation.FUNCTION,
+            Invertibility.NON_INVERTIBLE,
+            Loss.POSSIBLE,
+        ))
+        graph = graph.effect(Effect("parsed", "state", ("parsed",)))
+        graph = graph.guard(Recognizer("positive", "number", "fixture.positive", None, "region"))
+        graph = graph.transition(Transition("check", "check", "raw", "number", ("parse",), ("positive",), ("parsed",)))
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"parse": lambda value, _state: int(value["amount"])},
+            recognizers={"positive": lambda value, _state: value == 10},
+            effects={"parsed": lambda state, _value: state.update(parsed=True)},
+        )
+        moves = workspace.moves(workspace.start(), "check", {"amount": "10"}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.ACCEPT)
+        self.assertEqual(moves[0].event.request, {"amount": 10})
+        self.assertTrue(moves[0].after.target.get("done"))
+        self.assertTrue(moves[0].after.target.get("parsed"))
+        self.assertEqual(moves[0].event.effects, ("parsed", "operation"))
+        objective = Objective("done", "transform-fixture", "lab", (Same("done", True),), budget=Limits(max_trace_length=1))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("check", {"amount": "10"}), backward.required_actions)
+
+    def test_empty_graph_relation_does_not_fall_back_to_operation(self):
+        operation = Operation("empty", Entry("empty"), apply=lambda state, _request: state.update(done=True))
+        model = Model("empty-fixture", State({"done": False}), ({"value": "x"},), (operation,))
+        profile = Persona("fixture", "test", "target", "graph", "1")
+        graph = Graph("empty-workspace").persona(profile).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("raw", "mapping"))
+        graph = graph.value(Representation("out", "mapping"))
+        graph = graph.transform(Transform("empty", "raw", "out", "fixture.empty", "1", Partiality.PARTIAL, Relation.RELATION, Invertibility.UNKNOWN, Loss.UNKNOWN))
+        graph = graph.transition(Transition("empty", "empty", "raw", "out", ("empty",)))
+        workspace = Workspace.flat(model, graph=graph, transforms={"empty": lambda _value, _state: ()})
+        self.assertEqual(workspace.moves(workspace.start(), "empty", {"value": "x"}, operation=operation), ())
+
+    def test_declared_uncontrolled_environment_is_unknown(self):
+        world = World(
+            Context(State({"done": False}), State({"quota": 0})),
+            {"react": lambda context, _request: (
+                (context.target.update(done=True), context.environment.update(quota=1), {}),
+                (context.target.update(done=False), context.environment.update(quota=0), {}),
+            )},
+            nondeterministic=frozenset({"react"}),
+        )
+        options = world.options("react", world.initial, {})
+        self.assertEqual(len(options), 2)
+        self.assertTrue(all(step.status.value == "unknown" for step in options))
 
     def test_model_reachability_distinguishes_possible_and_guaranteed(self):
         deterministic = Operation(
