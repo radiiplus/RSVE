@@ -232,3 +232,19 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** Environment reactions occur after an interaction and can determine later reachability. Keeping them in the same qualified state view lets backward and forward reasoning use the same ordering without flattening environment state into target state.
 
 **Rejected:** Treating environment outputs as post-hoc metadata, assuming a reaction is identity when no symbolic contract exists, or merging `env.*` values into unqualified target keys.
+
+## ADR-0033: Use explicit bounded probes for opaque and unenumerated semantics
+
+**Decision:** `Workspace.probes` supplies an authorized, finite request domain for opaque graph transforms and unenumerated operation relations. Concrete backward regression evaluates those probes through the same workspace used by forward planning and records that the result is bounded and incomplete. No probe result is promoted to a symbolic inverse or global domain claim.
+
+**Reason:** Runtime callables and open relations cannot be inverted or exhaustively enumerated without a semantic contract. A finite probe domain permits useful synthesis evidence while preserving UNKNOWN and the exact coverage limitation.
+
+**Rejected:** Treating an opaque transform as identity, treating an empty probe set as exhaustive, or turning a successful probe into a global reachability result.
+
+## ADR-0034: Synchronize only declared aliases and enforce resource ownership
+
+**Decision:** `Workspace` treats alias groups as explicit equality relationships over qualified state keys. A write to one member propagates to the group, including values explicitly set to `None`. Resource writes require a declared owner matching the operation component; unknown or unauthorized ownership produces an UNKNOWN outcome and is also rejected from symbolic workspace regression.
+
+**Reason:** Cross-region identity and ownership cannot be inferred safely from similar names or co-location. Explicit declarations keep state propagation auditable and prevent a missing ownership model from being mistaken for a permitted write or a proof of impossibility.
+
+**Rejected:** Copying all region state into every region, inferring aliases from names, silently allowing cross-owner writes, or treating unknown ownership as identity.

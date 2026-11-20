@@ -28,7 +28,7 @@ from .result import (
     Reach,
 )
 from .solver import Answer, Query, Stack, Zed, Unknown
-from .wp import Symbolic, WP, Truth
+from .wp import Symbolic, WP, Truth, rename
 from .workspace import Frame, Workspace
 
 
@@ -178,7 +178,20 @@ class Regressor:
         if needed and not indexed:
             uncertainty.append("no indexed writer was found for the objective state keys")
         for operation in operations:
-            for request in model.args():
+            requests: list[Mapping[str, Any]] = []
+            seen_requests: set[str] = set()
+            for candidate in model.args() + workspace.probes_for(operation.entry_point.name):
+                key = self._request_key(candidate)
+                if key in seen_requests:
+                    continue
+                seen_requests.add(key)
+                requests.append(candidate)
+            if len(requests) > objective.budget.max_states:
+                uncertainty.append(
+                    f"bounded concrete preimage probes truncated to {objective.budget.max_states} requests"
+                )
+                requests = requests[:objective.budget.max_states]
+            for request in requests:
                 if self.preimage(operation, request, objective, workspace=workspace)(model.initial_state):
                     actions.append((operation.entry_point.name, dict(request)))
         backend = solver or Zed()
@@ -224,6 +237,8 @@ class Regressor:
             uncertainty.append("no one-step preimage was found; longer paths use forward bounded exploration")
         if any(operation.transforms and any(_transform_is_lossy(transform) for transform in operation.transforms) for operation in model.operations):
             uncertainty.append("information-losing transforms require bounded forward/preimage search")
+        if workspace.probes:
+            uncertainty.append("opaque or unenumerated workspace semantics were checked only against bounded probes")
         return Plan(
             objective_id=objective.objective_id,
             required_actions=tuple(actions),
@@ -324,7 +339,7 @@ class Regressor:
         solver_timeout_ms: int | None,
     ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str], list[tuple[str, ...]]]:
         """Regress supported graph routes into their original entry request."""
-        if workspace.graph is None and workspace.world is None:
+        if workspace.graph is None and workspace.world is None and not workspace.aliases and not workspace.resources:
             return [], [], []
         postcondition = _symbolic_postcondition(objective)
         if postcondition is None:
@@ -357,6 +372,10 @@ class Regressor:
                         operation.entry_point.name,
                         Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL)),
                     )
+                resource_reason = workspace.symbolic_resource_reason(operation, symbolic)
+                if resource_reason is not None:
+                    uncertainty.append(resource_reason)
+                    continue
                 steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
                 world_id = self._world_symbolic_id(workspace, operation)
                 if _mentions(postcondition, "state.env.") and world_id is not None:
@@ -370,7 +389,9 @@ class Regressor:
                         f"workspace symbolic route for {operation.entry_point.name} is unknown: {', '.join(missing)}"
                     )
                     continue
-                result = WP().derive(postcondition, tuple(steps))
+                goal = self._alias_constraint(postcondition, workspace.aliases)
+                steps = [self._alias_symbolic(step, workspace.aliases) for step in steps]
+                result = WP().derive(goal, tuple(steps))
                 if result.status is not Truth.EXACT or result.precondition is None:
                     uncertainty.append(
                         f"workspace symbolic route for {operation.entry_point.name} is unknown: "
@@ -419,6 +440,34 @@ class Regressor:
         if operation.entry_point.name in workspace.world.transitions:
             return operation.entry_point.name
         return None
+
+    @staticmethod
+    def _alias_name(name: str, aliases: tuple[tuple[str, ...], ...]) -> str:
+        if name.startswith("state."):
+            key = name[len("state."):]
+            for group in aliases:
+                if key in group:
+                    return "state." + group[0]
+        return name
+
+    @classmethod
+    def _alias_constraint(cls, node: Constraint, aliases: tuple[tuple[str, ...], ...]) -> Constraint:
+        return rename(node, lambda name: cls._alias_name(name, aliases)) if aliases else node
+
+    @classmethod
+    def _alias_symbolic(cls, symbolic: Symbolic, aliases: tuple[tuple[str, ...], ...]) -> Symbolic:
+        if not aliases:
+            return symbolic
+        mapper = lambda name: cls._alias_name(name, aliases)
+        return replace(
+            symbolic,
+            guard=rename(symbolic.guard, mapper),
+            assignments={mapper(key): rename(value, mapper) for key, value in symbolic.assignments.items()},
+            alternatives=tuple(
+                {mapper(key): rename(value, mapper) for key, value in branch.items()}
+                for branch in symbolic.alternatives
+            ),
+        )
 
     @staticmethod
     def _route_symbols(
@@ -561,7 +610,12 @@ class Regressor:
             return any(
                 objective.evaluate(move.after.view(), (move.event,))
                 for move in workspace.moves(
-                    Frame(state, workspace.start().environment, regions=workspace.start().regions),
+                    Frame(
+                        state,
+                        workspace.start().environment,
+                        regions=workspace.start().regions,
+                        aliases=workspace.start().aliases,
+                    ),
                     operation.entry_point.name,
                     request,
                     operation=operation,

@@ -233,6 +233,11 @@ def _scope_name(name: str, input_prefix: str, output_prefix: str) -> str:
     return name
 
 
+def rename(node: Constraint, mapper: Any) -> Constraint:
+    """Rename variables in a supported constraint tree."""
+    return _rename(node, mapper)
+
+
 def _rename(node: Constraint, rename: Any) -> Constraint:
     if isinstance(node, Variable):
         return Variable(rename(node.name), node.sort, node.width)

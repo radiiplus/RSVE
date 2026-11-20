@@ -588,6 +588,176 @@ class Suite(unittest.TestCase):
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"token": "run"})
 
+    def test_bounded_probe_regresses_opaque_graph_transform(self):
+        operation = Operation(
+            "finish-probe",
+            Entry("route-probe"),
+            guard=lambda _state, request: isinstance(request.get("amount"), int),
+            apply=lambda state, request: state.update(count=request["amount"]),
+        )
+        model = Model("probe-fixture", State({"count": 0}), (), (operation,))
+        profile = Persona("probe-profile", "test", "target", "graph", "1")
+        graph = Graph("probe-workspace").persona(profile).zone(Zone("probe", "probe-profile", "probe"))
+        graph = graph.value(Representation("probe-raw", "mapping"))
+        graph = graph.value(Representation("probe-request", "mapping"))
+        graph = graph.transform(Transform(
+            "opaque-scale",
+            "probe-raw",
+            "probe-request",
+            "fixture.opaque-scale",
+            "1",
+            Partiality.UNKNOWN,
+            Relation.UNKNOWN,
+            Invertibility.UNKNOWN,
+            Loss.UNKNOWN,
+        ))
+        graph = graph.transition(Transition("probe-decode", "route-probe", "probe-raw", "probe-request", ("opaque-scale",)))
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"opaque-scale": lambda value, _state: {"amount": value["amount"] * 2}},
+            entries={"route-probe"},
+            probes={"route-probe": ({"amount": 3},)},
+        )
+        objective = Objective(
+            "probe-count",
+            "probe-fixture",
+            "lab",
+            (Same("count", 6),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("probe-tests", frozenset({"lab"}), frozenset({"probe-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("route-probe", {"amount": 3}), backward.required_actions)
+        self.assertTrue(any("bounded probes" in item for item in backward.uncertainty))
+        report = Planner().plan(model, objective, auth, workspace=workspace)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual(report.witness.interactions[0]["request"], {"amount": 3})
+
+    def test_bounded_probe_regresses_unenumerated_relation(self):
+        operation = Operation(
+            "relation-probe",
+            Entry("relation-probe"),
+            relation=lambda state, request: (
+                Outcome(Decision.ACCEPT, state.update(done=True), terminal=True)
+                if request.get("token") == "go"
+                else Outcome(Decision.REJECT, state, terminal=True, guard=False)
+            ,),
+        )
+        model = Model("relation-probe-fixture", State({"done": False}), (), (operation,))
+        workspace = Workspace.flat(
+            model,
+            probes={"relation-probe": ({"token": "stop"}, {"token": "go"})},
+        )
+        objective = Objective(
+            "relation-probe-goal",
+            "relation-probe-fixture",
+            "lab",
+            (Same("done", True),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("relation-probe-tests", frozenset({"lab"}), frozenset({"relation-probe-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("relation-probe", {"token": "go"}), backward.required_actions)
+        report = Planner().plan(model, objective, auth, workspace=workspace)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+
+    def test_alias_groups_sync_and_resource_ownership_is_enforced(self):
+        update = Operation(
+            "update-alias",
+            Entry("update-alias"),
+            component="a",
+            apply=lambda state, _request: state.update(value=5),
+            writes=frozenset({"value"}),
+        )
+        model = Model("alias-fixture", State({}), (), (update,))
+        workspace = Workspace.flat(
+            model,
+            regions={"a": State({"value": 0}), "b": State({"value": 0})},
+            aliases=(("a.value", "b.value"),),
+        )
+        moves = workspace.moves(workspace.start(), "update-alias", {}, operation=update)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].after.regions["a"].get("value"), 5)
+        self.assertEqual(moves[0].after.regions["b"].get("value"), 5)
+        self.assertEqual(moves[0].after.view().get("b.value"), 5)
+
+        denied = Operation(
+            "write-resource",
+            Entry("write-resource"),
+            component="b",
+            apply=lambda state, _request: state.update(**{"resource.lock": True}),
+            writes=frozenset({"resource.lock"}),
+        )
+        denied_model = Model("resource-fixture", State({}), (), (denied,))
+        denied_workspace = Workspace.flat(
+            denied_model,
+            regions={"a": State({}), "b": State({})},
+            resources={"lock": "a"},
+        )
+        denied_move = denied_workspace.moves(denied_workspace.start(), "write-resource", {}, operation=denied)[0]
+        self.assertEqual(denied_move.outcome.decision, Decision.UNKNOWN)
+        self.assertTrue(any("outside owner a" in reason for reason in denied_move.outcome.uncertainty))
+
+    def test_symbolic_aliases_and_resource_ownership_are_regressed(self):
+        update = Operation(
+            "update-symbolic-alias",
+            Entry("update-symbolic-alias"),
+            component="a",
+            guard=lambda _state, request: request.get("token") == "go",
+            apply=lambda state, _request: state.update(value=5),
+            writes=frozenset({"value"}),
+            symbolic_transition=Symbolic(
+                "update-symbolic-alias",
+                "update-symbolic-alias",
+                Equal(Variable("input.token", Sort.STRING), Literal("go", Sort.STRING)),
+                {"state.a.value": Literal(5, Sort.INT)},
+            ),
+        )
+        model = Model("symbolic-alias-fixture", State({}), (), (update,))
+        workspace = Workspace.flat(
+            model,
+            regions={"a": State({"value": 0}), "b": State({"value": 0})},
+            aliases=(("a.value", "b.value"),),
+        )
+        objective = Objective(
+            "symbolic-alias-goal",
+            "symbolic-alias-fixture",
+            "lab",
+            (Same("b.value", 5),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("symbolic-alias-tests", frozenset({"lab"}), frozenset({"symbolic-alias-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("update-symbolic-alias", {"token": "go"}), backward.required_actions)
+
+        resource = Operation(
+            "symbolic-resource",
+            Entry("symbolic-resource"),
+            component="b",
+            symbolic_transition=Symbolic(
+                "symbolic-resource",
+                "symbolic-resource",
+                Literal(True, Sort.BOOL),
+                {"state.resource.lock": Literal(True, Sort.BOOL)},
+            ),
+        )
+        resource_model = Model("symbolic-resource-fixture", State({}), (), (resource,))
+        resource_workspace = Workspace.flat(
+            resource_model,
+            regions={"a": State({}), "b": State({})},
+            resources={"lock": "a"},
+        )
+        resource_objective = Objective(
+            "symbolic-resource-goal",
+            "symbolic-resource-fixture",
+            "lab",
+            (Same("resource.lock", True),),
+            budget=Limits(max_trace_length=1),
+        )
+        resource_plan = Regressor().regress(resource_model, resource_objective, workspace=resource_workspace)
+        self.assertTrue(any("outside owner a" in item for item in resource_plan.uncertainty))
+
 
 if __name__ == "__main__":
     unittest.main()

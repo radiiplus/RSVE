@@ -169,6 +169,13 @@ class Interpreter:
                 for branch in branches
             )
         effect_ids = tuple(transition.effect_ids)
+        effect_writes = frozenset(
+            state_effect
+            for effect_id in transition.effect_ids
+            for effect in self.graph.effects
+            if effect.effect_id == effect_id
+            for state_effect in effect.state_effects
+        )
         reads = frozenset(
             dependency
             for recognizer_id in transition.recognizer_ids
@@ -176,7 +183,7 @@ class Interpreter:
             if recognizer.recognizer_id == recognizer_id
             for dependency in recognizer.state_dependencies
         )
-        writes = frozenset(transition.state_effects)
+        writes = frozenset(transition.state_effects) | effect_writes
         results: list[Outcome] = []
         for branch in branches:
             if branch.status is Meaning.ACCEPTED:

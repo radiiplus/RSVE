@@ -12,6 +12,9 @@ from .semantic import Interpreter
 from .wp import Symbolic
 
 
+_MISSING = object()
+
+
 @dataclass(frozen=True)
 class Frame:
     """One composed target/environment configuration."""
@@ -21,6 +24,7 @@ class Frame:
     uncertain: bool = False
     reasons: tuple[str, ...] = ()
     regions: Mapping[str, State] = field(default_factory=dict)
+    aliases: tuple[tuple[str, ...], ...] = ()
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -29,6 +33,7 @@ class Frame:
             "uncertain": self.uncertain,
             "reasons": self.reasons,
             "regions": {key: value.canonical() for key, value in sorted(self.regions.items())},
+            "aliases": self.aliases,
         }
 
     def view(self) -> State:
@@ -37,6 +42,10 @@ class Frame:
         for region, state in self.regions.items():
             values.update({f"{region}.{key}": value for key, value in state.as_dict().items()})
         values.update({f"env.{key}": value for key, value in self.environment.as_dict().items()})
+        for group in self.aliases:
+            shared = next((values[key] for key in group if values.get(key, _MISSING) is not _MISSING), _MISSING)
+            if shared is not _MISSING:
+                values.update({key: shared for key in group})
         return State(values)
 
 
@@ -75,6 +84,9 @@ class Workspace:
     mappers: Mapping[str, Callable[[Any, Mapping[str, Any]], Mapping[str, Any]]] = field(default_factory=dict)
     entries: frozenset[str] = frozenset()
     symbolics: Mapping[str, Symbolic] = field(default_factory=dict)
+    aliases: tuple[tuple[str, ...], ...] = ()
+    resources: Mapping[str, str] = field(default_factory=dict)
+    probes: Mapping[str, tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
 
     @classmethod
     def flat(
@@ -91,6 +103,9 @@ class Workspace:
         mappers: Mapping[str, Callable[[Any, Mapping[str, Any]], Mapping[str, Any]]] | None = None,
         entries: frozenset[str] | set[str] = frozenset(),
         symbolics: Mapping[str, Symbolic] | None = None,
+        aliases: tuple[tuple[str, ...], ...] = (),
+        resources: Mapping[str, str] | None = None,
+        probes: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
     ) -> "Workspace":
         initial_environment = (
             environment
@@ -103,20 +118,27 @@ class Workspace:
             model,
             graph,
             world,
-            Frame(model.initial_state, initial_environment, regions=dict(regions or {})),
+            Frame(model.initial_state, initial_environment, regions=dict(regions or {}), aliases=tuple(aliases)),
             dict(transforms or {}),
             dict(recognizers or {}),
             dict(effects or {}),
             dict(mappers or {}),
             frozenset(entries),
             dict(symbolics or {}),
+            tuple(aliases),
+            dict(resources or {}),
+            {entry: tuple(dict(request) for request in requests) for entry, requests in (probes or {}).items()},
         )
+
+    def probes_for(self, entry: str) -> tuple[Mapping[str, Any], ...]:
+        """Return the bounded concrete probe domain for an entry."""
+        return self.probes.get(entry, ())
 
     def start(self) -> Frame:
         if self.initial is not None:
             return self.initial
         environment = self.world.initial.environment if self.world is not None else State()
-        return Frame(self.model.initial_state, environment)
+        return Frame(self.model.initial_state, environment, aliases=self.aliases)
 
     def validate(self) -> Any:
         return self.graph.validate() if self.graph is not None else None
@@ -475,10 +497,27 @@ class Workspace:
                     branch_reasons.extend(reaction.reasons)
                     branch = replace(branch, decision=Decision.UNKNOWN, uncertainty=tuple(branch_reasons))
                 branch = replace(branch, environment=dict(reaction.outputs))
+            resource_reason = self._resource_reason(item, branch)
+            if resource_reason is not None:
+                branch_uncertain = True
+                branch_reasons.append(resource_reason)
+                branch = replace(
+                    branch,
+                    decision=Decision.UNKNOWN,
+                    uncertainty=tuple(branch_reasons),
+                )
             regions = dict(frame.regions)
             if owned:
                 regions[item.component] = outcome.after
-            after = Frame(successor, current, branch_uncertain, tuple(branch_reasons), regions)
+            after = Frame(
+                successor,
+                current,
+                branch_uncertain,
+                tuple(branch_reasons),
+                regions,
+                frame.aliases,
+            )
+            after = self._sync(after, item, branch)
             event = branch.event(
                 item.name,
                 entry,
@@ -491,6 +530,82 @@ class Workspace:
                 event = replace(event, after=outcome.after if owned else successor, reaction=dict(branch.environment), uncertainty=after.reasons)
             moves.append(Move(item, branch, frame, after, event))
         return tuple(moves)
+
+    def _resource_reason(self, operation: Operation, outcome: Outcome) -> str | None:
+        return self._resource_reason_for(operation.component, outcome.writes | outcome.must | outcome.may)
+
+    def symbolic_resource_reason(self, operation: Operation, symbolic: Symbolic) -> str | None:
+        assignments = set(symbolic.assignments)
+        for alternative in symbolic.alternatives:
+            assignments.update(alternative)
+        keys = tuple(
+            key.removeprefix("state.")
+            for key in assignments
+            if key.startswith("state.resource.")
+        )
+        return self._resource_reason_for(operation.component, keys)
+
+    def _resource_reason_for(self, component: str, keys: Any) -> str | None:
+        for key in keys:
+            if not key.startswith("resource."):
+                continue
+            resource = key.removeprefix("resource.")
+            owner = self.resources.get(resource)
+            if owner is None:
+                return f"resource ownership is unknown: {resource}"
+            if owner != component:
+                return f"resource write denied outside owner {owner}: {resource}"
+        return None
+
+    def _sync(self, frame: Frame, operation: Operation, outcome: Outcome) -> Frame:
+        if not frame.aliases:
+            return frame
+        target = frame.target
+        environment = frame.environment
+        regions = dict(frame.regions)
+        for key in outcome.writes | outcome.must | outcome.may:
+            qualified = (
+                key
+                if "." in key or operation.component not in regions
+                else f"{operation.component}.{key}"
+            )
+            group = next((group for group in frame.aliases if qualified in group), None)
+            if group is None:
+                continue
+            value = self._read(frame, qualified)
+            if value is _MISSING:
+                continue
+            for alias in group:
+                target, environment, regions = self._write(target, environment, regions, alias, value)
+        return Frame(target, environment, frame.uncertain, frame.reasons, regions, frame.aliases)
+
+    @staticmethod
+    def _read(frame: Frame, key: str) -> Any:
+        if key.startswith("env."):
+            return frame.environment.as_dict().get(key.removeprefix("env."), _MISSING)
+        if "." in key:
+            region, local = key.split(".", 1)
+            if region in frame.regions:
+                return frame.regions[region].as_dict().get(local, _MISSING)
+        return frame.target.as_dict().get(key, _MISSING)
+
+    @staticmethod
+    def _write(
+        target: State,
+        environment: State,
+        regions: Mapping[str, State],
+        key: str,
+        value: Any,
+    ) -> tuple[State, State, dict[str, State]]:
+        updated = dict(regions)
+        if key.startswith("env."):
+            return target, environment.update(**{key.removeprefix("env."): value}), updated
+        if "." in key:
+            region, local = key.split(".", 1)
+            if region in updated:
+                updated[region] = updated[region].update(**{local: value})
+                return target, environment, updated
+        return target.update(**{key: value}), environment, updated
 
 
 def _merge(state: State, values: Mapping[str, Any]) -> State:
