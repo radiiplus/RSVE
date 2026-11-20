@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import heapq
 import json
 import math
+import random
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -338,3 +340,239 @@ class Evolve:
         if details:
             detail += "; " + "; ".join(dict.fromkeys(details))
         return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(population.values())))
+
+
+class Beam:
+    """Layer-wise novelty search that retains a bounded diverse beam."""
+
+    def search(
+        self,
+        seeds: Iterable[Sequence[Mapping[str, Any]]],
+        expand: Callable[[tuple[Mapping[str, Any], ...]], Iterable[Sequence[Mapping[str, Any]]]],
+        assess: Callable[[tuple[Mapping[str, Any], ...]], Trial],
+        *,
+        budget: Bounds = Bounds(),
+        archive: Archive = Archive(),
+        width: int = 8,
+    ) -> Found:
+        if width <= 0:
+            raise ValueError("beam width must be positive")
+        population = self._seeds(seeds, budget)
+        if not population:
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+        known = {Explorer._key(item) for item in population}
+        attempts = 0
+        generated = len(population)
+        started = time.monotonic()
+        details: list[str] = []
+        budget_hit = False
+        while population:
+            if attempts >= budget.max_candidates or (time.monotonic() - started) * 1000 >= budget.max_time_ms:
+                budget_hit = True
+                break
+            scored: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+            for candidate in sorted(population, key=Explorer._key):
+                if attempts >= budget.max_candidates:
+                    budget_hit = True
+                    break
+                trial = assess(candidate)
+                attempts += 1
+                novelty, detail = self._novel(trial, archive)
+                if trial.signature is not None:
+                    archive, _ = archive.offer(trial.signature)
+                if detail:
+                    details.append(detail)
+                if trial.detail:
+                    details.append(trial.detail)
+                if trial.accepted:
+                    return Found(Status.VALIDATED_WITNESS, attempts, generated, candidate, "beam accepted a behavior-assessed candidate")
+                scored.append((novelty, Explorer._key(candidate), candidate))
+            if budget_hit or not scored:
+                break
+            scored.sort(key=lambda item: (-item[0], item[1]))
+            children: dict[str, tuple[Mapping[str, Any], ...]] = {}
+            for _novelty, _key, parent in scored[:width]:
+                for child in expand(parent):
+                    candidate = Explorer._normalize(child)
+                    if len(candidate) > budget.max_trace_length:
+                        continue
+                    key = Explorer._key(candidate)
+                    if key not in known and key not in children:
+                        children[key] = candidate
+                        known.add(key)
+                        generated += 1
+                    if len(children) >= width:
+                        break
+                if len(children) >= width:
+                    break
+            population = tuple(children.values())
+        status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
+        detail = "beam exhausted its explicit candidate/time budget" if budget_hit else "beam exhausted the generated finite layers"
+        if details:
+            detail += "; " + "; ".join(dict.fromkeys(details))
+        return Found(status, attempts, generated, detail=detail)
+
+    @staticmethod
+    def _seeds(seeds: Iterable[Sequence[Mapping[str, Any]]], budget: Bounds) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+        found: dict[str, tuple[Mapping[str, Any], ...]] = {}
+        for seed in seeds:
+            candidate = Explorer._normalize(seed)
+            if len(candidate) <= budget.max_trace_length:
+                found.setdefault(Explorer._key(candidate), candidate)
+        return tuple(found.values())
+
+    @staticmethod
+    def _novel(trial: Trial, archive: Archive) -> tuple[int, str | None]:
+        if trial.signature is None:
+            return 0, "candidate produced no behavior signature"
+        _, novelty = archive.offer(trial.signature)
+        return novelty.score, None
+
+
+class Frontier:
+    """Best-first novelty search over an explicitly generated candidate frontier."""
+
+    def search(
+        self,
+        seeds: Iterable[Sequence[Mapping[str, Any]]],
+        expand: Callable[[tuple[Mapping[str, Any], ...]], Iterable[Sequence[Mapping[str, Any]]]],
+        assess: Callable[[tuple[Mapping[str, Any], ...]], Trial],
+        *,
+        budget: Bounds = Bounds(),
+        archive: Archive = Archive(),
+    ) -> Found:
+        queue: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+        known: set[str] = set()
+        for seed in seeds:
+            candidate = Explorer._normalize(seed)
+            if len(candidate) <= budget.max_trace_length:
+                key = Explorer._key(candidate)
+                if key not in known:
+                    known.add(key)
+                    heapq.heappush(queue, (0, key, candidate))
+        if not queue:
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+        attempts = 0
+        generated = len(known)
+        started = time.monotonic()
+        budget_hit = False
+        details: list[str] = []
+        while queue:
+            if attempts >= budget.max_candidates or (time.monotonic() - started) * 1000 >= budget.max_time_ms:
+                budget_hit = True
+                break
+            _priority, key, candidate = heapq.heappop(queue)
+            trial = assess(candidate)
+            attempts += 1
+            novelty, detail = Beam._novel(trial, archive)
+            if trial.signature is not None:
+                archive, _ = archive.offer(trial.signature)
+            if detail:
+                details.append(detail)
+            if trial.detail:
+                details.append(trial.detail)
+            if trial.accepted:
+                return Found(Status.VALIDATED_WITNESS, attempts, generated, candidate, "frontier accepted a behavior-assessed candidate")
+            for child in expand(candidate):
+                normalized = Explorer._normalize(child)
+                if len(normalized) > budget.max_trace_length:
+                    continue
+                child_key = Explorer._key(normalized)
+                if child_key in known:
+                    continue
+                known.add(child_key)
+                generated += 1
+                heapq.heappush(queue, (-novelty, child_key, normalized))
+        status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
+        detail = "frontier exhausted its explicit candidate/time budget" if budget_hit else "frontier exhausted the generated finite candidates"
+        if details:
+            detail += "; " + "; ".join(dict.fromkeys(details))
+        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(item[2] for item in queue)))
+
+
+class Anneal:
+    """Deterministic simulated-annealing search over behavior signatures."""
+
+    def search(
+        self,
+        seeds: Iterable[Sequence[Mapping[str, Any]]],
+        mutate: Callable[[tuple[Mapping[str, Any], ...]], Iterable[Sequence[Mapping[str, Any]]]],
+        assess: Callable[[tuple[Mapping[str, Any], ...]], Trial],
+        *,
+        budget: Bounds = Bounds(),
+        archive: Archive = Archive(),
+        seed: int = 0,
+        start: float = 3.0,
+        cool: float = 0.85,
+    ) -> Found:
+        if start <= 0 or not 0 < cool < 1:
+            raise ValueError("annealing requires positive start temperature and cooling in (0, 1)")
+        population = Beam._seeds(seeds, budget)
+        if not population:
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+        current = min(population, key=Explorer._key)
+        known = {Explorer._key(item) for item in population}
+        attempts = 0
+        generated = len(known)
+        started = time.monotonic()
+        temperature = start
+        rng = random.Random(seed)
+        details: list[str] = []
+        current_score = 0
+        budget_hit = False
+        while attempts < budget.max_candidates:
+            if (time.monotonic() - started) * 1000 >= budget.max_time_ms:
+                budget_hit = True
+                break
+            trial = assess(current)
+            attempts += 1
+            score, detail = Beam._novel(trial, archive)
+            if trial.signature is not None:
+                archive, _ = archive.offer(trial.signature)
+            if detail:
+                details.append(detail)
+            if trial.detail:
+                details.append(trial.detail)
+            if trial.accepted:
+                return Found(Status.VALIDATED_WITNESS, attempts, generated, current, "annealing accepted a behavior-assessed candidate")
+            current_score = score
+            candidates: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+            for child in mutate(current):
+                candidate = Explorer._normalize(child)
+                if len(candidate) > budget.max_trace_length:
+                    continue
+                key = Explorer._key(candidate)
+                if key in known:
+                    continue
+                known.add(key)
+                generated += 1
+                child_trial = assess(candidate)
+                attempts += 1
+                child_score, child_detail = Beam._novel(child_trial, archive)
+                if child_trial.signature is not None:
+                    archive, _ = archive.offer(child_trial.signature)
+                if child_detail:
+                    details.append(child_detail)
+                if child_trial.detail:
+                    details.append(child_trial.detail)
+                if child_trial.accepted:
+                    return Found(Status.VALIDATED_WITNESS, attempts, generated, candidate, "annealing accepted a behavior-assessed candidate")
+                candidates.append((child_score, key, candidate))
+                if attempts >= budget.max_candidates:
+                    budget_hit = True
+                    break
+            if budget_hit or not candidates:
+                break
+            candidates.sort(key=lambda item: (-item[0], item[1]))
+            score, _key, candidate = candidates[0]
+            delta = score - current_score
+            probability = 1.0 if delta >= 0 else math.exp(delta / max(temperature, 1e-9))
+            if delta >= 0 or rng.random() < probability:
+                current = candidate
+                current_score = score
+            temperature *= cool
+        status = Status.BUDGET_EXHAUSTED if budget_hit or attempts >= budget.max_candidates else Status.UNSAT_BOUNDED
+        detail = "annealing exhausted its explicit candidate/time budget" if status is Status.BUDGET_EXHAUSTED else "annealing exhausted the generated mutation neighborhood"
+        if details:
+            detail += "; " + "; ".join(dict.fromkeys(details))
+        return Found(status, attempts, generated, detail=detail)

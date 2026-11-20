@@ -631,7 +631,7 @@ semantic difference. If two candidates share a coarse signature but later
 diverge, retain the counterexample and refine the selected keys or archive
 resolution.
 
-RSVE provides two bounded novelty-driven strategies. Both require an
+RSVE provides five bounded novelty-driven strategies. All require an
 assessment callback that returns `Trial(accepted, signature, detail)`; the
 callback is responsible for executing or modeling the candidate and deciding
 whether the objective was actually satisfied.
@@ -666,6 +666,16 @@ supplied mutation function to create the next population. Both deduplicate
 candidate traces, enforce the same explicit bounds, and return
 `BUDGET_EXHAUSTED` when a budget stops exploration.
 
+The complementary strategies are:
+
+- `Beam` evaluates a layer at a time and retains only the most novel bounded
+  population.
+- `Frontier` performs deterministic best-first expansion, prioritizing the
+  children of candidates that produced novel behavior.
+- `Anneal` mutates one current candidate, accepts improvements immediately,
+  and can accept lower-novelty moves according to a deterministic seeded
+  cooling schedule to escape a local behavior plateau.
+
 The callback should return `accepted=True` only for an objective result
 established within the declared model or replay scope. A missing signature is
 recorded as a limitation and contributes no novelty; it never becomes a
@@ -676,6 +686,9 @@ planner execution.
 
 Use `Mcts` when interaction prefixes form a useful causal tree. Use `Evolve`
 when a domain has meaningful mutation operators and route diversity matters.
+Use `Beam` when breadth and a stable population cap matter, `Frontier` when
+the expansion graph is sparse and best-first behavior is useful, and `Anneal`
+when local mutations can escape a behavior plateau.
 Neither strategy should mutate raw bytes blindly when the target requires
 typed requests or representation-aware transformations; mutate authorized
 interaction structures and let the workspace produce the behavior signature.

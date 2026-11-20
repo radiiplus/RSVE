@@ -1,6 +1,6 @@
 import unittest
 
-from rsve import Archive, Bounds, Decision, Event, Evolve, Explorer, Mcts, Signature, State, Trial
+from rsve import Archive, Anneal, Beam, Bounds, Decision, Event, Evolve, Explorer, Frontier, Mcts, Signature, State, Trial
 from rsve.result import Status
 
 
@@ -111,6 +111,45 @@ class Suite(unittest.TestCase):
         )
         self.assertEqual(result.status, Status.UNSAT_BOUNDED)
         self.assertEqual(result.attempts, 1)
+
+    def test_beam_retains_a_bounded_novel_population(self) -> None:
+        result = Beam().search(
+            (({"entry_point": "start", "request": {"value": 0}},),),
+            self.grow,
+            self.trial,
+            budget=Bounds(max_candidates=10, max_trace_length=3, max_time_ms=1_000),
+            width=2,
+        )
+        self.assertEqual(result.status, Status.VALIDATED_WITNESS)
+        self.assertEqual(result.candidate[-1]["request"]["value"], 2)
+
+    def test_frontier_expands_novel_behavior(self) -> None:
+        result = Frontier().search(
+            (({"entry_point": "start", "request": {"value": 0}},),),
+            self.grow,
+            self.trial,
+            budget=Bounds(max_candidates=10, max_trace_length=3, max_time_ms=1_000),
+        )
+        self.assertEqual(result.status, Status.VALIDATED_WITNESS)
+        self.assertEqual(result.candidate[-1]["request"]["value"], 2)
+
+    def test_anneal_is_reproducible_and_can_escape_to_objective(self) -> None:
+        first = Anneal().search(
+            (({"entry_point": "start", "request": {"value": 0}},),),
+            self.grow,
+            self.trial,
+            budget=Bounds(max_candidates=10, max_trace_length=3, max_time_ms=1_000),
+            seed=7,
+        )
+        second = Anneal().search(
+            (({"entry_point": "start", "request": {"value": 0}},),),
+            self.grow,
+            self.trial,
+            budget=Bounds(max_candidates=10, max_trace_length=3, max_time_ms=1_000),
+            seed=7,
+        )
+        self.assertEqual(first.status, Status.VALIDATED_WITNESS)
+        self.assertEqual(first.candidate, second.candidate)
 
 
 if __name__ == "__main__":
