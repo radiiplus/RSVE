@@ -200,3 +200,11 @@ Solver results are valid only within their recorded model revision and execution
 - The intended contract source and policy language for recognizers are unresolved.
 - A solver proof format and independent checker strategy are unresolved.
 - CI host matrix and supported Node/JVM/EVM versions are unresolved because no CI exists.
+
+## ADR-0029: Bind symbolic graph semantics explicitly
+
+**Decision:** `Workspace.symbolics` provides explicit `Symbolic` contracts for graph transforms, recognizers, effects, and connection bridges. `Regressor` enumerates bounded graph routes, scopes their representation variables by route stage, composes them with the endpoint operation relation, and solves the resulting preimage with the existing WP/Z3 session. Forward execution continues to use the registered concrete evaluators.
+
+**Reason:** A callable transform cannot be inverted soundly by inspection. Explicit symbolic bindings let backward regression and forward execution share a route while preserving `UNKNOWN` for opaque or relational semantics. The original source request is retained separately from the transformed operation request for replay.
+
+**Rejected:** Treating runtime callables as identity or automatically deriving inverses, making graph metadata solver semantics, or reporting a model-solved transformed request as the original interaction.

@@ -331,6 +331,7 @@ class Event:
     writes: frozenset[str] = frozenset()
     reaction: dict[str, Value] = field(default_factory=dict)
     uncertainty: tuple[str, ...] = ()
+    source: dict[str, Value] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.guard_result is False and self.decision is Decision.ACCEPT:
@@ -369,6 +370,7 @@ class Event:
             "writes": sorted(self.writes),
             "reaction": _canonical(self.reaction),
             "uncertainty": list(self.uncertainty),
+            "source": _canonical(self.source),
         }
 
 

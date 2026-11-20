@@ -52,6 +52,20 @@ class Symbolic(Schema):
         if self.relation not in {"function", "relation", "unknown"}:
             raise ValueError("unsupported symbolic transition relation")
 
+    def scoped(self, input_prefix: str, output_prefix: str) -> "Symbolic":
+        """Rename representation variables for one composed route stage."""
+        rename = lambda name: _scope_name(name, input_prefix, output_prefix)
+        return Symbolic(
+            transition_id=self.transition_id,
+            entry_point=self.entry_point,
+            guard=_rename(self.guard, rename),
+            assignments={rename(key): _rename(value, rename) for key, value in self.assignments.items()},
+            relation=self.relation,
+            deterministic=self.deterministic,
+            semantics_ref=self.semantics_ref,
+            assumptions=self.assumptions,
+        )
+
     def to_record(self) -> dict[str, Any]:
         return {
             "schema_version": Version,
@@ -169,6 +183,40 @@ class WP:
 
 class Opaque(ValueError):
     pass
+
+
+def _scope_name(name: str, input_prefix: str, output_prefix: str) -> str:
+    if name.startswith("input."):
+        return input_prefix + name[len("input."):]
+    if name.startswith("output."):
+        return output_prefix + name[len("output."):]
+    return name
+
+
+def _rename(node: Constraint, rename: Any) -> Constraint:
+    if isinstance(node, Variable):
+        return Variable(rename(node.name), node.sort, node.width)
+    if isinstance(node, Literal):
+        return node
+    if isinstance(node, Equal):
+        return Equal(_rename(node.left, rename), _rename(node.right, rename))
+    if isinstance(node, Arithmetic):
+        return Arithmetic(node.operator, _rename(node.left, rename), _rename(node.right, rename))
+    if isinstance(node, Range):
+        return Range(_rename(node.value, rename), node.minimum, node.maximum)
+    if isinstance(node, Set):
+        return Set(_rename(node.value, rename), node.values)
+    if isinstance(node, Every):
+        return Every(tuple(_rename(item, rename) for item in node.terms))
+    if isinstance(node, Either):
+        return Either(tuple(_rename(item, rename) for item in node.terms))
+    if isinstance(node, Negate):
+        return Negate(_rename(node.term, rename))
+    if isinstance(node, Rel):
+        return Rel(_rename(node.left, rename), node.relation, _rename(node.right, rename))
+    if isinstance(node, Axiom):
+        return Axiom(node.name, _rename(node.term, rename))
+    raise Opaque(f"unsupported constraint node: {type(node).__name__}")
 
 
 def _substitute(node: Constraint, assignments: Mapping[str, Constraint]) -> Constraint:

@@ -33,6 +33,11 @@ from rsve import (
     Effect,
     Direction,
     Port,
+    Add,
+    Range,
+    Sort,
+    Symbolic,
+    Variable,
 )
 from rsve.result import Status
 from rsve.planner import Regressor
@@ -325,6 +330,64 @@ class Suite(unittest.TestCase):
             workspace=workspace,
         )
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
+
+    def test_symbolic_regression_crosses_graph_transform(self):
+        operation = Operation(
+            "finish",
+            Entry("route"),
+            guard=lambda _state, request: isinstance(request.get("amount"), int),
+            apply=lambda state, request: state.update(count=state["count"] + request["amount"]),
+            symbolic_transition=Symbolic(
+                "finish-symbolic",
+                "route",
+                Range(Variable("input.amount", Sort.INT), 1, 10),
+                {"state.count": Add(Variable("state.count", Sort.INT), Variable("input.amount", Sort.INT))},
+            ),
+        )
+        model = Model("symbolic-graph-fixture", State({"count": 0}), (), (operation,))
+        profile = Persona("fixture", "test", "target", "graph", "1")
+        graph = Graph("symbolic-graph-workspace").persona(profile).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("raw", "mapping"))
+        graph = graph.value(Representation("request", "mapping"))
+        graph = graph.transform(Transform(
+            "scale",
+            "raw",
+            "request",
+            "fixture.scale",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.NON_INVERTIBLE,
+            Loss.NONE,
+        ))
+        graph = graph.transition(Transition("decode", "route", "raw", "request", ("scale",)))
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"scale": lambda value, _state: {"amount": value["amount"] * 2}},
+            symbolics={
+                "scale": Symbolic(
+                    "scale-symbolic",
+                    "route",
+                    Range(Variable("input.amount", Sort.INT), 1, 10),
+                    {"output.amount": Add(Variable("input.amount", Sort.INT), Variable("input.amount", Sort.INT))},
+                ),
+            },
+            entries={"route"},
+        )
+        objective = Objective(
+            "scaled-count",
+            "symbolic-graph-fixture",
+            "lab",
+            (Same("count", 6),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("workspace-symbolic", frozenset({"lab"}), frozenset({"symbolic-graph-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("route", {"amount": 3}), backward.required_actions)
+        report = Planner().plan(model, objective, auth, workspace=workspace)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual(report.witness.interactions[0]["request"], {"amount": 3})
 
 
 if __name__ == "__main__":

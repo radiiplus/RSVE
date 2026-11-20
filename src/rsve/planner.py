@@ -167,6 +167,13 @@ class Regressor:
                     actions.append((operation.entry_point.name, dict(request)))
         backend = solver or Zed()
         with backend.incremental() as session:
+            workspace_actions, workspace_uncertainty, workspace_cores = self._symbolic_workspace(
+                model,
+                objective,
+                workspace=workspace,
+                solver=session,
+                solver_timeout_ms=solver_timeout_ms,
+            )
             symbolic_actions, symbolic_uncertainty, action_cores = self._symbolic_actions(
                 model,
                 objective,
@@ -179,13 +186,15 @@ class Regressor:
                 solver=session,
                 solver_timeout_ms=solver_timeout_ms,
             )
+            cores.extend(workspace_cores)
             cores.extend(action_cores)
             cores.extend(trace_cores)
-        for action in symbolic_actions:
+        for action in workspace_actions + symbolic_actions:
             if (action[0], self._request_key(action[1])) not in {
                 (entry, self._request_key(request)) for entry, request in actions
             }:
                 actions.append(action)
+        uncertainty.extend(workspace_uncertainty)
         uncertainty.extend(symbolic_uncertainty)
         uncertainty.extend(sequence_uncertainty)
         for trace in symbolic_traces:
@@ -202,11 +211,13 @@ class Regressor:
         return Plan(
             objective_id=objective.objective_id,
             required_actions=tuple(actions),
-            method=("preimage+solver+sequence+bounded_preimage"
-                    if symbolic_actions or symbolic_traces or any(
+            method=("workspace+preimage+solver+sequence+bounded_preimage"
+                    if workspace_actions or symbolic_actions or symbolic_traces or any(
                         operation.symbolic_transition is not None
                         for operation in model.operations
-                    ) else "bounded_preimage_enumeration"),
+                    ) else "workspace+bounded_preimage_enumeration"
+                    if workspace is not None and workspace.graph is not None
+                    else "bounded_preimage_enumeration"),
             complete=False,
             uncertainty=tuple(uncertainty),
             required_traces=tuple(symbolic_traces),
@@ -286,6 +297,122 @@ class Regressor:
                 if all(interaction["request"] or operation.symbolic_transition is not None for interaction, operation in zip(interactions, sequence)):
                     traces.append(interactions)
         return traces, uncertainty, cores
+
+    def _symbolic_workspace(
+        self,
+        model: Model,
+        objective: Objective,
+        *,
+        workspace: Workspace,
+        solver: Zed | Stack,
+        solver_timeout_ms: int | None,
+    ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str], list[tuple[str, ...]]]:
+        """Regress supported graph routes into their original entry request."""
+        if workspace.graph is None:
+            return [], [], []
+        postcondition = _symbolic_postcondition(objective)
+        if postcondition is None:
+            return [], ["workspace symbolic regression supports Same postconditions only"], []
+        actions: list[tuple[str, Mapping[str, Any]]] = []
+        uncertainty: list[str] = []
+        cores: list[tuple[str, ...]] = []
+        examined = 0
+        for operation in workspace.operations():
+            symbolic = operation.symbolic_transition
+            if symbolic is None:
+                continue
+            routes = workspace.routes(operation)
+            for transitions, connections in routes:
+                examined += 1
+                if examined > min(objective.budget.max_states, 256):
+                    uncertainty.append("workspace symbolic route bound reached")
+                    return actions, uncertainty, cores
+                steps, stage, missing = self._route_symbols(workspace, transitions, connections)
+                if missing:
+                    uncertainty.append(
+                        f"workspace symbolic route for {operation.entry_point.name} is unknown: {', '.join(missing)}"
+                    )
+                    continue
+                steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
+                result = WP().derive(postcondition, tuple(steps))
+                if result.status is not Truth.EXACT or result.precondition is None:
+                    uncertainty.append(
+                        f"workspace symbolic route for {operation.entry_point.name} is unknown: "
+                        f"{result.reason or 'unsupported semantics'}"
+                    )
+                    continue
+                formula: Constraint = result.precondition
+                initial = _initial_state_constraints(workspace.start().view())
+                if initial:
+                    formula = Every(tuple(initial) + (Axiom(
+                        f"workspace:{objective.objective_id}:{examined}",
+                        formula,
+                    ),))
+                solved = _solve(
+                    solver,
+                    Query(
+                        f"workspace-wp:{objective.objective_id}:{examined}",
+                        formula,
+                    ),
+                    timeout_ms=solver_timeout_ms,
+                )
+                if solved.status is Verdict.UNKNOWN:
+                    uncertainty.append(
+                        solved.unknown_reason or "workspace symbolic query returned UNKNOWN"
+                    )
+                    continue
+                if solved.status is not Verdict.SAT:
+                    if solved.status is Verdict.UNSAT_BOUNDED and solved.unsat_core:
+                        cores.append(solved.unsat_core)
+                    continue
+                request = {
+                    name[len("route.0."):]: value
+                    for name, value in solved.model.items()
+                    if name.startswith("route.0.")
+                }
+                if request:
+                    actions.append((operation.entry_point.name, request))
+        return actions, uncertainty, cores
+
+    @staticmethod
+    def _route_symbols(
+        workspace: Workspace,
+        transitions: Sequence[Any],
+        connections: Sequence[Any],
+    ) -> tuple[list[Any], int, list[str]]:
+        steps: list[Any] = []
+        missing: list[str] = []
+        stage = 0
+        for index, transition in enumerate(transitions):
+            for transform_id in transition.transform_ids:
+                symbolic = workspace.symbolics.get(transform_id)
+                if symbolic is None:
+                    missing.append(f"transform:{transform_id}")
+                else:
+                    steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage + 1}."))
+                stage += 1
+            for recognizer_id in transition.recognizer_ids:
+                symbolic = workspace.symbolics.get(recognizer_id)
+                if symbolic is None:
+                    missing.append(f"recognizer:{recognizer_id}")
+                else:
+                    steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
+            for effect_id in transition.effect_ids:
+                symbolic = workspace.symbolics.get(effect_id)
+                if symbolic is None:
+                    missing.append(f"effect:{effect_id}")
+                else:
+                    steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
+            if index < len(connections):
+                transform_id = connections[index].transform_id
+                if transform_id is not None:
+                    symbolic = workspace.symbolics.get(transform_id)
+                    if symbolic is None:
+                        missing.append(f"connection:{transform_id}")
+                    else:
+                        steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage + 1}."))
+                    stage += 1
+        return steps, stage, missing
 
     def _symbolic_actions(
         self,
@@ -661,7 +788,13 @@ class Planner:
         environment: Mapping[str, str],
         authorization: Authorization,
     ) -> Attempt:
-        interactions = tuple({"entry_point": event.entry_point, "request": dict(event.request)} for event in predicted)
+        interactions = tuple(
+            {
+                "entry_point": event.entry_point,
+                "request": dict(event.source or event.request),
+            }
+            for event in predicted
+        )
         if adapter is None:
             return Attempt(interactions, tuple(predicted), False, None, detail="candidate was not replayed by a target adapter")
         adapter.prepare()

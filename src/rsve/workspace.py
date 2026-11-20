@@ -9,6 +9,7 @@ from .environment import Context, Signal, World
 from .graph import Graph
 from .model import Decision, Entry, Event, Model, Operation, Outcome, State
 from .semantic import Interpreter
+from .wp import Symbolic
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class Workspace:
     effects: Mapping[str, Callable[[State, Any], State]] = field(default_factory=dict)
     mappers: Mapping[str, Callable[[Any, Mapping[str, Any]], Mapping[str, Any]]] = field(default_factory=dict)
     entries: frozenset[str] = frozenset()
+    symbolics: Mapping[str, Symbolic] = field(default_factory=dict)
 
     @classmethod
     def flat(
@@ -77,6 +79,7 @@ class Workspace:
         effects: Mapping[str, Callable[[State, Any], State]] | None = None,
         mappers: Mapping[str, Callable[[Any, Mapping[str, Any]], Mapping[str, Any]]] | None = None,
         entries: frozenset[str] | set[str] = frozenset(),
+        symbolics: Mapping[str, Symbolic] | None = None,
     ) -> "Workspace":
         initial_environment = (
             environment
@@ -95,6 +98,7 @@ class Workspace:
             dict(effects or {}),
             dict(mappers or {}),
             frozenset(entries),
+            dict(symbolics or {}),
         )
 
     def start(self) -> Frame:
@@ -128,6 +132,44 @@ class Workspace:
         )
         return model_operations + graph_operations
 
+    def routes(
+        self,
+        operation: Operation,
+    ) -> tuple[tuple[tuple[Any, ...], tuple[Any, ...]], ...]:
+        """Return bounded graph routes that can feed an operation."""
+        if self.graph is None:
+            return ()
+        routes: list[tuple[tuple[Any, ...], tuple[Any, ...]]] = []
+
+        def walk(
+            transition: Any,
+            transitions: tuple[Any, ...],
+            connections: tuple[Any, ...],
+            seen: tuple[str, ...],
+        ) -> None:
+            edges = self._edges(transition)
+            if not edges:
+                routes.append((transitions, connections))
+                return
+            for edge in edges:
+                destinations = self._destinations(edge)
+                if not destinations:
+                    routes.append((transitions, connections + (edge,)))
+                    continue
+                for destination in destinations:
+                    if destination.transition_id in seen or len(seen) >= self.graph.budget.max_depth:
+                        continue
+                    walk(
+                        destination,
+                        transitions + (destination,),
+                        connections + (edge,),
+                        seen + (destination.transition_id,),
+                    )
+
+        for transition in self._transitions(operation):
+            walk(transition, (transition,), (), (transition.transition_id,))
+        return tuple(routes)
+
     def moves(
         self,
         frame: Frame,
@@ -141,15 +183,15 @@ class Workspace:
         for item in operations:
             if not self._transitions(item):
                 for outcome in item.branches(self._local(frame, item), request):
-                    moves.extend(self._move(item, outcome, frame, entry, request))
+                    moves.extend(self._move(item, outcome, frame, entry, request, source=request))
                 continue
             for outcome, transformed in self._outcomes(item, frame, request):
                 if outcome.decision is Decision.ACCEPT:
                     for branch in item.branches(outcome.after, transformed):
                         combined = self._combine(outcome, branch)
-                        moves.extend(self._move(item, combined, frame, entry, transformed))
+                        moves.extend(self._move(item, combined, frame, entry, transformed, source=request))
                 else:
-                    moves.extend(self._move(item, outcome, frame, entry, request))
+                    moves.extend(self._move(item, outcome, frame, entry, request, source=request))
         return tuple(moves)
 
     def _transitions(self, operation: Operation) -> tuple[Any, ...]:
@@ -337,6 +379,8 @@ class Workspace:
         frame: Frame,
         entry: str,
         request: Mapping[str, Any],
+        *,
+        source: Mapping[str, Any] | None = None,
     ) -> tuple[Move, ...]:
         moves: list[Move] = []
         owned = item.component in frame.regions
@@ -381,6 +425,7 @@ class Workspace:
                 local_before,
                 component=item.component,
             )
+            event = replace(event, source=dict(request if source is None else source))
             if reaction is not None:
                 event = replace(event, after=outcome.after if owned else successor, reaction=dict(branch.environment), uncertainty=after.reasons)
             moves.append(Move(item, branch, frame, after, event))
