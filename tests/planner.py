@@ -274,7 +274,11 @@ class Suite(unittest.TestCase):
         sink = Outcome(
             Decision.ACCEPT,
             State({}),
-            observation={"sink": "controlled.sink", "value": "different-representation"},
+            observation={
+                "sink": "controlled.sink",
+                "value": "different-representation",
+                "provenance_consumed": ("payload",),
+            },
             lineage=("source",),
             origins={"payload": ("source:proof",)},
         ).event("store", "store", {"value": "different-representation"}, State({}))
@@ -295,11 +299,12 @@ class Suite(unittest.TestCase):
             Entry("sink"),
             component="controlled.sink",
             provenance_paths={"payload": ("proof",)},
+            provenance_inputs=("payload",),
         )
         model = Model(
             "node-fixture",
             State({}),
-            ({"proof": "ordinary"},),
+            ({"proof": "ordinary"}, {}),
             (source, sink),
         )
         objective = Objective(
@@ -335,6 +340,7 @@ class Suite(unittest.TestCase):
             Entry("sink"),
             component="controlled.sink",
             provenance_paths={"payload": ("proof",)},
+            provenance_inputs=("payload",),
             symbolic_transition=Symbolic(
                 "sink-flow",
                 "sink",
@@ -369,6 +375,24 @@ class Suite(unittest.TestCase):
         second = workspace.moves(first.after, "sink", {}, operation=sink)[0]
         objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
         self.assertFalse(objective.evaluate(second.after.view(), (first.event, second.event)))
+
+    def test_flow_requires_the_sink_consumed_path(self):
+        source = Outcome(
+            Decision.ACCEPT,
+            State({}),
+            origins={"proof": ("source:proof",)},
+        ).event("source", "source", {"proof": "RSVE-CANARY"}, State({}))
+        sink = Outcome(
+            Decision.ACCEPT,
+            State({}),
+            observation={
+                "sink": "controlled.sink",
+                "provenance_consumed": ("payload",),
+            },
+            origins={"unrelated": ("source:proof",)},
+        ).event("sink", "sink", {}, State({}))
+        objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
+        self.assertFalse(objective.evaluate(State({}), (source, sink)))
 
     def test_finite_relational_symbolic_route_guides_candidate_synthesis(self):
         operation = Operation(

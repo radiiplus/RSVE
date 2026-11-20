@@ -29,6 +29,7 @@ from rsve import (
     Partiality,
     Relation,
     Representation,
+    Quality,
     Recognizer,
     Transform,
     Transition,
@@ -1057,7 +1058,7 @@ class Suite(unittest.TestCase):
         self.assertTrue(any("outside owner a" in item for item in resource_plan.uncertainty))
 
     def test_workspace_flow_requires_actual_value_provenance(self):
-        def make_workspace(mode):
+        def make_workspace(mode, quality=Quality.DIRECT):
             model = Model("workspace-flow", State({}), (), ())
             profile = Persona("flow-profile", "test", "target", "fixture", "1")
             graph = Graph("workspace-flow-graph").persona(profile)
@@ -1076,7 +1077,7 @@ class Suite(unittest.TestCase):
                 Invertibility.UNKNOWN,
                 Loss.NONE,
                 provenance=mode,
-                provenance_paths={"payload": ("proof",)} if mode == "preserve" else {},
+                provenance_paths={"payload": ("proof",)} if mode in {"preserve", "unknown"} else {},
             ))
             graph = graph.transform(Transform(
                 "bridge-flow",
@@ -1091,7 +1092,12 @@ class Suite(unittest.TestCase):
                 provenance="preserve",
                 provenance_paths={"payload": ("payload",)},
             ))
-            graph = graph.effect(Effect("sink-flow", "controlled.sink", ("done",)))
+            graph = graph.effect(Effect(
+                "sink-flow",
+                "controlled.sink",
+                ("done",),
+                provenance_inputs=("payload",),
+            ))
             graph = graph.transition(Transition(
                 "source-flow",
                 "source",
@@ -1110,7 +1116,13 @@ class Suite(unittest.TestCase):
             ))
             graph = graph.port(Port("flow-out", "a", "out", Direction.OUTPUT, "mid-flow", "mapping"))
             graph = graph.port(Port("flow-in", "b", "in", Direction.INPUT, "final-flow", "mapping"))
-            graph = graph.connect("flow-out", "flow-in", connection_id="flow-bridge", transform_id="bridge-flow")
+            graph = graph.connect(
+                "flow-out",
+                "flow-in",
+                connection_id="flow-bridge",
+                transform_id="bridge-flow",
+                correlation_quality=quality,
+            )
             symbolics = {
                 "decode-flow": Symbolic(
                     "decode-flow-symbolic",
@@ -1148,7 +1160,7 @@ class Suite(unittest.TestCase):
             )
 
         objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
-        for mode, expected in (("preserve", True), ("discard", False)):
+        for mode, expected in (("preserve", True), ("discard", False), ("unknown", False)):
             workspace = make_workspace(mode)
             moves = workspace.moves(workspace.start(), "source", {"proof": "RSVE-CANARY"})
             self.assertEqual(len(moves), 1)
@@ -1170,6 +1182,11 @@ class Suite(unittest.TestCase):
                 self.assertEqual(backward.required_traces[0][0]["request"], {"proof": "RSVE-CANARY"})
             else:
                 self.assertFalse(backward.required_traces)
+
+        uncertain = make_workspace("preserve", Quality.UNCORRELATED)
+        moves = uncertain.moves(uncertain.start(), "source", {"proof": "RSVE-CANARY"})
+        self.assertEqual(len(moves), 1)
+        self.assertFalse(objective.evaluate(moves[0].after.view(), (moves[0].event,)))
 
 
 if __name__ == "__main__":

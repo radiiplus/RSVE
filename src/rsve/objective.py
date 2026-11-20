@@ -93,15 +93,32 @@ class Flow(Predicate):
                 or self.sink in event.observation.get("effect_observables", ())
             ):
                 if self.require_lineage:
+                    if event.correlation_uncertain or any(
+                        "uncorrelated connection:" in reason
+                        for reason in event.uncertainty
+                    ):
+                        continue
                     lineage = event.observation.get("data_lineage")
                     if not isinstance(lineage, (tuple, list)):
                         continue
+                    consumed = event.observation.get("provenance_consumed")
+                    consumed_paths = set(consumed) if isinstance(consumed, (tuple, list, set, frozenset)) else None
                     if not any(
                         isinstance(item, Mapping)
                         and item.get("source_entry") == self.source_entry
                         and (
-                            item.get("source_path") in source_origins
-                            or _contains(item.get("value"), self.canary)
+                            (
+                                item.get("source_path") in source_origins
+                                and (
+                                    item.get("path") is None
+                                    or consumed_paths is not None
+                                    and item.get("path") in consumed_paths
+                                )
+                            )
+                            or (
+                                item.get("source_path") is None
+                                and _contains(item.get("value"), self.canary)
+                            )
                         )
                         for item in lineage
                     ):

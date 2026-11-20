@@ -234,6 +234,7 @@ class Operation:
     unknown: frozenset[str] = frozenset()
     relation_complete: bool = False
     provenance_paths: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    provenance_inputs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for transform in self.transforms:
@@ -247,6 +248,8 @@ class Operation:
         for output, inputs in self.provenance_paths.items():
             if not isinstance(output, str) or any(not isinstance(item, str) for item in inputs):
                 raise TypeError("operation provenance paths must map string outputs to string inputs")
+        if any(not isinstance(item, str) for item in self.provenance_inputs):
+            raise TypeError("operation provenance inputs must be strings")
 
     def branches(self, state: State, request: Request) -> tuple[Outcome, ...]:
         if self.relation is not None:

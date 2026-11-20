@@ -79,6 +79,13 @@ class Suite(unittest.TestCase):
         unknown = interpreter.outcomes("lineage-unknown", "encoded", lineage=("source",))[0]
         self.assertIsNone(unknown.lineage)
         self.assertIn("provenance transfer is unknown", unknown.uncertainty)
+        unknown_value = interpreter.outcomes(
+            "lineage-unknown",
+            {"proof": "encoded"},
+            origins={"proof": ("source:proof",)},
+        )[0]
+        self.assertIsNone(unknown_value.origins)
+        self.assertIn("value provenance transfer is unknown", unknown_value.uncertainty)
 
     def test_value_provenance_requires_explicit_paths_and_combines_inputs(self):
         profile = Persona("p", "fixture", "target", "synthetic", "1")

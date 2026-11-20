@@ -618,7 +618,7 @@ class Regressor:
                             "symbolic Flow regression requires graph provenance paths for composed workspaces"
                         )
                         continue
-                    if flow.require_lineage and not self._flow_sequence_lineage(sequence, fields):
+                    if flow.require_lineage and not self._flow_sequence_lineage(sequence, fields, flow):
                         continue
                     incomplete = [
                         operation.entry_point.name
@@ -733,7 +733,31 @@ class Regressor:
                         for transition in transitions
                     ):
                         continue
-                    steps, stage, missing = self._route_symbols(workspace, transitions, connections)
+                    sink_index = next(
+                        (
+                            index
+                            for index, transition in enumerate(transitions)
+                            if transition.entry_point == flow.sink
+                            or transition.transition_id == flow.sink
+                            or transition.region_id == flow.sink
+                            or any(
+                                effect.observable == flow.sink
+                                for effect_id in transition.effect_ids
+                                for effect in workspace.graph.effects
+                                if effect.effect_id == effect_id
+                            )
+                        ),
+                        None,
+                    )
+                    if sink_index is None:
+                        continue
+                    route_transitions = transitions[:sink_index + 1]
+                    route_connections = connections[:sink_index]
+                    steps, stage, missing = self._route_symbols(
+                        workspace,
+                        route_transitions,
+                        route_connections,
+                    )
                     if missing:
                         uncertainty.append(
                             f"symbolic graph Flow route is unknown: {', '.join(missing)}"
@@ -750,13 +774,29 @@ class Regressor:
                         steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
                     for field in fields:
                         if flow.require_lineage:
-                            lineage = self._graph_lineage(transitions, connections, field, transforms)
+                            lineage = self._graph_lineage(
+                                route_transitions,
+                                route_connections,
+                                field,
+                                transforms,
+                            )
                             if lineage is None:
                                 uncertainty.append(
                                     f"graph Flow provenance is unknown for {operation.entry_point.name}"
                                 )
                                 continue
                             if not lineage:
+                                continue
+                            consumers = self._graph_consumers(
+                                route_transitions[sink_index],
+                                workspace,
+                            )
+                            if consumers is None:
+                                uncertainty.append(
+                                    f"graph Flow sink consumption is unknown for {operation.entry_point.name}"
+                                )
+                                continue
+                            if not any(path in lineage for path in consumers):
                                 continue
                         result = WP().derive(true, tuple(steps))
                         if result.status is not Truth.EXACT or result.precondition is None:
@@ -816,8 +856,14 @@ class Regressor:
         connections: Sequence[Any],
         source: str,
         transforms: Mapping[str, Any],
-    ) -> bool | None:
+    ) -> frozenset[str] | None:
         available = {source}
+        if any(
+            getattr(connection.correlation_quality, "value", connection.correlation_quality)
+            == "uncorrelated"
+            for connection in connections
+        ):
+            return None
         transform_ids: list[str] = []
         for index, transition in enumerate(transitions):
             transform_ids.extend(transition.transform_ids)
@@ -828,7 +874,7 @@ class Regressor:
             if transform is None or transform.provenance == "unknown":
                 return None
             if transform.provenance == "discard":
-                return False
+                return frozenset()
             if not transform.provenance_paths:
                 return None
             available = {
@@ -837,8 +883,19 @@ class Regressor:
                 if any(item in available for item in inputs)
             }
             if not available:
-                return False
-        return bool(available)
+                return frozenset()
+        return frozenset(available)
+
+    @staticmethod
+    def _graph_consumers(transition: Any, workspace: Workspace) -> tuple[str, ...] | None:
+        consumers = tuple(
+            path
+            for effect_id in transition.effect_ids
+            for effect in workspace.graph.effects
+            if effect.effect_id == effect_id
+            for path in effect.provenance_inputs
+        )
+        return consumers or None
 
     @staticmethod
     def _flow_sink(operation: Operation, flow: Flow) -> bool:
@@ -849,16 +906,29 @@ class Regressor:
         )
 
     @staticmethod
-    def _flow_sequence_lineage(sequence: Sequence[Operation], fields: Sequence[str]) -> bool:
+    def _flow_sequence_lineage(
+        sequence: Sequence[Operation],
+        fields: Sequence[str],
+        flow: Flow,
+    ) -> bool:
         available = set(fields)
         for operation in sequence[1:]:
-            if not operation.provenance_paths:
+            if operation.provenance_paths:
+                available = {
+                    output
+                    for output, inputs in operation.provenance_paths.items()
+                    if any(item in available for item in inputs)
+                }
+            elif Regressor._flow_sink(operation, flow):
+                return bool(operation.provenance_inputs) and any(
+                    item in available for item in operation.provenance_inputs
+                )
+            else:
                 return False
-            available = {
-                output
-                for output, inputs in operation.provenance_paths.items()
-                if any(item in available for item in inputs)
-            }
+            if Regressor._flow_sink(operation, flow):
+                return bool(operation.provenance_inputs) and any(
+                    item in available for item in operation.provenance_inputs
+                )
             if not available:
                 return False
         return bool(available)

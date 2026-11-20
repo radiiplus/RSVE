@@ -183,6 +183,7 @@ class Effect(Schema):
     evidence: tuple[Evidence, ...] = ()
     semantics_ref: str = "rsve.effect"
     semantics_version: str = "1"
+    provenance_inputs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

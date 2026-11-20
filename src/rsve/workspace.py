@@ -569,6 +569,8 @@ class Workspace:
                 if edge.correlation_quality is Quality.UNCORRELATED:
                     edge_outcome = replace(
                         edge_outcome,
+                        lineage=None,
+                        origins=None,
                         uncertainty=edge_outcome.uncertainty + (
                             f"uncorrelated connection: {edge.connection_id}",
                         ),
@@ -576,9 +578,9 @@ class Workspace:
                 converted = self._convert(
                     edge,
                     outcome.observation.get("value"),
-                    outcome.after,
-                    outcome.lineage,
-                    outcome.origins,
+                    edge_outcome.after,
+                    edge_outcome.lineage,
+                    edge_outcome.origins,
                 )
                 if converted is None:
                     results.append(GraphResult(
@@ -765,8 +767,23 @@ class Workspace:
 
     @staticmethod
     def _join(first: Outcome, second: Outcome) -> Outcome:
+        observation = dict(first.observation)
+        first_lineage = (
+            _origin_records(first.origins)
+            if first.origins is not None and first.observation.get("effect_observables")
+            else ()
+        )
+        second_lineage = tuple(observation.get("data_lineage", ()))
+        if first_lineage:
+            observation["data_lineage"] = tuple(dict.fromkeys(first_lineage + second_lineage))
+        observation.update(second.observation)
+        if second.observation.get("data_lineage") and first_lineage:
+            observation["data_lineage"] = tuple(dict.fromkeys(
+                first_lineage + second_lineage + tuple(second.observation["data_lineage"])
+            ))
         return replace(
             second,
+            observation=observation,
             effects=first.effects + second.effects,
             reads=first.reads | second.reads,
             writes=first.writes | second.writes,
@@ -864,6 +881,13 @@ class Workspace:
         )
         for reaction in reactions:
             branch = replace(outcome, lineage=lineage, origins=origins)
+            if item.provenance_inputs:
+                observation = dict(branch.observation)
+                existing = tuple(observation.get("provenance_consumed", ()))
+                observation["provenance_consumed"] = tuple(dict.fromkeys(
+                    existing + tuple(item.provenance_inputs)
+                ))
+                branch = replace(branch, observation=observation)
             successor = target
             current = environment
             branch_uncertain = uncertain
@@ -1039,8 +1063,8 @@ def _merge_origins(
     previous: Mapping[str, tuple[str, ...]] | None,
     current: Mapping[str, tuple[str, ...]],
 ) -> dict[str, tuple[str, ...]]:
-    result = dict(current)
-    result.update(previous or {})
+    result = dict(previous or {})
+    result.update(current)
     return result
 
 
@@ -1052,6 +1076,19 @@ def _lineage_from_origins(origins: Mapping[str, tuple[str, ...]]) -> tuple[str, 
         for source, _, _path in (origin.partition(":"),)
         if source
     ))
+
+
+def _origin_records(origins: Mapping[str, tuple[str, ...]]) -> tuple[Mapping[str, str], ...]:
+    return tuple(
+        {
+            "source_entry": source,
+            "source_path": source_path,
+            "path": path,
+        }
+        for path, values in sorted(origins.items())
+        for origin in values
+        for source, _, source_path in (origin.partition(":"),)
+    )
 
 
 def _transfer_origins(

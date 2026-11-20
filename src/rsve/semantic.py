@@ -213,6 +213,13 @@ class Interpreter:
             for effect in self.graph.effects
             if effect.effect_id == effect_id
         )
+        effect_inputs = tuple(
+            path
+            for effect_id in effect_ids
+            for effect in self.graph.effects
+            if effect.effect_id == effect_id
+            for path in effect.provenance_inputs
+        )
         effect_writes = frozenset(
             state_effect
             for effect_id in transition.effect_ids
@@ -245,6 +252,7 @@ class Interpreter:
                     observation={
                         "value": branch.value,
                         "effect_observables": effect_observables,
+                        "provenance_consumed": effect_inputs,
                     },
                     effects=effect_ids,
                     reads=reads,
@@ -288,6 +296,8 @@ def _origins(
         return None, "value provenance is unknown"
     if mode == "discard":
         return {}, None
+    if mode not in {"preserve", "duplicate", "combine"}:
+        return None, "value provenance transfer is unknown"
     if not paths:
         return None, "value provenance paths are required for value-level transfer"
     result: dict[str, tuple[str, ...]] = {}
