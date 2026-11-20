@@ -6,7 +6,7 @@ import heapq
 import hashlib
 import json
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, is_dataclass, replace
 from itertools import product
 from typing import Any, Callable, Mapping, Sequence
 
@@ -113,6 +113,22 @@ def _initial_state_constraints(state: State) -> list[Constraint]:
                 Equal(Variable(f"state.{key}", sort), Literal(value, sort)),
             ))
     return constraints
+
+
+def _mentions(node: Constraint, prefix: str) -> bool:
+    if isinstance(node, Variable):
+        return node.name.startswith(prefix)
+    if is_dataclass(node):
+        return any(_mentions_value(getattr(node, field.name), prefix) for field in fields(node))
+    return False
+
+
+def _mentions_value(value: Any, prefix: str) -> bool:
+    if isinstance(value, Constraint):
+        return _mentions(value, prefix)
+    if isinstance(value, (tuple, list)):
+        return any(_mentions_value(item, prefix) for item in value)
+    return False
 
 
 def _request_for_step(model: Mapping[str, Any], index: int) -> dict[str, Any]:
@@ -308,7 +324,7 @@ class Regressor:
         solver_timeout_ms: int | None,
     ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str], list[tuple[str, ...]]]:
         """Regress supported graph routes into their original entry request."""
-        if workspace.graph is None:
+        if workspace.graph is None and workspace.world is None:
             return [], [], []
         postcondition = _symbolic_postcondition(objective)
         if postcondition is None:
@@ -323,7 +339,7 @@ class Regressor:
             synthetic = (operation.name, operation.entry_point.name) not in model_operations
             if symbolic is None and not synthetic:
                 continue
-            routes = workspace.routes(operation)
+            routes = workspace.routes(operation) if workspace.graph is not None else (((), ()),)
             for transitions, connections in routes:
                 examined += 1
                 if examined > min(objective.budget.max_states, 256):
@@ -342,6 +358,18 @@ class Regressor:
                         Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL)),
                     )
                 steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
+                world_id = self._world_symbolic_id(workspace, operation)
+                if _mentions(postcondition, "state.env.") and world_id is not None:
+                    environment = workspace.symbolics.get(world_id)
+                    if environment is None:
+                        missing.append(f"environment:{world_id}")
+                    else:
+                        steps.append(environment.scoped(f"route.{stage}.", f"route.{stage}."))
+                if missing:
+                    uncertainty.append(
+                        f"workspace symbolic route for {operation.entry_point.name} is unknown: {', '.join(missing)}"
+                    )
+                    continue
                 result = WP().derive(postcondition, tuple(steps))
                 if result.status is not Truth.EXACT or result.precondition is None:
                     uncertainty.append(
@@ -381,6 +409,16 @@ class Regressor:
                 if request:
                     actions.append((operation.entry_point.name, request))
         return actions, uncertainty, cores
+
+    @staticmethod
+    def _world_symbolic_id(workspace: Workspace, operation: Operation) -> str | None:
+        if workspace.world is None:
+            return None
+        if operation.name in workspace.world.transitions:
+            return operation.name
+        if operation.entry_point.name in workspace.world.transitions:
+            return operation.entry_point.name
+        return None
 
     @staticmethod
     def _route_symbols(

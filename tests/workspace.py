@@ -540,6 +540,54 @@ class Suite(unittest.TestCase):
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"value": "ok"})
 
+    def test_symbolic_regression_crosses_reactive_environment(self):
+        operation = Operation(
+            "go",
+            Entry("go"),
+            guard=lambda _state, request: request.get("token") == "run",
+            symbolic_transition=Symbolic(
+                "go-symbolic",
+                "go",
+                Equal(Variable("input.token", Sort.STRING), Literal("run", Sort.STRING)),
+            ),
+        )
+        model = Model("environment-symbolic-fixture", State({"done": False}), (), (operation,))
+        world = World(
+            Context(model.initial_state, State({"quota": 0})),
+            {
+                "go": lambda context, _request: (
+                    context.target,
+                    context.environment.update(quota=1),
+                    {"quota": 1},
+                ),
+            },
+        )
+        workspace = Workspace.flat(
+            model,
+            world=world,
+            symbolics={
+                "go": Symbolic(
+                    "go-environment-symbolic",
+                    "go",
+                    Literal(True, Sort.BOOL),
+                    {"state.env.quota": Literal(1, Sort.INT)},
+                ),
+            },
+        )
+        objective = Objective(
+            "quota-reach",
+            "environment-symbolic-fixture",
+            "lab",
+            (Same("env.quota", 1),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("environment-symbolic-tests", frozenset({"lab"}), frozenset({"environment-symbolic-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("go", {"token": "run"}), backward.required_actions)
+        report = Planner().plan(model, objective, auth, workspace=workspace)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual(report.witness.interactions[0]["request"], {"token": "run"})
+
 
 if __name__ == "__main__":
     unittest.main()

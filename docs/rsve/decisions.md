@@ -224,3 +224,11 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** A nondeterministic transition needs branch semantics before it can be regressed. A finite disjunction is solver-compatible and auditable without inventing an inverse or treating an opaque relation as identity.
 
 **Rejected:** Regressing a single assignment from a nondeterministic record, dropping alternatives, or presenting one solver branch as a universal guarantee.
+
+## ADR-0032: Treat reactive environment state as a qualified workspace domain
+
+**Decision:** `Frame.view()` exposes environment values under the `env.` namespace. When an objective references that namespace, `Regressor` appends the selected world transition's explicit symbolic relation after the operation and before graph-route preconditions. Missing environment symbolic semantics remain `UNKNOWN`; concrete `World.options()` remains authoritative for forward execution.
+
+**Reason:** Environment reactions occur after an interaction and can determine later reachability. Keeping them in the same qualified state view lets backward and forward reasoning use the same ordering without flattening environment state into target state.
+
+**Rejected:** Treating environment outputs as post-hoc metadata, assuming a reaction is identity when no symbolic contract exists, or merging `env.*` values into unqualified target keys.

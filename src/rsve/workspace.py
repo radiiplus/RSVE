@@ -32,10 +32,11 @@ class Frame:
         }
 
     def view(self) -> State:
-        """Expose global state plus qualified region values to predicates."""
+        """Expose global, region, and environment values to predicates."""
         values = self.target.as_dict()
         for region, state in self.regions.items():
             values.update({f"{region}.{key}": value for key, value in state.as_dict().items()})
+        values.update({f"env.{key}": value for key, value in self.environment.as_dict().items()})
         return State(values)
 
 
