@@ -8,6 +8,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 from .environment import Context, Signal, World
 from .graph import Graph
+from .ir import Partiality, Relation, Semantic
 from .model import Decision, Entry, Event, Model, Operation, Outcome, State
 from .semantic import Interpreter
 from .wp import Symbolic
@@ -156,6 +157,103 @@ class Workspace:
             if len(unique) >= bound:
                 break
         return tuple(unique)
+
+    def contracts(self) -> tuple[Semantic, ...]:
+        """Describe which executable directions each semantic binding supports."""
+        records: list[Semantic] = []
+        transforms: list[Any] = list(self.graph.transforms if self.graph is not None else ())
+        known_transforms = {item.transform_id for item in transforms}
+        for operation in self.model.operations:
+            for transform in operation.transforms:
+                if transform.transform_id not in known_transforms:
+                    transforms.append(transform)
+                    known_transforms.add(transform.transform_id)
+        for transform in transforms:
+            semantic = self.symbolics.get(transform.transform_id)
+            forward = transform.transform_id in self.transforms
+            backward = semantic is not None
+            limitations: list[str] = []
+            if not forward:
+                limitations.append("forward evaluator is unavailable")
+            if not backward:
+                entries = self._transform_entries(transform.transform_id)
+                if any(self.probes.get(entry) for entry in entries) or any(entry in self.expanders for entry in entries):
+                    limitations.append("backward reasoning is bounded by concrete probes")
+                else:
+                    limitations.append("symbolic relation is unavailable")
+            if transform.relation is Relation.UNKNOWN:
+                limitations.append("transform relation is unknown")
+            if transform.partiality is Partiality.UNKNOWN:
+                limitations.append("transform partiality is unknown")
+            if semantic is not None and not self._matches(transform.semantics_ref, transform.semantics_version, semantic):
+                limitations.append("forward and backward semantics references do not match")
+            if semantic is not None:
+                if semantic.relation == "unknown":
+                    limitations.append("symbolic relation is unknown")
+                if transform.relation is Relation.RELATION and not semantic.alternatives:
+                    limitations.append("relational transform has no explicit finite alternatives")
+            complete = forward and backward and not limitations
+            records.append(Semantic(
+                transform.transform_id,
+                transform.semantics_ref,
+                transform.semantics_version,
+                forward,
+                backward,
+                complete,
+                transform.relation,
+                transform.partiality,
+                tuple(limitations),
+                transform.evidence,
+            ))
+        for operation in self.model.operations:
+            semantic = operation.symbolic_transition
+            if operation.relation is None and semantic is None:
+                continue
+            forward = True
+            backward = semantic is not None
+            limitations = []
+            if not backward:
+                if self.probes.get(operation.entry_point.name) or operation.entry_point.name in self.expanders:
+                    limitations.append("backward reasoning is bounded by concrete probes")
+                else:
+                    limitations.append("symbolic relation is unavailable")
+            relation = Relation.RELATION if operation.relation is not None else Relation.FUNCTION
+            reference = semantic.semantics_ref if semantic is not None else "rsve.operation"
+            version = semantic.semantics_version if semantic is not None else "1"
+            if operation.relation is not None and semantic is not None and semantic.relation == "unknown":
+                limitations.append("symbolic relation is unknown")
+            records.append(Semantic(
+                operation.name,
+                reference,
+                version,
+                forward,
+                backward,
+                forward and backward and not limitations,
+                relation,
+                Partiality.UNKNOWN,
+                tuple(limitations),
+                (),
+            ))
+        return tuple(records)
+
+    def _transform_entries(self, transform_id: str) -> tuple[str, ...]:
+        entries = [
+            transition.entry_point
+            for transition in self.graph.transitions
+            if self.graph is not None and transform_id in transition.transform_ids
+        ] if self.graph is not None else []
+        entries.extend(
+            operation.entry_point.name
+            for operation in self.model.operations
+            if any(transform.transform_id == transform_id for transform in operation.transforms)
+        )
+        return tuple(dict.fromkeys(entries))
+
+    @staticmethod
+    def _matches(reference: str, version: str, semantic: Symbolic) -> bool:
+        if semantic.semantics_ref == "rsve.symbolic/1":
+            return True
+        return semantic.semantics_ref == reference and semantic.semantics_version == version
 
     def start(self) -> Frame:
         if self.initial is not None:

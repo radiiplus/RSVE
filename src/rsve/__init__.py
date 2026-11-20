@@ -46,6 +46,7 @@ from .ir import (
     Recognizer,
     Representation,
     Scope,
+    Semantic,
     Checkpoint,
     Key,
     Identity,

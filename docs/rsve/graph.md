@@ -41,6 +41,14 @@ are never treated as identity. `World` models target and
 environment state together and reconciles predicted versus observed
 reactions.
 
+`Workspace.contracts()` reports the executable semantic binding for each
+graph transform and modeled relation. A binding is `forward` when a concrete
+evaluator exists, `backward` when an exact `Symbolic` relation exists, and
+`complete` only when both directions are present with compatible references,
+versions, relation metadata, and no unresolved limitation. Static probes or
+budgeted expanders are recorded as bounded limitations, never as complete
+semantic contracts.
+
 The graph profile is the canonical identity. The former single-stack
 `ExecutionProfile`/`LayerPin` abstraction has been removed from core and
 adapter contracts. Concrete Node, EVM, Linux environment, and QEMU code lives

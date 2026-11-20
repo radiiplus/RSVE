@@ -45,6 +45,7 @@ class Symbolic(Schema):
     relation: str = "function"
     deterministic: bool = True
     semantics_ref: str = "rsve.symbolic/1"
+    semantics_version: str = "1"
     assumptions: tuple[str, ...] = ()
     alternatives: tuple[Mapping[str, Constraint], ...] = ()
 
@@ -65,6 +66,7 @@ class Symbolic(Schema):
             relation=self.relation,
             deterministic=self.deterministic,
             semantics_ref=self.semantics_ref,
+            semantics_version=self.semantics_version,
             assumptions=self.assumptions,
             alternatives=tuple(
                 {rename(key): _rename(value, rename) for key, value in branch.items()}
@@ -88,6 +90,7 @@ class Symbolic(Schema):
                 "relation": self.relation,
                 "deterministic": self.deterministic,
                 "semantics_ref": self.semantics_ref,
+                "semantics_version": self.semantics_version,
                 "assumptions": list(self.assumptions),
                 "alternatives": [
                     {key: value.to_record() for key, value in sorted(branch.items())}
@@ -111,6 +114,7 @@ class Symbolic(Schema):
             relation=payload.get("relation", "function"),
             deterministic=bool(payload.get("deterministic", True)),
             semantics_ref=payload.get("semantics_ref", "rsve.symbolic/1"),
+            semantics_version=payload.get("semantics_version", "1"),
             assumptions=tuple(payload.get("assumptions", ())),
             alternatives=tuple(
                 {

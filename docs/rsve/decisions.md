@@ -256,3 +256,11 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** Opaque transforms and open relations often cannot provide a complete symbolic inverse, but a controlled extension can expose a deterministic candidate generator. Lazy expansion avoids requiring the entire domain up front while preserving reproducibility and budget scope.
 
 **Rejected:** Enumerating without a budget, accepting arbitrary non-mapping values, treating expander exhaustion as global completeness, or converting an expander failure into bounded UNSAT.
+
+## ADR-0036: Record executable semantic binding status
+
+**Decision:** `ir.Semantic` and `Workspace.contracts()` are the canonical status boundary for executable semantic contracts. Forward capability comes from a registered concrete evaluator; backward capability comes from a compatible exact `Symbolic` relation. A contract is complete only when both directions and their declared relation metadata are established. Probe-backed behavior is explicitly incomplete.
+
+**Reason:** A transform or relation record alone is metadata. The planner must know whether it can execute the relation, regress it, or only sample it within a finite scope. Keeping status in one record prevents a forward-only evaluator from being mistaken for an exact inverse.
+
+**Rejected:** Inferring inverses from callables, treating a symbolic record without a forward evaluator as replayable, or treating probe coverage as complete semantics.

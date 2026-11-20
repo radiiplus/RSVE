@@ -40,6 +40,7 @@ from rsve import (
     Sort,
     Symbolic,
     Variable,
+    Semantic,
 )
 from rsve.result import Status
 from rsve.planner import Regressor
@@ -704,6 +705,56 @@ class Suite(unittest.TestCase):
         auth = Authorization("broken-expander-tests", frozenset({"lab"}), frozenset({"broken-expander-fixture"}))
         report = Planner().plan(model, objective, auth, workspace=workspace)
         self.assertEqual(report.status, Status.UNKNOWN)
+
+    def test_semantic_contract_reports_forward_and_backward_bindings(self):
+        operation = Operation("contract", Entry("contract"), apply=lambda state, _request: state)
+        model = Model("contract-fixture", State({}), (), (operation,))
+        profile = Persona("contract-profile", "test", "target", "fixture", "1")
+        graph = Graph("contract-workspace").persona(profile).zone(Zone("region", "contract-profile", "region"))
+        graph = graph.value(Representation("raw-contract", "mapping"))
+        graph = graph.value(Representation("out-contract", "mapping"))
+        graph = graph.transform(Transform(
+            "contract-transform",
+            "raw-contract",
+            "out-contract",
+            "fixture.contract",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.BIJECTIVE,
+            Loss.NONE,
+        ))
+        graph = graph.transition(Transition("contract-transition", "contract", "raw-contract", "out-contract", ("contract-transform",)))
+        symbolic = Symbolic(
+            "contract-symbolic",
+            "contract",
+            Literal(True, Sort.BOOL),
+            semantics_ref="fixture.contract",
+            semantics_version="1",
+        )
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"contract-transform": lambda value, _state: value},
+            symbolics={"contract-transform": symbolic},
+        )
+        record = workspace.contracts()[0]
+        self.assertTrue(record.forward)
+        self.assertTrue(record.backward)
+        self.assertTrue(record.complete)
+        self.assertEqual(Semantic.from_record(record.to_record()), record)
+
+        bounded = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"contract-transform": lambda value, _state: value},
+            probes={"contract": ({"value": 1},)},
+        )
+        bounded_record = bounded.contracts()[0]
+        self.assertTrue(bounded_record.forward)
+        self.assertFalse(bounded_record.backward)
+        self.assertFalse(bounded_record.complete)
+        self.assertIn("bounded by concrete probes", bounded_record.limitations[0])
 
     def test_alias_groups_sync_and_resource_ownership_is_enforced(self):
         update = Operation(

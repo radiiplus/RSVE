@@ -136,6 +136,28 @@ class Transform(Schema):
 
 
 @dataclass(frozen=True)
+class Semantic(Schema):
+    """Executable binding status for one forward/backward semantic relation."""
+
+    semantic_id: str
+    semantics_ref: str
+    semantics_version: str
+    forward: bool = False
+    backward: bool = False
+    complete: bool = False
+    relation: Relation = Relation.UNKNOWN
+    partiality: Partiality = Partiality.UNKNOWN
+    limitations: tuple[str, ...] = ()
+    evidence: tuple[Evidence, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.semantic_id or not self.semantics_ref or not self.semantics_version:
+            raise ValueError("semantic identity and reference/version are required")
+        if self.complete and not (self.forward and self.backward):
+            raise ValueError("complete semantics require forward and backward bindings")
+
+
+@dataclass(frozen=True)
 class Recognizer(Schema):
     recognizer_id: str
     input_representation: str
