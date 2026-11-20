@@ -129,6 +129,7 @@ class Transform(Schema):
     information_loss: Loss
     state_effects: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
+    complete: bool = False
 
     def __post_init__(self) -> None:
         if not self.transform_id or not self.semantics_ref or not self.semantics_version:

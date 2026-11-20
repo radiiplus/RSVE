@@ -172,7 +172,7 @@ class Regressor:
         indexed = [item.operation for item in index.chain(needed)] if needed else []
         seen = {(item.entry_point.name, item.name) for item in indexed}
         operations = tuple(indexed) + tuple(
-            item for item in model.ops()
+            item for item in workspace.operations()
             if (item.entry_point.name, item.name) not in seen
         )
         if needed and not indexed:
@@ -362,6 +362,8 @@ class Regressor:
             if symbolic is None and not synthetic:
                 continue
             routes = workspace.routes(operation) if workspace.graph is not None else (((), ()),)
+            route_notes = workspace.route_notes(operation) if workspace.graph is not None else ()
+            uncertainty.extend(route_notes)
             for transitions, connections in routes:
                 examined += 1
                 if examined > min(objective.budget.max_states, 256):
@@ -379,6 +381,13 @@ class Regressor:
                         operation.entry_point.name,
                         Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL)),
                     )
+                endpoint_contract = workspace.contract(operation.name)
+                if endpoint_contract is not None and not endpoint_contract.complete:
+                    uncertainty.append(
+                        f"workspace endpoint semantics for {operation.entry_point.name} are incomplete: "
+                        f"{'; '.join(endpoint_contract.limitations) or 'contract is incomplete'}"
+                    )
+                    continue
                 resource_reason = workspace.symbolic_resource_reason(operation, symbolic)
                 if resource_reason is not None:
                     uncertainty.append(resource_reason)
@@ -490,6 +499,10 @@ class Regressor:
                 symbolic = workspace.symbolics.get(transform_id)
                 if symbolic is None:
                     missing.append(f"transform:{transform_id}")
+                elif (contract := workspace.contract(transform_id)) is not None and not contract.complete:
+                    missing.append(
+                        f"transform:{transform_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                    )
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage + 1}."))
                 stage += 1
@@ -497,12 +510,20 @@ class Regressor:
                 symbolic = workspace.symbolics.get(recognizer_id)
                 if symbolic is None:
                     missing.append(f"recognizer:{recognizer_id}")
+                elif (contract := workspace.contract(recognizer_id)) is not None and not contract.complete:
+                    missing.append(
+                        f"recognizer:{recognizer_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                    )
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
             for effect_id in transition.effect_ids:
                 symbolic = workspace.symbolics.get(effect_id)
                 if symbolic is None:
                     missing.append(f"effect:{effect_id}")
+                elif (contract := workspace.contract(effect_id)) is not None and not contract.complete:
+                    missing.append(
+                        f"effect:{effect_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                    )
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
             if index < len(connections):
@@ -511,6 +532,10 @@ class Regressor:
                     symbolic = workspace.symbolics.get(transform_id)
                     if symbolic is None:
                         missing.append(f"connection:{transform_id}")
+                    elif (contract := workspace.contract(transform_id)) is not None and not contract.complete:
+                        missing.append(
+                            f"connection:{transform_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                        )
                     else:
                         steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage + 1}."))
                     stage += 1

@@ -47,7 +47,16 @@ evaluator exists, `backward` when an exact `Symbolic` relation exists, and
 `complete` only when both directions are present with compatible references,
 versions, relation metadata, and no unresolved limitation. Static probes or
 budgeted expanders are recorded as bounded limitations, never as complete
-semantic contracts.
+semantic contracts. The planner treats incomplete or mismatched contracts as
+`UNKNOWN` and does not use their raw symbolic bindings for synthesis.
+
+Graph zones have independently initialized state when a workspace is created
+without an explicit region map. If a caller supplies a partial region map,
+an explicitly owned transition whose state is absent produces `UNKNOWN`; it
+never falls back to global target state. Only `DATA` connections participate
+in value-route execution. Uncorrelated data seams may remain modeled routes,
+but their uncertainty is preserved in the resulting event rather than being
+promoted to causal evidence.
 
 The graph profile is the canonical identity. The former single-stack
 `ExecutionProfile`/`LayerPin` abstraction has been removed from core and

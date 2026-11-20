@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 
 from rsve import (
     Authorization,
@@ -41,6 +42,7 @@ from rsve import (
     Symbolic,
     Variable,
     Semantic,
+    Shape,
 )
 from rsve.result import Status
 from rsve.planner import Regressor
@@ -225,10 +227,155 @@ class Suite(unittest.TestCase):
         graph = Graph("empty-workspace").persona(profile).zone(Zone("region", "fixture", "region"))
         graph = graph.value(Representation("raw", "mapping"))
         graph = graph.value(Representation("out", "mapping"))
-        graph = graph.transform(Transform("empty", "raw", "out", "fixture.empty", "1", Partiality.PARTIAL, Relation.RELATION, Invertibility.UNKNOWN, Loss.UNKNOWN))
+        graph = graph.transform(Transform("empty", "raw", "out", "fixture.empty", "1", Partiality.PARTIAL, Relation.RELATION, Invertibility.UNKNOWN, Loss.UNKNOWN, complete=True))
         graph = graph.transition(Transition("empty", "empty", "raw", "out", ("empty",)))
         workspace = Workspace.flat(model, graph=graph, transforms={"empty": lambda _value, _state: ()})
         self.assertEqual(workspace.moves(workspace.start(), "empty", {"value": "x"}, operation=operation), ())
+
+    def test_incomplete_empty_graph_relation_is_unknown(self):
+        operation = Operation("empty-unknown", Entry("empty-unknown"))
+        model = Model("empty-unknown-fixture", State({"done": False}), ({},), (operation,))
+        graph = Graph("empty-unknown-workspace").persona(Persona("fixture", "test", "target", "fixture", "1")).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("raw-unknown", "mapping"))
+        graph = graph.value(Representation("out-unknown", "mapping"))
+        graph = graph.transform(Transform(
+            "empty-unknown-transform",
+            "raw-unknown",
+            "out-unknown",
+            "fixture.empty-unknown",
+            "1",
+            Partiality.PARTIAL,
+            Relation.RELATION,
+            Invertibility.UNKNOWN,
+            Loss.UNKNOWN,
+        ))
+        graph = graph.transition(Transition("empty-unknown", "empty-unknown", "raw-unknown", "out-unknown", ("empty-unknown-transform",)))
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"empty-unknown-transform": lambda _value, _state: ()},
+        )
+        moves = workspace.moves(workspace.start(), "empty-unknown", {}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.UNKNOWN)
+        self.assertIn("without completeness evidence", moves[0].event.uncertainty[0])
+
+    def test_empty_operation_relation_requires_completeness(self):
+        incomplete = Operation(
+            "relation-empty",
+            Entry("relation-empty"),
+            relation=lambda _state, _request: (),
+        )
+        complete = Operation(
+            "relation-empty-complete",
+            Entry("relation-empty-complete"),
+            relation=lambda _state, _request: (),
+            relation_complete=True,
+        )
+        state = State({})
+        self.assertEqual(incomplete.branches(state, {})[0].decision, Decision.UNKNOWN)
+        self.assertEqual(complete.branches(state, {}), ())
+
+    def test_missing_owned_region_state_is_unknown(self):
+        operation = Operation("owned", Entry("owned"), component="owned")
+        model = Model("missing-region-fixture", State({}), ({},), (operation,))
+        graph = Graph("missing-region-workspace").persona(Persona("fixture", "test", "target", "fixture", "1")).zone(Zone("owned", "fixture", "owned"))
+        workspace = Workspace.flat(model, graph=graph, regions={})
+        frame = replace(workspace.start(), regions={})
+        moves = workspace.moves(frame, "owned", {}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.UNKNOWN)
+        self.assertIn("region state unavailable", moves[0].event.uncertainty[0])
+
+    def test_non_data_connection_is_not_a_value_route(self):
+        model = Model("shape-fixture", State({"done": False}), (), ())
+        graph = Graph("shape-workspace").persona(Persona("fixture", "test", "target", "fixture", "1"))
+        graph = graph.zone(Zone("a", "fixture", "a")).zone(Zone("b", "fixture", "b"))
+        graph = graph.value(Representation("shape-mid", "mapping"))
+        graph = graph.transition(Transition("shape-start", "shape", "shape-mid", "shape-mid"))
+        graph = graph.transition(Transition("shape-end", "internal", "shape-mid", "shape-mid", region_id="b"))
+        graph = graph.port(Port("shape-out", "a", "out", Direction.OUTPUT, "shape-mid", "mapping"))
+        graph = graph.port(Port("shape-in", "b", "in", Direction.INPUT, "shape-mid", "mapping"))
+        graph = graph.connect(
+            "shape-out",
+            "shape-in",
+            connection_id="shape-control",
+            relationship_type=Shape.CONTROL,
+        )
+        workspace = Workspace.flat(model, graph=graph, entries={"shape"}, regions={"b": State({})})
+        moves = workspace.moves(workspace.start(), "shape", {})
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].event.operation, "shape-start")
+        self.assertFalse(moves[0].after.regions["b"].as_dict())
+
+    def test_contract_mismatch_blocks_symbolic_graph_synthesis(self):
+        model = Model("contract-mismatch-fixture", State({"done": False}), (), ())
+        graph = Graph("contract-mismatch-workspace").persona(Persona("fixture", "test", "target", "fixture", "1")).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("mismatch-raw", "mapping"))
+        graph = graph.value(Representation("mismatch-out", "mapping"))
+        graph = graph.transform(Transform(
+            "mismatch-transform",
+            "mismatch-raw",
+            "mismatch-out",
+            "fixture.v2",
+            "2",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.BIJECTIVE,
+            Loss.NONE,
+        ))
+        graph = graph.transition(Transition("mismatch-route", "mismatch", "mismatch-raw", "mismatch-out", ("mismatch-transform",)))
+        symbolic = Symbolic(
+            "mismatch-symbolic",
+            "mismatch",
+            Literal(True, Sort.BOOL),
+            semantics_ref="fixture.v1",
+            semantics_version="1",
+        )
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"mismatch-transform": lambda value, _state: value},
+            symbolics={"mismatch-transform": symbolic},
+            entries={"mismatch"},
+        )
+        record = workspace.contract("mismatch-transform")
+        self.assertIsNotNone(record)
+        self.assertFalse(record.complete)
+        objective = Objective("mismatch-goal", "contract-mismatch-fixture", "lab", (Same("done", True),))
+        plan = Regressor().regress(model, objective, workspace=workspace)
+        self.assertEqual(plan.required_actions, ())
+        self.assertTrue(any("references do not match" in item for item in plan.uncertainty))
+
+    def test_graph_only_probe_expander_is_regressed(self):
+        model = Model("graph-probe-fixture", State({"done": False}), (), ())
+        graph = Graph("graph-probe-workspace").persona(Persona("fixture", "test", "target", "fixture", "1")).zone(Zone("region", "fixture", "region"))
+        graph = graph.value(Representation("probe-raw", "mapping"))
+        graph = graph.value(Representation("probe-out", "mapping"))
+        graph = graph.effect(Effect("probe-done", "done", ("done",)))
+        graph = graph.transform(Transform(
+            "probe-transform",
+            "probe-raw",
+            "probe-out",
+            "fixture.probe",
+            "1",
+            Partiality.UNKNOWN,
+            Relation.UNKNOWN,
+            Invertibility.UNKNOWN,
+            Loss.UNKNOWN,
+        ))
+        graph = graph.transition(Transition("probe-route", "probe-entry", "probe-raw", "probe-out", ("probe-transform",), effect_ids=("probe-done",)))
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"probe-transform": lambda value, _state: {"amount": value["amount"]}},
+            effects={"probe-done": lambda state, _value: state.update(done=True)},
+            entries={"probe-entry"},
+            expanders={"probe-entry": lambda limit: ({"amount": 1} for _ in range(limit))},
+        )
+        objective = Objective("graph-probe-goal", "graph-probe-fixture", "lab", (Same("done", True),))
+        plan = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("probe-entry", {"amount": 1}), plan.required_actions)
 
     def test_declared_uncontrolled_environment_is_unknown(self):
         world = World(
@@ -297,9 +444,9 @@ class Suite(unittest.TestCase):
         moves = workspace.moves(workspace.start(), "route", {"value": "ok"})
         self.assertEqual(len(moves), 1)
         self.assertEqual(moves[0].outcome.decision, Decision.ACCEPT)
-        self.assertTrue(moves[0].after.target.get("done"))
+        self.assertTrue(moves[0].after.regions["b"].get("done"))
         self.assertIn("finish", moves[0].event.effects)
-        objective = Objective("done", "route-fixture", "lab", (Same("done", True),), budget=Limits(max_trace_length=1))
+        objective = Objective("done", "route-fixture", "lab", (Same("b.done", True),), budget=Limits(max_trace_length=1))
         report = Planner().plan(
             model,
             objective,

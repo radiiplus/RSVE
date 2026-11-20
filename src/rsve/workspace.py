@@ -7,7 +7,7 @@ import json
 from typing import Any, Callable, Iterable, Mapping
 
 from .environment import Context, Signal, World
-from .graph import Graph
+from .graph import Graph, Quality, Shape
 from .ir import Partiality, Relation, Semantic
 from .model import Decision, Entry, Event, Model, Operation, Outcome, State
 from .semantic import Interpreter
@@ -119,11 +119,19 @@ class Workspace:
             if world is not None
             else State()
         )
+        initial_regions = (
+            dict(regions)
+            if regions is not None
+            else {
+                region.region_id: model.initial_state
+                for region in (graph.regions if graph is not None else ())
+            }
+        )
         return cls(
             model,
             graph,
             world,
-            Frame(model.initial_state, initial_environment, regions=dict(regions or {}), aliases=tuple(aliases)),
+            Frame(model.initial_state, initial_environment, regions=initial_regions, aliases=tuple(aliases)),
             dict(transforms or {}),
             dict(recognizers or {}),
             dict(effects or {}),
@@ -190,7 +198,7 @@ class Workspace:
             if semantic is not None:
                 if semantic.relation == "unknown":
                     limitations.append("symbolic relation is unknown")
-                if transform.relation is Relation.RELATION and not semantic.alternatives:
+                if transform.relation is Relation.RELATION and not self.symbolics[transform.transform_id].alternatives:
                     limitations.append("relational transform has no explicit finite alternatives")
             complete = forward and backward and not limitations
             records.append(Semantic(
@@ -220,7 +228,7 @@ class Workspace:
             relation = Relation.RELATION if operation.relation is not None else Relation.FUNCTION
             reference = semantic.semantics_ref if semantic is not None else "rsve.operation"
             version = semantic.semantics_version if semantic is not None else "1"
-            if operation.relation is not None and semantic is not None and semantic.relation == "unknown":
+            if semantic is not None and semantic.relation == "unknown":
                 limitations.append("symbolic relation is unknown")
             records.append(Semantic(
                 operation.name,
@@ -234,7 +242,58 @@ class Workspace:
                 tuple(limitations),
                 (),
             ))
+        if self.graph is not None:
+            for recognizer in self.graph.recognizers:
+                semantic = self.symbolics.get(recognizer.recognizer_id)
+                limitations: list[str] = []
+                forward = recognizer.recognizer_id in self.recognizers
+                backward = semantic is not None
+                if not forward:
+                    limitations.append("forward evaluator is unavailable")
+                if not backward:
+                    limitations.append("symbolic predicate is unavailable")
+                if semantic is not None and semantic.relation == "unknown":
+                    limitations.append("symbolic relation is unknown")
+                records.append(Semantic(
+                    recognizer.recognizer_id,
+                    recognizer.actual_predicate_ref,
+                    "1",
+                    forward,
+                    backward,
+                    forward and backward and not limitations,
+                    Relation.FUNCTION,
+                    Partiality.TOTAL,
+                    tuple(limitations),
+                    recognizer.evidence,
+                ))
+            for effect in self.graph.effects:
+                semantic = self.symbolics.get(effect.effect_id)
+                limitations = []
+                forward = effect.effect_id in self.effects
+                backward = semantic is not None
+                if not forward:
+                    limitations.append("forward evaluator is unavailable")
+                if not backward:
+                    limitations.append("symbolic effect relation is unavailable")
+                if semantic is not None and semantic.relation == "unknown":
+                    limitations.append("symbolic relation is unknown")
+                records.append(Semantic(
+                    effect.effect_id,
+                    effect.observable,
+                    "1",
+                    forward,
+                    backward,
+                    forward and backward and not limitations,
+                    Relation.FUNCTION,
+                    Partiality.TOTAL,
+                    tuple(limitations),
+                    effect.evidence,
+                ))
         return tuple(records)
+
+    def contract(self, semantic_id: str) -> Semantic | None:
+        """Return the authoritative semantic contract for one graph binding."""
+        return next((item for item in self.contracts() if item.semantic_id == semantic_id), None)
 
     def _transform_entries(self, transform_id: str) -> tuple[str, ...]:
         entries = [
@@ -324,6 +383,27 @@ class Workspace:
             walk(transition, (transition,), (), (transition.transition_id,))
         return tuple(routes)
 
+    def route_notes(self, operation: Operation) -> tuple[str, ...]:
+        """Report graph routes excluded by cycle or depth bounds."""
+        if self.graph is None:
+            return ()
+        notes: set[str] = set()
+
+        def walk(transition: Any, seen: tuple[str, ...]) -> None:
+            for edge in self._edges(transition):
+                destinations = self._destinations(edge)
+                for destination in destinations:
+                    if destination.transition_id in seen:
+                        notes.add(f"cycle route excluded at {destination.transition_id}")
+                    elif len(seen) >= self.graph.budget.max_depth:
+                        notes.add("symbolic graph route depth budget reached")
+                    else:
+                        walk(destination, seen + (destination.transition_id,))
+
+        for transition in self._transitions(operation):
+            walk(transition, (transition.transition_id,))
+        return tuple(sorted(notes))
+
     def moves(
         self,
         frame: Frame,
@@ -335,6 +415,9 @@ class Workspace:
         operations = (operation,) if operation is not None else self.operations(entry)
         moves: list[Move] = []
         for item in operations:
+            if item.component and self.graph is not None and item.component in {region.region_id for region in self.graph.regions} and item.component not in frame.regions:
+                moves.extend(self._missing_region(item, frame, entry, request))
+                continue
             if not self._transitions(item):
                 for outcome in item.branches(self._local(frame, item), request):
                     moves.extend(self._move(item, outcome, frame, entry, request, source=request))
@@ -399,8 +482,21 @@ class Workspace:
         regions: Mapping[str, State],
         seen: tuple[str, ...],
     ) -> tuple[GraphResult, ...]:
-        owned = transition.region_id is not None and transition.region_id in regions
-        state = regions.get(transition.region_id, target)
+        owned = transition.region_id is not None
+        if owned and transition.region_id not in regions:
+            missing = Outcome(
+                Decision.UNKNOWN,
+                target,
+                terminal=True,
+                uncertainty=(f"region state unavailable: {transition.region_id}",),
+            )
+            return (GraphResult(
+                missing,
+                value if isinstance(value, Mapping) else {"value": value},
+                target,
+                dict(regions),
+            ),)
+        state = regions[transition.region_id] if owned else target
         outcomes = interpreter.outcomes(transition.transition_id, value, state=state)
         results: list[GraphResult] = []
         for outcome in outcomes:
@@ -437,11 +533,19 @@ class Workspace:
                 continue
             for edge in edges:
                 destinations = self._destinations(edge)
+                edge_outcome = outcome
+                if edge.correlation_quality is Quality.UNCORRELATED:
+                    edge_outcome = replace(
+                        edge_outcome,
+                        uncertainty=edge_outcome.uncertainty + (
+                            f"uncorrelated connection: {edge.connection_id}",
+                        ),
+                    )
                 converted = self._convert(edge, outcome.observation.get("value"), outcome.after)
                 if converted is None:
                     results.append(GraphResult(
                         replace(
-                            outcome,
+                            edge_outcome,
                             decision=Decision.UNKNOWN,
                             uncertainty=outcome.uncertainty + (f"opaque connection: {edge.connection_id}",),
                         ),
@@ -451,12 +555,39 @@ class Workspace:
                     ))
                     continue
                 if not converted:
+                    if self._connection_complete(edge):
+                        continue
+                    results.append(GraphResult(
+                        replace(
+                            edge_outcome,
+                            decision=Decision.UNKNOWN,
+                            uncertainty=edge_outcome.uncertainty + (
+                                f"connection relation returned no successors without completeness evidence: {edge.connection_id}",
+                            ),
+                        ),
+                        value if isinstance(value, Mapping) else {"value": value},
+                        next_target,
+                        next_regions,
+                    ))
                     continue
                 if not destinations:
                     for converted_value in converted:
                         mapped = self._map(transition.transition_id, converted_value, value)
-                        if mapped is not None:
-                            results.append(GraphResult(outcome, mapped, next_target, next_regions))
+                        if mapped is None:
+                            results.append(GraphResult(
+                                replace(
+                                    edge_outcome,
+                                    decision=Decision.UNKNOWN,
+                                    uncertainty=edge_outcome.uncertainty + (
+                                        f"no request mapping for {transition.transition_id}",
+                                    ),
+                                ),
+                                value if isinstance(value, Mapping) else {"value": value},
+                                next_target,
+                                next_regions,
+                            ))
+                        else:
+                            results.append(GraphResult(edge_outcome, mapped, next_target, next_regions))
                     continue
                 for next_value in converted:
                     for destination in destinations:
@@ -493,7 +624,7 @@ class Workspace:
                             seen + (destination.transition_id,),
                         ):
                             results.append(GraphResult(
-                                self._join(outcome, next_result.outcome),
+                                    self._join(edge_outcome, next_result.outcome),
                                 next_result.request,
                                 next_result.target,
                                 next_result.regions,
@@ -504,13 +635,39 @@ class Workspace:
         ports = {port.port_id: port for port in self.graph.ports}
         return tuple(
             edge for edge in self.graph.connections
-            if edge.output_representation == transition.output_representation
+            if edge.relationship_type is Shape.DATA
+            and edge.output_representation == transition.output_representation
             and (
                 transition.region_id is None
                 or ports.get(edge.source_port_id) is None
                 or ports[edge.source_port_id].region_id == transition.region_id
             )
         )
+
+    def _connection_complete(self, edge: Any) -> bool:
+        if edge.transform_id is None:
+            return True
+        transform = next(
+            (item for item in self.graph.transforms if item.transform_id == edge.transform_id),
+            None,
+        )
+        return bool(transform is not None and transform.complete)
+
+    def _missing_region(
+        self,
+        operation: Operation,
+        frame: Frame,
+        entry: str,
+        request: Mapping[str, Any],
+    ) -> tuple[Move, ...]:
+        reason = f"region state unavailable: {operation.component}"
+        outcome = Outcome(
+            Decision.UNKNOWN,
+            frame.target,
+            terminal=True,
+            uncertainty=(reason,),
+        )
+        return self._move(operation, outcome, frame, entry, request, source=request)
 
     def _destinations(self, edge: Any) -> tuple[Any, ...]:
         ports = {port.port_id: port for port in self.graph.ports}
@@ -646,7 +803,14 @@ class Workspace:
                 local_before,
                 component=item.component,
             )
-            event = replace(event, source=dict(request if source is None else source))
+            event = replace(
+                event,
+                source=dict(request if source is None else source),
+                correlation_uncertain=any(
+                    "uncorrelated connection:" in reason
+                    for reason in branch.uncertainty
+                ),
+            )
             if reaction is not None:
                 event = replace(event, after=outcome.after if owned else successor, reaction=dict(branch.environment), uncertainty=after.reasons)
             moves.append(Move(item, branch, frame, after, event))

@@ -78,6 +78,20 @@ class Interpreter:
                 try:
                     outputs = evaluator(branch.value, branch.state)
                     values = _relation_values(outputs)
+                    if not values:
+                        if transform.complete:
+                            continue
+                        expanded.append(Branch(
+                            branch.value,
+                            Meaning.UNKNOWN,
+                            branch.representations + (transform.output_representation,),
+                            branch.recognizer_results,
+                            branch.state,
+                            branch.reasons + (
+                                f"transform relation returned no successors without completeness evidence: {transform_id}",
+                            ),
+                        ))
+                        continue
                     for output in values:
                         expanded.append(Branch(output, branch.status, branch.representations + (transform.output_representation,), branch.recognizer_results, branch.state, branch.reasons))
                 except Exception as exc:

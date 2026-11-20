@@ -76,7 +76,7 @@ Status meanings: EXISTS is implemented and tested; PARTIAL is an explicit contra
 
 7. **Repository governance.** Local Git metadata and a lockfile exist, but CI is intentionally excluded from this repository snapshot. Build, test, and advisory checks must therefore be run explicitly by maintainers or an external pipeline.
 
-8. **Unknown transition branches.** Unknown outcomes are retained as uncertain trace branches and force `UNKNOWN` when they can affect the bounded conclusion; missing graph effect semantics, dependent recognizers, opaque seams, and declared uncontrolled environment transitions are also marked UNKNOWN. None is treated as rejection, identity, or bounded UNSAT.
+8. **Unknown transition branches.** Unknown outcomes are retained as uncertain trace branches and force `UNKNOWN` when they can affect the bounded conclusion; missing graph effect semantics, dependent recognizers, opaque seams, incomplete empty relations, missing owned-region state, and declared uncontrolled environment transitions are also marked UNKNOWN. None is treated as rejection, identity, or bounded UNSAT.
 
 9. **Dependency drift.** The environment contains packages not declared by the project. Import success is not evidence that a dependency is available to a clean build.
 

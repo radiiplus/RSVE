@@ -213,6 +213,7 @@ class Operation:
     may: frozenset[str] = frozenset()
     keep: frozenset[str] = frozenset()
     unknown: frozenset[str] = frozenset()
+    relation_complete: bool = False
 
     def __post_init__(self) -> None:
         for transform in self.transforms:
@@ -230,7 +231,18 @@ class Operation:
                 values = self.relation(state, request)
                 if isinstance(values, Outcome):
                     values = (values,)
-                return tuple(values)
+                values = tuple(values)
+                if not values and not self.relation_complete:
+                    return (Outcome(
+                        decision=Decision.UNKNOWN,
+                        after=state,
+                        terminal=True,
+                        fidelity=self.fidelity,
+                        mode=self.mode,
+                        evidence=(self.provenance,),
+                        uncertainty=("operation relation returned no successors without completeness evidence",),
+                    ),)
+                return values
             except Exception as exc:  # model failures remain explicit outcomes
                 return (self._error(state, exc),)
         try:

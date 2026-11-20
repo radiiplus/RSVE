@@ -211,11 +211,27 @@ Solver results are valid only within their recorded model revision and execution
 
 ## ADR-0030: Carry owned region state through graph routes
 
-**Decision:** Graph route evaluation carries both the global target state and initialized owner-region states. A transition reads and writes its owner when that region is present in the frame; otherwise it uses the legacy global projection. Destination-region effects survive into the endpoint operation and objective view. Graph-only routes may be regressed when their transforms, recognizers, and effects have explicit symbolic bindings.
+**Decision:** Graph route evaluation carries both the global target state and initialized owner-region states. A transition with an explicit owner must have initialized state; missing owner state produces `UNKNOWN`. Transitions without an owner retain the legacy global projection. Destination-region effects survive into the endpoint operation and objective view. Graph-only routes may be regressed when their transforms, recognizers, and effects have explicit symbolic bindings.
 
 **Reason:** A region map that only affects visited-state keys is not executable composition. The compatibility fallback keeps existing graphs valid while making independently initialized regions semantically meaningful.
 
 **Rejected:** Copying the entire target state into every region, treating region IDs as proof of ownership without frame state, or merging region effects into global state without an explicit projection.
+
+## ADR-0037: Preserve incomplete relation outcomes
+
+**Decision:** Empty operation, graph-transform, and connection relations are exhaustive only when their canonical record declares completeness. Otherwise the relation produces an explicit `UNKNOWN` outcome with provenance. Value-route traversal uses only `DATA` connections; uncorrelated data seams remain executable hypotheses but carry uncertainty into events.
+
+**Reason:** An empty enumeration can mean either a proven no-successor relation or unavailable semantics. Dropping it would turn incomplete analysis into false bounded unreachability. Separating data routes from control, resource, ownership, and comparison edges prevents topology metadata from becoming an unintended value path.
+
+**Rejected:** Treating empty relations as identity, silently discarding incomplete routes, or executing every graph edge as a data conversion.
+
+## ADR-0038: Gate symbolic synthesis on semantic contracts
+
+**Decision:** Workspace backward synthesis may use a symbolic transform, recognizer, effect, connection, or endpoint only when its `Semantic` contract is complete and its declared references match. Probe-backed or mismatched bindings remain bounded evidence or `UNKNOWN`, never exact solver semantics.
+
+**Reason:** A solver result is only meaningful for the semantic relation it encodes. Reporting a reference mismatch while using the mismatched relation would combine incompatible concrete and symbolic models.
+
+**Rejected:** Letting the planner retrieve raw symbolic bindings without contract validation, or treating a contract report as documentation that does not constrain execution.
 
 ## ADR-0031: Regress only explicitly enumerated relations
 
