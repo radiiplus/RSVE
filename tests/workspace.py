@@ -662,6 +662,49 @@ class Suite(unittest.TestCase):
         report = Planner().plan(model, objective, auth, workspace=workspace)
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
 
+    def test_probe_expander_discovers_opaque_candidate_on_demand(self):
+        operation = Operation(
+            "expand-probe",
+            Entry("expand-probe"),
+            guard=lambda _state, request: request.get("amount") == 3,
+            apply=lambda state, _request: state.update(done=True),
+        )
+        model = Model("expander-fixture", State({"done": False}), (), (operation,))
+        workspace = Workspace.flat(
+            model,
+            expanders={"expand-probe": lambda limit: ({"amount": value} for value in range(limit))},
+        )
+        objective = Objective(
+            "expander-goal",
+            "expander-fixture",
+            "lab",
+            (Same("done", True),),
+            budget=Limits(max_trace_length=1, max_states=5),
+        )
+        auth = Authorization("expander-tests", frozenset({"lab"}), frozenset({"expander-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("expand-probe", {"amount": 3}), backward.required_actions)
+        self.assertTrue(any("bounded probes" in item for item in backward.uncertainty))
+
+    def test_probe_expander_failure_is_unknown(self):
+        operation = Operation("broken-probe", Entry("broken-probe"), apply=lambda state, _request: state)
+        model = Model("broken-expander-fixture", State({"done": False}), (), (operation,))
+
+        def fail(_limit):
+            raise RuntimeError("probe source unavailable")
+
+        workspace = Workspace.flat(model, expanders={"broken-probe": fail})
+        objective = Objective(
+            "broken-expander-goal",
+            "broken-expander-fixture",
+            "lab",
+            (Same("done", True),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("broken-expander-tests", frozenset({"lab"}), frozenset({"broken-expander-fixture"}))
+        report = Planner().plan(model, objective, auth, workspace=workspace)
+        self.assertEqual(report.status, Status.UNKNOWN)
+
     def test_alias_groups_sync_and_resource_ownership_is_enforced(self):
         update = Operation(
             "update-alias",

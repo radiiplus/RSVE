@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable, Mapping
+import json
+from typing import Any, Callable, Iterable, Mapping
 
 from .environment import Context, Signal, World
 from .graph import Graph
@@ -13,6 +14,7 @@ from .wp import Symbolic
 
 
 _MISSING = object()
+Probe = Callable[[int], Iterable[Mapping[str, Any]]]
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,7 @@ class Workspace:
     aliases: tuple[tuple[str, ...], ...] = ()
     resources: Mapping[str, str] = field(default_factory=dict)
     probes: Mapping[str, tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
+    expanders: Mapping[str, Probe] = field(default_factory=dict)
 
     @classmethod
     def flat(
@@ -106,6 +109,7 @@ class Workspace:
         aliases: tuple[tuple[str, ...], ...] = (),
         resources: Mapping[str, str] | None = None,
         probes: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
+        expanders: Mapping[str, Probe] | None = None,
     ) -> "Workspace":
         initial_environment = (
             environment
@@ -128,11 +132,30 @@ class Workspace:
             tuple(aliases),
             dict(resources or {}),
             {entry: tuple(dict(request) for request in requests) for entry, requests in (probes or {}).items()},
+            dict(expanders or {}),
         )
 
-    def probes_for(self, entry: str) -> tuple[Mapping[str, Any], ...]:
-        """Return the bounded concrete probe domain for an entry."""
-        return self.probes.get(entry, ())
+    def probes_for(self, entry: str, limit: int | None = None) -> tuple[Mapping[str, Any], ...]:
+        """Return a deterministic, finite concrete probe domain for an entry."""
+        bound = max(0, limit if limit is not None else 256)
+        candidates = list(self.probes.get(entry, ()))
+        expander = self.expanders.get(entry)
+        if expander is not None and len(candidates) < bound:
+            candidates.extend(expander(bound - len(candidates)))
+        unique: list[Mapping[str, Any]] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            if not isinstance(candidate, Mapping):
+                raise TypeError(f"probe for {entry} must be a mapping")
+            value = dict(candidate)
+            key = json.dumps(value, sort_keys=True, separators=(",", ":"), default=repr)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(value)
+            if len(unique) >= bound:
+                break
+        return tuple(unique)
 
     def start(self) -> Frame:
         if self.initial is not None:

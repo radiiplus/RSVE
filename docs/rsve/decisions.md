@@ -248,3 +248,11 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** Cross-region identity and ownership cannot be inferred safely from similar names or co-location. Explicit declarations keep state propagation auditable and prevent a missing ownership model from being mistaken for a permitted write or a proof of impossibility.
 
 **Rejected:** Copying all region state into every region, inferring aliases from names, silently allowing cross-owner writes, or treating unknown ownership as identity.
+
+## ADR-0035: Expand probe regions lazily under analysis budgets
+
+**Decision:** A workspace may register a deterministic entry-specific expander that receives the remaining finite probe budget and yields request mappings. Static probes and generated probes are canonicalized and deduplicated before concrete preimage checks. Expander failures remain UNKNOWN; generated candidates are evidence only within the requested bound.
+
+**Reason:** Opaque transforms and open relations often cannot provide a complete symbolic inverse, but a controlled extension can expose a deterministic candidate generator. Lazy expansion avoids requiring the entire domain up front while preserving reproducibility and budget scope.
+
+**Rejected:** Enumerating without a budget, accepting arbitrary non-mapping values, treating expander exhaustion as global completeness, or converting an expander failure into bounded UNSAT.

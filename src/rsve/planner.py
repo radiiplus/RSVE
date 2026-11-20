@@ -180,7 +180,14 @@ class Regressor:
         for operation in operations:
             requests: list[Mapping[str, Any]] = []
             seen_requests: set[str] = set()
-            for candidate in model.args() + workspace.probes_for(operation.entry_point.name):
+            try:
+                probes = workspace.probes_for(operation.entry_point.name, objective.budget.max_states)
+            except Exception as exc:
+                probes = ()
+                uncertainty.append(
+                    f"probe expansion for {operation.entry_point.name} is unknown: {type(exc).__name__}"
+                )
+            for candidate in model.args() + probes:
                 key = self._request_key(candidate)
                 if key in seen_requests:
                     continue
@@ -237,7 +244,7 @@ class Regressor:
             uncertainty.append("no one-step preimage was found; longer paths use forward bounded exploration")
         if any(operation.transforms and any(_transform_is_lossy(transform) for transform in operation.transforms) for operation in model.operations):
             uncertainty.append("information-losing transforms require bounded forward/preimage search")
-        if workspace.probes:
+        if workspace.probes or workspace.expanders:
             uncertainty.append("opaque or unenumerated workspace semantics were checked only against bounded probes")
         return Plan(
             objective_id=objective.objective_id,
@@ -725,7 +732,7 @@ class Planner:
         explored_events = 0
         attempts: list[Attempt] = []
         budget_hit = False
-        unknown_seen = False
+        unknown_seen = any(item.startswith("probe expansion ") for item in backward.uncertainty)
 
         while queue:
             if (time.monotonic() - started) * 1000 > budget.max_time_ms:
