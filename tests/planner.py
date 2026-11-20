@@ -4,6 +4,7 @@ from pathlib import Path
 from rsve import (
     Add,
     All,
+    Equal,
     Literal,
     Authorization,
     Decision,
@@ -308,6 +309,49 @@ class Suite(unittest.TestCase):
             "entry_point": "source",
             "request": {"proof": "RSVE-CANARY"},
         })
+
+    def test_symbolic_flow_regression_generates_a_trace(self):
+        source = Operation(
+            "source",
+            Entry("source"),
+            component="source",
+            symbolic_transition=Symbolic(
+                "source-flow",
+                "source",
+                Equal(
+                    Variable("input.0.proof", Sort.STRING),
+                    Literal("RSVE-CANARY", Sort.STRING),
+                ),
+            ),
+        )
+        sink = Operation(
+            "sink",
+            Entry("sink"),
+            component="controlled.sink",
+            symbolic_transition=Symbolic(
+                "sink-flow",
+                "sink",
+                Literal(True, Sort.BOOL),
+            ),
+        )
+        model = Model(
+            "node-fixture",
+            State({}),
+            (),
+            (source, sink),
+        )
+        objective = Objective(
+            "symbolic-flow-goal",
+            "node-fixture",
+            "node-lab",
+            (Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True),),
+            budget=Limits(max_trace_length=2),
+        )
+        backward = Regressor().regress(model, objective)
+        self.assertTrue(backward.required_traces)
+        self.assertEqual(backward.required_traces[0][0]["request"], {"proof": "RSVE-CANARY"})
+        report = Planner(harness_sinks={"controlled.sink"}).plan(model, objective, self.authorization)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
 
     def test_finite_relational_symbolic_route_guides_candidate_synthesis(self):
         operation = Operation(
