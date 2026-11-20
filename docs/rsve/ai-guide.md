@@ -632,15 +632,18 @@ diverge, retain the counterexample and refine the selected keys or archive
 resolution.
 
 RSVE provides five bounded novelty-driven strategies. All require an
-assessment callback that returns `Trial(accepted, signature, detail)`; the
-callback is responsible for executing or modeling the candidate and deciding
-whether the objective was actually satisfied.
+assessment callback that returns a `Trial`; the callback is responsible for
+executing or modeling the candidate and deciding whether the objective was
+actually satisfied. A boolean acceptance result is not enough to claim a
+validated witness: the assessor must provide an explicit result status.
 
 ```python
-from rsve import Bounds, Mcts, Signature, Trial
+from rsve import Bounds, Mcts, Signature, Status, Trial
 
 def assess(candidate):
     events, frame, accepted = run_authorized_workspace(candidate)
+    replayed = accepted  # replace with the controlled replay result
+    stable = replayed      # replace with the configured stability check
     signature = Signature.make(
         events,
         frame,
@@ -648,7 +651,13 @@ def assess(candidate):
         profile="profile-1",
         keys={"done", "quota"},
     )
-    return Trial(accepted, signature)
+    return Trial(
+        accepted,
+        signature,
+        status=Status.VALIDATED_WITNESS if replayed and stable else Status.SAT_CANDIDATE,
+        replayed=replayed,
+        stable=stable,
+    )
 
 result = Mcts().search(
     seeds,
@@ -658,6 +667,14 @@ result = Mcts().search(
     archive=archive,
 )
 ```
+
+`Trial(status=Status.MODEL_SAT)` or `Trial(status=Status.SAT_CANDIDATE)` keeps
+model-only evidence separate from replay-confirmed evidence. The
+`VALIDATED_WITNESS` status is accepted only when the trial is accepted and has
+stable replay evidence. Every novelty strategy returns the archive accumulated
+during its run as `Found.archive`; pass that archive to a later search to avoid
+rediscovering the same behavior. Archive partitions include target, profile
+and execution scope.
 
 `Mcts` uses deterministic UCB selection over expanded candidate traces and
 back-propagates objective acceptance plus behavior novelty. `Evolve` evaluates

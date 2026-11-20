@@ -57,7 +57,16 @@ def _state(value: State | None) -> Mapping[str, Any]:
 def _frame(value: Any) -> Mapping[str, Any]:
     """Read a Frame without importing Workspace and creating a cycle."""
     if isinstance(value, State):
-        return {"target": value.as_dict(), "environment": {}, "regions": {}}
+        return {
+            "target": value.as_dict(),
+            "environment": {},
+            "regions": {},
+            "uncertain": False,
+            "reasons": (),
+            "aliases": (),
+            "lineage": None,
+            "origins": None,
+        }
     target = getattr(value, "target", State())
     environment = getattr(value, "environment", State())
     regions = getattr(value, "regions", {})
@@ -68,6 +77,11 @@ def _frame(value: Any) -> Mapping[str, Any]:
             str(name): _state(state)
             for name, state in sorted(regions.items(), key=lambda item: str(item[0]))
         },
+        "uncertain": bool(getattr(value, "uncertain", False)),
+        "reasons": tuple(str(reason) for reason in getattr(value, "reasons", ())),
+        "aliases": _canonical(getattr(value, "aliases", ())),
+        "lineage": _canonical(getattr(value, "lineage", None)),
+        "origins": _canonical(getattr(value, "origins", None)),
     }
 
 
@@ -100,13 +114,16 @@ def _event(event: Event, keys: frozenset[str], level: Level) -> Mapping[str, Any
         "reaction_keys": tuple(sorted(event.reaction)),
         "delta": _project(_delta(before, after), keys),
         "observation_keys": tuple(sorted(event.observation)),
+        "ordering": event.ordering,
+        "parent_event_id": event.parent_event_id,
     }
     if level is Level.EXACT:
         base.update({
-            "before": _project(before, keys),
-            "after": _project(after, keys),
+            "before": before,
+            "after": after,
             "observation": _digest(event.observation),
             "reaction": _digest(event.reaction),
+            "event_id": event.event_id,
         })
     return base
 
@@ -143,6 +160,11 @@ class Signature:
                 name: _project(value, selected)
                 for name, value in frame["regions"].items()
             },
+            "uncertain": frame["uncertain"],
+            "reasons": tuple(frame["reasons"]),
+            "aliases": _shape(frame["aliases"]),
+            "lineage": _shape(frame["lineage"]),
+            "origins": _shape(frame["origins"]),
         }
         state_exact = frame
         transition_coarse = tuple(_event(event, selected, Level.COARSE) for event in events)
@@ -155,6 +177,8 @@ class Signature:
             "events": transition_exact,
             "state": state_exact,
             "environment": frame["environment"],
+            "orders": tuple(event.ordering for event in events),
+            "parents": tuple(event.parent_event_id for event in events),
         }
         return cls(
             target,
@@ -167,8 +191,12 @@ class Signature:
             dict(scope or {}),
         )
 
-    def key(self, level: Level = Level.COARSE) -> tuple[str, str, str]:
-        return self.target, self.profile, self.levels[level.value]
+    def partition(self) -> tuple[str, str, str]:
+        """Return the archive partition for this target/profile/scope."""
+        return self.target, self.profile, _digest(self.scope)
+
+    def key(self, level: Level = Level.COARSE) -> tuple[str, str, str, str]:
+        return (*self.partition(), self.levels[level.value])
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -200,20 +228,21 @@ class Novelty:
 class Archive:
     """Profile-partitioned state, transition, and path behavior archives."""
 
-    states: frozenset[tuple[str, str, str]] = frozenset()
-    transitions: frozenset[tuple[str, str, str]] = frozenset()
-    paths: frozenset[tuple[str, str, str]] = frozenset()
-    states_exact: frozenset[tuple[str, str, str]] = frozenset()
-    transitions_exact: frozenset[tuple[str, str, str]] = frozenset()
-    paths_exact: frozenset[tuple[str, str, str]] = frozenset()
+    states: frozenset[tuple[str, str, str, str]] = frozenset()
+    transitions: frozenset[tuple[str, str, str, str]] = frozenset()
+    paths: frozenset[tuple[str, str, str, str]] = frozenset()
+    states_exact: frozenset[tuple[str, str, str, str]] = frozenset()
+    transitions_exact: frozenset[tuple[str, str, str, str]] = frozenset()
+    paths_exact: frozenset[tuple[str, str, str, str]] = frozenset()
 
     def offer(self, signature: Signature) -> tuple["Archive", Novelty]:
-        state_key = signature.target, signature.profile, signature.state[Level.COARSE.value]
-        transition_key = signature.target, signature.profile, signature.transition[Level.COARSE.value]
-        path_key = signature.target, signature.profile, signature.path[Level.COARSE.value]
-        state_exact = signature.target, signature.profile, signature.state[Level.EXACT.value]
-        transition_exact = signature.target, signature.profile, signature.transition[Level.EXACT.value]
-        path_exact = signature.target, signature.profile, signature.path[Level.EXACT.value]
+        partition = signature.partition()
+        state_key = (*partition, signature.state[Level.COARSE.value])
+        transition_key = (*partition, signature.transition[Level.COARSE.value])
+        path_key = (*partition, signature.path[Level.COARSE.value])
+        state_exact = (*partition, signature.state[Level.EXACT.value])
+        transition_exact = (*partition, signature.transition[Level.EXACT.value])
+        path_exact = (*partition, signature.path[Level.EXACT.value])
         novelty = Novelty(
             state_key not in self.states,
             transition_key not in self.transitions,
@@ -233,15 +262,15 @@ class Archive:
         )
 
     def seen(self, signature: Signature, level: Level = Level.COARSE) -> bool:
-        key = signature.target, signature.profile
+        partition = signature.partition()
         if level is Level.EXACT:
             return (
-                (*key, signature.state[level.value]) in self.states_exact
-                and (*key, signature.transition[level.value]) in self.transitions_exact
-                and (*key, signature.path[level.value]) in self.paths_exact
+                (*partition, signature.state[level.value]) in self.states_exact
+                and (*partition, signature.transition[level.value]) in self.transitions_exact
+                and (*partition, signature.path[level.value]) in self.paths_exact
             )
         return (
-            (*key, signature.state[level.value]) in self.states
-            and (*key, signature.transition[level.value]) in self.transitions
-            and (*key, signature.path[level.value]) in self.paths
+            (*partition, signature.state[level.value]) in self.states
+            and (*partition, signature.transition[level.value]) in self.transitions
+            and (*partition, signature.path[level.value]) in self.paths
         )

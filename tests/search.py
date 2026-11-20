@@ -26,7 +26,13 @@ class Suite(unittest.TestCase):
             profile="profile-a",
             keys={"value"},
         )
-        return Trial(value == 2, signature)
+        return Trial(
+            value == 2,
+            signature,
+            status=Status.VALIDATED_WITNESS if value == 2 else Status.SAT_CANDIDATE,
+            replayed=True,
+            stable=True,
+        )
 
     @staticmethod
     def grow(candidate):
@@ -111,6 +117,16 @@ class Suite(unittest.TestCase):
         )
         self.assertEqual(result.status, Status.UNSAT_BOUNDED)
         self.assertEqual(result.attempts, 1)
+        self.assertEqual(len(result.archive.states), 1)
+
+    def test_model_acceptance_is_not_reported_as_validated_witness(self) -> None:
+        result = Beam().search(
+            (({"entry_point": "start", "request": {}},),),
+            lambda _candidate: (),
+            lambda _candidate: Trial(True, None, status=Status.MODEL_SAT),
+            budget=Bounds(max_candidates=1, max_trace_length=1, max_time_ms=1_000),
+        )
+        self.assertEqual(result.status, Status.MODEL_SAT)
 
     def test_beam_retains_a_bounded_novel_population(self) -> None:
         result = Beam().search(
@@ -150,6 +166,23 @@ class Suite(unittest.TestCase):
         )
         self.assertEqual(first.status, Status.VALIDATED_WITNESS)
         self.assertEqual(first.candidate, second.candidate)
+
+    def test_expansion_budget_limits_generated_candidates(self) -> None:
+        generated = []
+
+        def expand(_candidate):
+            for value in range(100):
+                generated.append(value)
+                yield ({"entry_point": "step", "request": {"value": value}},)
+
+        result = Frontier().search(
+            (({"entry_point": "start", "request": {}},),),
+            expand,
+            lambda _candidate: Trial(False, None),
+            budget=Bounds(max_candidates=3, max_trace_length=1, max_time_ms=1_000),
+        )
+        self.assertEqual(result.status, Status.BUDGET_EXHAUSTED)
+        self.assertLessEqual(result.generated, 3)
 
 
 if __name__ == "__main__":

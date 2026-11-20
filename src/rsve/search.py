@@ -34,6 +34,7 @@ class Found:
     candidate: tuple[Mapping[str, Any], ...] = ()
     detail: str = ""
     frontier_digest: str = ""
+    archive: Archive = Archive()
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,16 @@ class Trial:
     accepted: bool
     signature: Signature | None
     detail: str = ""
+    status: Status = Status.SAT_CANDIDATE
+    progress: float = 0.0
+    replayed: bool = False
+    stable: bool | None = None
+
+    def __post_init__(self) -> None:
+        if self.progress < 0:
+            raise ValueError("trial progress must be non-negative")
+        if self.status is Status.VALIDATED_WITNESS and not (self.accepted and self.replayed and self.stable is True):
+            raise ValueError("validated trials require accepted stable replay evidence")
 
 
 class Explorer:
@@ -146,6 +157,8 @@ class Mcts:
         known: set[str] = set()
         generated = 0
         for seed in seeds:
+            if generated >= budget.max_candidates:
+                break
             candidate = Explorer._normalize(seed)
             key = Explorer._key(candidate)
             if len(candidate) <= budget.max_trace_length and key not in known:
@@ -153,7 +166,7 @@ class Mcts:
                 known.add(key)
                 generated += 1
         if not root.children:
-            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied", archive=archive)
 
         cache: dict[str, Trial] = {}
         attempts = 0
@@ -180,22 +193,24 @@ class Mcts:
                 else:
                     archive, observation = archive.offer(trial.signature)
                     novelty = observation.score
-                node.value = float((10_000 if trial.accepted else 0) + novelty)
-                node.visits = 1
+                reward = float((10_000 if trial.accepted else 0) + novelty + trial.progress)
                 if trial.accepted:
                     return Found(
-                        Status.VALIDATED_WITNESS,
+                        trial.status,
                         attempts,
                         generated,
                         node.candidate,
                         "MCTS accepted a candidate after behavior-aware assessment",
                         Explorer._frontier_digest(tuple(item.candidate for item in root.children.values())),
+                        archive,
                     )
                 if trial.detail:
                     details.append(trial.detail)
+            else:
+                reward = float(10_000 if trial.accepted else 0) + trial.progress
             self._expand(node, expand, known, budget)
             generated = len(known)
-            self._back(node)
+            self._back(node, reward)
 
         status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
         detail = (
@@ -205,7 +220,7 @@ class Mcts:
         )
         if details:
             detail += "; " + "; ".join(dict.fromkeys(details))
-        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(item.candidate for item in root.children.values())))
+        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(item.candidate for item in root.children.values())), archive=archive)
 
     @staticmethod
     def _select(root: _Node, explore: float) -> _Node:
@@ -236,6 +251,8 @@ class Mcts:
             return
         node.expanded = True
         for child in expand(node.candidate):
+            if len(known) >= budget.max_candidates:
+                break
             candidate = Explorer._normalize(child)
             if len(candidate) > budget.max_trace_length:
                 continue
@@ -246,11 +263,11 @@ class Mcts:
             node.children[key] = _Node(candidate, node)
 
     @staticmethod
-    def _back(node: _Node) -> None:
-        current = node.parent
+    def _back(node: _Node, reward: float) -> None:
+        current: _Node | None = node
         while current is not None:
             current.visits += 1
-            current.value = max(current.value, node.value)
+            current.value += reward
             current = current.parent
 
 
@@ -271,11 +288,13 @@ class Evolve:
             raise ValueError("evolution population size must be positive")
         population: dict[str, tuple[Mapping[str, Any], ...]] = {}
         for seed in seeds:
+            if len(population) >= budget.max_candidates:
+                break
             candidate = Explorer._normalize(seed)
             if len(candidate) <= budget.max_trace_length:
                 population.setdefault(Explorer._key(candidate), candidate)
         if not population:
-            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied", archive=archive)
 
         attempts = 0
         generated = len(population)
@@ -286,29 +305,30 @@ class Evolve:
             if attempts >= budget.max_candidates or (time.monotonic() - started) * 1000 >= budget.max_time_ms:
                 budget_hit = True
                 break
-            scored: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+            scored: list[tuple[float, str, tuple[Mapping[str, Any], ...]]] = []
             for key, candidate in sorted(population.items()):
                 if attempts >= budget.max_candidates:
                     budget_hit = True
                     break
                 trial = assess(candidate)
                 attempts += 1
-                novelty = 0
+                novelty = 0.0
                 if trial.signature is not None:
                     archive, observation = archive.offer(trial.signature)
-                    novelty = observation.score
+                    novelty = float(observation.score) + trial.progress
                 else:
                     details.append(f"candidate {key} produced no behavior signature")
                 if trial.detail:
                     details.append(trial.detail)
                 if trial.accepted:
                     return Found(
-                        Status.VALIDATED_WITNESS,
+                        trial.status,
                         attempts,
                         generated,
                         candidate,
                         "evolution accepted a candidate after behavior-aware assessment",
                         Explorer._frontier_digest(tuple(population.values())),
+                        archive,
                     )
                 scored.append((novelty, key, candidate))
             if budget_hit or not scored:
@@ -318,6 +338,9 @@ class Evolve:
             next_population: dict[str, tuple[Mapping[str, Any], ...]] = {}
             for parent in parents:
                 for child in mutate(parent):
+                    if generated >= budget.max_candidates:
+                        budget_hit = True
+                        break
                     candidate = Explorer._normalize(child)
                     if len(candidate) > budget.max_trace_length:
                         continue
@@ -330,6 +353,8 @@ class Evolve:
                 if len(next_population) >= size:
                     break
             population = next_population
+            if budget_hit:
+                break
 
         status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
         detail = (
@@ -339,7 +364,7 @@ class Evolve:
         )
         if details:
             detail += "; " + "; ".join(dict.fromkeys(details))
-        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(population.values())))
+        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(population.values())), archive=archive)
 
 
 class Beam:
@@ -359,7 +384,7 @@ class Beam:
             raise ValueError("beam width must be positive")
         population = self._seeds(seeds, budget)
         if not population:
-            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied", archive=archive)
         known = {Explorer._key(item) for item in population}
         attempts = 0
         generated = len(population)
@@ -370,7 +395,7 @@ class Beam:
             if attempts >= budget.max_candidates or (time.monotonic() - started) * 1000 >= budget.max_time_ms:
                 budget_hit = True
                 break
-            scored: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+            scored: list[tuple[float, str, tuple[Mapping[str, Any], ...]]] = []
             for candidate in sorted(population, key=Explorer._key):
                 if attempts >= budget.max_candidates:
                     budget_hit = True
@@ -385,7 +410,7 @@ class Beam:
                 if trial.detail:
                     details.append(trial.detail)
                 if trial.accepted:
-                    return Found(Status.VALIDATED_WITNESS, attempts, generated, candidate, "beam accepted a behavior-assessed candidate")
+                    return Found(trial.status, attempts, generated, candidate, "beam accepted a behavior-assessed candidate", archive=archive)
                 scored.append((novelty, Explorer._key(candidate), candidate))
             if budget_hit or not scored:
                 break
@@ -393,6 +418,9 @@ class Beam:
             children: dict[str, tuple[Mapping[str, Any], ...]] = {}
             for _novelty, _key, parent in scored[:width]:
                 for child in expand(parent):
+                    if generated >= budget.max_candidates:
+                        budget_hit = True
+                        break
                     candidate = Explorer._normalize(child)
                     if len(candidate) > budget.max_trace_length:
                         continue
@@ -406,27 +434,31 @@ class Beam:
                 if len(children) >= width:
                     break
             population = tuple(children.values())
+            if budget_hit:
+                break
         status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
         detail = "beam exhausted its explicit candidate/time budget" if budget_hit else "beam exhausted the generated finite layers"
         if details:
             detail += "; " + "; ".join(dict.fromkeys(details))
-        return Found(status, attempts, generated, detail=detail)
+        return Found(status, attempts, generated, detail=detail, archive=archive)
 
     @staticmethod
     def _seeds(seeds: Iterable[Sequence[Mapping[str, Any]]], budget: Bounds) -> tuple[tuple[Mapping[str, Any], ...], ...]:
         found: dict[str, tuple[Mapping[str, Any], ...]] = {}
         for seed in seeds:
+            if len(found) >= budget.max_candidates:
+                break
             candidate = Explorer._normalize(seed)
             if len(candidate) <= budget.max_trace_length:
                 found.setdefault(Explorer._key(candidate), candidate)
         return tuple(found.values())
 
     @staticmethod
-    def _novel(trial: Trial, archive: Archive) -> tuple[int, str | None]:
+    def _novel(trial: Trial, archive: Archive) -> tuple[float, str | None]:
         if trial.signature is None:
-            return 0, "candidate produced no behavior signature"
+            return trial.progress, "candidate produced no behavior signature"
         _, novelty = archive.offer(trial.signature)
-        return novelty.score, None
+        return float(novelty.score) + trial.progress, None
 
 
 class Frontier:
@@ -441,9 +473,11 @@ class Frontier:
         budget: Bounds = Bounds(),
         archive: Archive = Archive(),
     ) -> Found:
-        queue: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+        queue: list[tuple[float, str, tuple[Mapping[str, Any], ...]]] = []
         known: set[str] = set()
         for seed in seeds:
+            if len(known) >= budget.max_candidates:
+                break
             candidate = Explorer._normalize(seed)
             if len(candidate) <= budget.max_trace_length:
                 key = Explorer._key(candidate)
@@ -451,7 +485,7 @@ class Frontier:
                     known.add(key)
                     heapq.heappush(queue, (0, key, candidate))
         if not queue:
-            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied", archive=archive)
         attempts = 0
         generated = len(known)
         started = time.monotonic()
@@ -472,8 +506,11 @@ class Frontier:
             if trial.detail:
                 details.append(trial.detail)
             if trial.accepted:
-                return Found(Status.VALIDATED_WITNESS, attempts, generated, candidate, "frontier accepted a behavior-assessed candidate")
+                return Found(trial.status, attempts, generated, candidate, "frontier accepted a behavior-assessed candidate", archive=archive)
             for child in expand(candidate):
+                if generated >= budget.max_candidates:
+                    budget_hit = True
+                    break
                 normalized = Explorer._normalize(child)
                 if len(normalized) > budget.max_trace_length:
                     continue
@@ -483,11 +520,13 @@ class Frontier:
                 known.add(child_key)
                 generated += 1
                 heapq.heappush(queue, (-novelty, child_key, normalized))
+            if budget_hit:
+                break
         status = Status.BUDGET_EXHAUSTED if budget_hit else Status.UNSAT_BOUNDED
         detail = "frontier exhausted its explicit candidate/time budget" if budget_hit else "frontier exhausted the generated finite candidates"
         if details:
             detail += "; " + "; ".join(dict.fromkeys(details))
-        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(item[2] for item in queue)))
+        return Found(status, attempts, generated, detail=detail, frontier_digest=Explorer._frontier_digest(tuple(item[2] for item in queue)), archive=archive)
 
 
 class Anneal:
@@ -509,7 +548,7 @@ class Anneal:
             raise ValueError("annealing requires positive start temperature and cooling in (0, 1)")
         population = Beam._seeds(seeds, budget)
         if not population:
-            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied")
+            return Found(Status.UNSAT_BOUNDED, 0, 0, detail="no seed candidates were supplied", archive=archive)
         current = min(population, key=Explorer._key)
         known = {Explorer._key(item) for item in population}
         attempts = 0
@@ -534,10 +573,13 @@ class Anneal:
             if trial.detail:
                 details.append(trial.detail)
             if trial.accepted:
-                return Found(Status.VALIDATED_WITNESS, attempts, generated, current, "annealing accepted a behavior-assessed candidate")
+                return Found(trial.status, attempts, generated, current, "annealing accepted a behavior-assessed candidate", archive=archive)
             current_score = score
-            candidates: list[tuple[int, str, tuple[Mapping[str, Any], ...]]] = []
+            candidates: list[tuple[float, str, tuple[Mapping[str, Any], ...]]] = []
             for child in mutate(current):
+                if attempts >= budget.max_candidates:
+                    budget_hit = True
+                    break
                 candidate = Explorer._normalize(child)
                 if len(candidate) > budget.max_trace_length:
                     continue
@@ -556,7 +598,7 @@ class Anneal:
                 if child_trial.detail:
                     details.append(child_trial.detail)
                 if child_trial.accepted:
-                    return Found(Status.VALIDATED_WITNESS, attempts, generated, candidate, "annealing accepted a behavior-assessed candidate")
+                    return Found(child_trial.status, attempts, generated, candidate, "annealing accepted a behavior-assessed candidate", archive=archive)
                 candidates.append((child_score, key, candidate))
                 if attempts >= budget.max_candidates:
                     budget_hit = True
@@ -575,4 +617,4 @@ class Anneal:
         detail = "annealing exhausted its explicit candidate/time budget" if status is Status.BUDGET_EXHAUSTED else "annealing exhausted the generated mutation neighborhood"
         if details:
             detail += "; " + "; ".join(dict.fromkeys(details))
-        return Found(status, attempts, generated, detail=detail)
+        return Found(status, attempts, generated, detail=detail, archive=archive)
