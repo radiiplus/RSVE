@@ -82,15 +82,15 @@ class Flow(Predicate):
         source_seen = False
         source_origins: set[str] = set()
         for event in trace:
-            if event.entry_point == self.source_entry and _contains(event.request, self.canary):
+            source_request = event.source or event.request
+            if event.entry_point == self.source_entry and _contains(source_request, self.canary):
                 source_seen = True
-                for key, value in event.request.items():
-                    if _contains(value, self.canary):
-                        source_origins.add(str(key))
+                source_origins.update(_matching_paths(source_request, self.canary))
             if source_seen and (
                 event.component == self.sink
                 or event.operation == self.sink
                 or event.observation.get("sink") == self.sink
+                or self.sink in event.observation.get("effect_observables", ())
             ):
                 if self.require_lineage:
                     lineage = event.observation.get("data_lineage")
@@ -383,6 +383,22 @@ def _contains(value: Any, needle: str) -> bool:
     if isinstance(value, (tuple, list, set, frozenset)):
         return any(_contains(item, needle) for item in value)
     return needle in str(value)
+
+
+def _matching_paths(value: Any, needle: str, prefix: str = "") -> tuple[str, ...]:
+    if isinstance(value, Mapping):
+        paths: list[str] = []
+        for key, item in value.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            paths.extend(_matching_paths(item, needle, path))
+        return tuple(paths)
+    if isinstance(value, (tuple, list)):
+        paths = []
+        for index, item in enumerate(value):
+            path = f"{prefix}.{index}" if prefix else str(index)
+            paths.extend(_matching_paths(item, needle, path))
+        return tuple(paths)
+    return (prefix,) if prefix and needle in str(value) else ()
 
 
 def _evaluate_constraint(node: Constraint, environment: Mapping[str, Any]) -> bool:

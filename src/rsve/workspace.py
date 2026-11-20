@@ -492,8 +492,8 @@ class Workspace:
                 frame.target,
                 frame.regions,
                 (transition.transition_id,),
-                _request_lineage(entry, frame.lineage),
-                _request_origins(entry, request, frame.origins),
+                _request_lineage(entry, request),
+                _request_origins(entry, request),
             ))
         return tuple(lowered)
 
@@ -786,11 +786,13 @@ class Workspace:
 
     @staticmethod
     def _combine(graph: Outcome, operation: Outcome) -> Outcome:
+        observation = dict(graph.observation)
+        observation.update(operation.observation)
         if graph.decision is Decision.UNKNOWN:
             return replace(
                 graph,
                 after=operation.after,
-                observation=operation.observation,
+                observation=observation,
                 effects=graph.effects + operation.effects,
                 reads=graph.reads | operation.reads,
                 writes=graph.writes | operation.writes,
@@ -802,6 +804,7 @@ class Workspace:
             return graph
         return replace(
             operation,
+            observation=observation,
             effects=graph.effects + operation.effects,
             reads=graph.reads | operation.reads,
             writes=graph.writes | operation.writes,
@@ -828,11 +831,26 @@ class Workspace:
         uncertain = frame.uncertain or outcome.decision is Decision.UNKNOWN
         reasons = list(frame.reasons) + list(outcome.uncertainty)
         lineage = outcome.lineage
-        if lineage is None and not any("provenance" in reason for reason in outcome.uncertainty):
-            lineage = frame.lineage if frame.lineage is not None else (entry,)
         origins = outcome.origins
         if origins is None and not any("provenance" in reason for reason in outcome.uncertainty):
-            origins = frame.origins if frame.origins is not None else _request_origins(entry, request)
+            request_origins = _request_origins(entry, request)
+            if item.provenance_paths:
+                origins, transfer_reason = _transfer_origins(
+                    "preserve",
+                    item.provenance_paths,
+                    _merge_origins(frame.origins, request_origins),
+                )
+                if transfer_reason:
+                    uncertain = True
+                    reasons.append(transfer_reason)
+            else:
+                origins = (
+                    frame.origins
+                    if not request_origins and frame.origins == {}
+                    else request_origins or None
+                )
+            if lineage is None and origins is not None:
+                lineage = _lineage_from_origins(origins) or ((entry,) if request_origins else ())
         transition = None
         if self.world is not None:
             if item.name in self.world.transitions:
@@ -994,16 +1012,46 @@ def _request_origins(
     previous: Mapping[str, tuple[str, ...]] | None = None,
 ) -> dict[str, tuple[str, ...]]:
     result = dict(previous or {})
-    result.update({
-        str(key): (f"{entry}:{key}",)
-        for key in request
-    })
+    for key, value in request.items():
+        result.update(_request_origin_paths(entry, str(key), value))
     return result
 
 
-def _request_lineage(entry: str, previous: tuple[str, ...] | None) -> tuple[str, ...]:
-    """Add a new interaction origin without reviving discarded lineage."""
-    return tuple(dict.fromkeys((previous or ()) + (entry,)))
+def _request_origin_paths(entry: str, path: str, value: Any) -> dict[str, tuple[str, ...]]:
+    if isinstance(value, Mapping):
+        result: dict[str, tuple[str, ...]] = {}
+        for key, item in value.items():
+            result.update(_request_origin_paths(entry, f"{path}.{key}", item))
+        return result
+    if isinstance(value, (tuple, list)):
+        result = {}
+        for index, item in enumerate(value):
+            result.update(_request_origin_paths(entry, f"{path}.{index}", item))
+        return result
+    return {path: (f"{entry}:{path}",)}
+
+
+def _request_lineage(entry: str, request: Mapping[str, Any]) -> tuple[str, ...]:
+    return (entry,) if request else ()
+
+
+def _merge_origins(
+    previous: Mapping[str, tuple[str, ...]] | None,
+    current: Mapping[str, tuple[str, ...]],
+) -> dict[str, tuple[str, ...]]:
+    result = dict(current)
+    result.update(previous or {})
+    return result
+
+
+def _lineage_from_origins(origins: Mapping[str, tuple[str, ...]]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(
+        source
+        for values in origins.values()
+        for origin in values
+        for source, _, _path in (origin.partition(":"),)
+        if source
+    ))
 
 
 def _transfer_origins(

@@ -207,6 +207,12 @@ class Interpreter:
                 for branch in branches
             )
         effect_ids = tuple(transition.effect_ids)
+        effect_observables = tuple(
+            effect.observable
+            for effect_id in effect_ids
+            for effect in self.graph.effects
+            if effect.effect_id == effect_id
+        )
         effect_writes = frozenset(
             state_effect
             for effect_id in transition.effect_ids
@@ -236,7 +242,10 @@ class Interpreter:
                 Outcome(
                     decision=decision,
                     after=branch.state,
-                    observation={"value": branch.value},
+                    observation={
+                        "value": branch.value,
+                        "effect_observables": effect_observables,
+                    },
                     effects=effect_ids,
                     reads=reads,
                     writes=writes,

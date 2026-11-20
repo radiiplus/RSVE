@@ -1056,6 +1056,121 @@ class Suite(unittest.TestCase):
         resource_plan = Regressor().regress(resource_model, resource_objective, workspace=resource_workspace)
         self.assertTrue(any("outside owner a" in item for item in resource_plan.uncertainty))
 
+    def test_workspace_flow_requires_actual_value_provenance(self):
+        def make_workspace(mode):
+            model = Model("workspace-flow", State({}), (), ())
+            profile = Persona("flow-profile", "test", "target", "fixture", "1")
+            graph = Graph("workspace-flow-graph").persona(profile)
+            graph = graph.zone(Zone("a", "flow-profile", "a")).zone(Zone("b", "flow-profile", "b"))
+            graph = graph.value(Representation("raw-flow", "mapping"))
+            graph = graph.value(Representation("mid-flow", "mapping"))
+            graph = graph.value(Representation("final-flow", "mapping"))
+            graph = graph.transform(Transform(
+                "decode-flow",
+                "raw-flow",
+                "mid-flow",
+                "fixture.decode-flow",
+                "1",
+                Partiality.TOTAL,
+                Relation.FUNCTION,
+                Invertibility.UNKNOWN,
+                Loss.NONE,
+                provenance=mode,
+                provenance_paths={"payload": ("proof",)} if mode == "preserve" else {},
+            ))
+            graph = graph.transform(Transform(
+                "bridge-flow",
+                "mid-flow",
+                "final-flow",
+                "fixture.bridge-flow",
+                "1",
+                Partiality.TOTAL,
+                Relation.FUNCTION,
+                Invertibility.UNKNOWN,
+                Loss.NONE,
+                provenance="preserve",
+                provenance_paths={"payload": ("payload",)},
+            ))
+            graph = graph.effect(Effect("sink-flow", "controlled.sink", ("done",)))
+            graph = graph.transition(Transition(
+                "source-flow",
+                "source",
+                "raw-flow",
+                "mid-flow",
+                ("decode-flow",),
+                region_id="a",
+            ))
+            graph = graph.transition(Transition(
+                "sink-flow",
+                "internal",
+                "final-flow",
+                "final-flow",
+                effect_ids=("sink-flow",),
+                region_id="b",
+            ))
+            graph = graph.port(Port("flow-out", "a", "out", Direction.OUTPUT, "mid-flow", "mapping"))
+            graph = graph.port(Port("flow-in", "b", "in", Direction.INPUT, "final-flow", "mapping"))
+            graph = graph.connect("flow-out", "flow-in", connection_id="flow-bridge", transform_id="bridge-flow")
+            symbolics = {
+                "decode-flow": Symbolic(
+                    "decode-flow-symbolic",
+                    "source",
+                    Literal(True, Sort.BOOL),
+                    {"output.payload": Variable("input.proof", Sort.STRING)},
+                    semantics_ref="fixture.decode-flow",
+                ),
+                "bridge-flow": Symbolic(
+                    "bridge-flow-symbolic",
+                    "source",
+                    Literal(True, Sort.BOOL),
+                    {"output.payload": Variable("input.payload", Sort.STRING)},
+                    semantics_ref="fixture.bridge-flow",
+                ),
+                "sink-flow": Symbolic(
+                    "sink-flow-symbolic",
+                    "internal",
+                    Literal(True, Sort.BOOL),
+                    {"state.b.done": Literal(True, Sort.BOOL)},
+                    semantics_ref="rsve.effect",
+                ),
+            }
+            return Workspace.flat(
+                model,
+                graph=graph,
+                regions={"a": State({}), "b": State({"done": False})},
+                transforms={
+                    "decode-flow": lambda value, _state: {"payload": value["proof"]},
+                    "bridge-flow": lambda value, _state: dict(value),
+                },
+                effects={"sink-flow": lambda state, _value: state.update(done=True)},
+                entries={"source"},
+                symbolics=symbolics,
+            )
+
+        objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
+        for mode, expected in (("preserve", True), ("discard", False)):
+            workspace = make_workspace(mode)
+            moves = workspace.moves(workspace.start(), "source", {"proof": "RSVE-CANARY"})
+            self.assertEqual(len(moves), 1)
+            self.assertEqual(moves[0].after.regions["b"].get("done"), True)
+            self.assertEqual(objective.evaluate(moves[0].after.view(), (moves[0].event,)), expected)
+            backward = Regressor().regress(
+                workspace.model,
+                Objective(
+                    "workspace-flow-goal",
+                    "workspace-flow",
+                    "lab",
+                    (objective,),
+                    budget=Limits(max_trace_length=1),
+                ),
+                workspace=workspace,
+            )
+            if expected:
+                self.assertTrue(backward.required_traces)
+                self.assertEqual(backward.required_traces[0][0]["request"], {"proof": "RSVE-CANARY"})
+            else:
+                self.assertFalse(backward.required_traces)
+
 
 if __name__ == "__main__":
     unittest.main()

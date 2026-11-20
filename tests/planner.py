@@ -35,6 +35,7 @@ from rsve import (
     Transform,
     Model,
     Variable,
+    Workspace,
 )
 from rsve.extensions import Node
 from rsve.diff import Analyzer, Kind
@@ -289,7 +290,12 @@ class Suite(unittest.TestCase):
 
     def test_flow_objective_seeds_canary_from_known_request_shape(self):
         source = Operation("source", Entry("source"), component="source")
-        sink = Operation("sink", Entry("sink"), component="controlled.sink")
+        sink = Operation(
+            "sink",
+            Entry("sink"),
+            component="controlled.sink",
+            provenance_paths={"payload": ("proof",)},
+        )
         model = Model(
             "node-fixture",
             State({}),
@@ -328,6 +334,7 @@ class Suite(unittest.TestCase):
             "sink",
             Entry("sink"),
             component="controlled.sink",
+            provenance_paths={"payload": ("proof",)},
             symbolic_transition=Symbolic(
                 "sink-flow",
                 "sink",
@@ -352,6 +359,16 @@ class Suite(unittest.TestCase):
         self.assertEqual(backward.required_traces[0][0]["request"], {"proof": "RSVE-CANARY"})
         report = Planner(harness_sinks={"controlled.sink"}).plan(model, objective, self.authorization)
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
+
+    def test_flow_does_not_inherit_origins_into_unrelated_sink(self):
+        source = Operation("source", Entry("source"), component="source")
+        sink = Operation("sink", Entry("sink"), component="controlled.sink")
+        model = Model("node-fixture", State({}), ({"proof": "RSVE-CANARY"}, {}), (source, sink))
+        workspace = Workspace.flat(model)
+        first = workspace.moves(workspace.start(), "source", {"proof": "RSVE-CANARY"}, operation=source)[0]
+        second = workspace.moves(first.after, "sink", {}, operation=sink)[0]
+        objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
+        self.assertFalse(objective.evaluate(second.after.view(), (first.event, second.event)))
 
     def test_finite_relational_symbolic_route_guides_candidate_synthesis(self):
         operation = Operation(

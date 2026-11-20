@@ -233,6 +233,7 @@ class Operation:
     keep: frozenset[str] = frozenset()
     unknown: frozenset[str] = frozenset()
     relation_complete: bool = False
+    provenance_paths: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for transform in self.transforms:
@@ -243,6 +244,9 @@ class Operation:
             required = ("recognizer_id", "input_representation", "actual_predicate_ref", "enforcement_point")
             if any(not hasattr(recognizer, field_name) for field_name in required):
                 raise TypeError("operation recognizers must use canonical ir.Recognizer records")
+        for output, inputs in self.provenance_paths.items():
+            if not isinstance(output, str) or any(not isinstance(item, str) for item in inputs):
+                raise TypeError("operation provenance paths must map string outputs to string inputs")
 
     def branches(self, state: State, request: Request) -> tuple[Outcome, ...]:
         if self.relation is not None:

@@ -208,14 +208,32 @@ def _request_for_step(model: Mapping[str, Any], index: int) -> dict[str, Any]:
     for name, value in model.items():
         for prefix in indexed_prefixes:
             if name.startswith(prefix):
-                request[name[len(prefix):]] = value
+                _put_request(request, name[len(prefix):], value)
     if request:
         return request
     for name, value in model.items():
         for prefix in ("input.", "request."):
-            if name.startswith(prefix) and "." not in name[len(prefix):]:
-                request[name[len(prefix):]] = value
+            if name.startswith(prefix):
+                path = name[len(prefix):]
+                if path.split(".", 1)[0].isdigit():
+                    continue
+                _put_request(request, path, value)
     return request
+
+
+def _put_request(request: dict[str, Any], path: str, value: Any) -> None:
+    parts = path.split(".")
+    if len(parts) == 1:
+        request[path] = value
+        return
+    current = request
+    for part in parts[:-1]:
+        child = current.get(part)
+        if not isinstance(child, dict):
+            child = {}
+            current[part] = child
+        current = child
+    current[parts[-1]] = value
 
 
 def _replace_canary(value: Any, canary: str) -> tuple[Any, ...]:
@@ -246,7 +264,24 @@ def _replace_canary(value: Any, canary: str) -> tuple[Any, ...]:
 
 
 def _flow_predicates(objective: Objective) -> tuple[Flow, ...]:
-    return tuple(predicate for predicate in objective._predicates() if isinstance(predicate, Flow))
+    """Return only Flow predicates required by the objective's Boolean form."""
+    found: list[Flow] = []
+
+    def visit(predicate: Any, positive: bool = True) -> None:
+        if isinstance(predicate, Flow):
+            if positive:
+                found.append(predicate)
+            return
+        if isinstance(predicate, All):
+            for child in predicate.predicates:
+                visit(child, positive)
+        elif isinstance(predicate, Not):
+            visit(predicate.predicate, not positive)
+        # A Flow inside Some is an alternative, not a required synthesis target.
+
+    for predicate in objective.postconditions:
+        visit(predicate)
+    return tuple(found)
 
 
 def _input_fields(node: Any) -> set[str]:
@@ -258,7 +293,7 @@ def _input_fields(node: Any) -> set[str]:
         if parts and parts[0].isdigit():
             parts = parts[1:]
         if parts:
-            found.add(parts[0])
+            found.add(".".join(parts))
         return found
     if isinstance(node, Constraint):
         if is_dataclass(node):
@@ -307,7 +342,14 @@ class Regressor:
         flow_requests: dict[str, tuple[Mapping[str, Any], ...]] = {}
         for flow in _flow_predicates(objective):
             known: list[Mapping[str, Any]] = []
-            candidates = list(model.args()) + list(workspace.probes_for(flow.source_entry, objective.budget.max_states))
+            try:
+                source_probes = workspace.probes_for(flow.source_entry, objective.budget.max_states)
+            except Exception as exc:
+                source_probes = ()
+                uncertainty.append(
+                    f"Flow probe expansion for {flow.source_entry} is unknown: {type(exc).__name__}"
+                )
+            candidates = list(model.args()) + list(source_probes)
             for candidate in candidates:
                 if _contains(candidate, flow.canary):
                     known.append(dict(candidate))
@@ -531,6 +573,14 @@ class Regressor:
         flows = _flow_predicates(objective)
         if not flows:
             return [], [], []
+        if workspace.graph is not None:
+            return self._symbolic_graph_flows(
+                model,
+                objective,
+                workspace=workspace,
+                solver=solver,
+                solver_timeout_ms=solver_timeout_ms,
+            )
         symbolic_operations = tuple(
             operation for operation in workspace.operations()
             if operation.symbolic_transition is not None
@@ -555,9 +605,20 @@ class Regressor:
             found = False
             for length in range(1, objective.budget.max_trace_length + 1):
                 for sequence in product(symbolic_operations, repeat=length):
+                    examined += 1
+                    if examined > bound:
+                        uncertainty.append("symbolic Flow route bound reached")
+                        return traces, uncertainty, cores
                     if sequence[0].entry_point.name != flow.source_entry:
                         continue
                     if not any(self._flow_sink(operation, flow) for operation in sequence[1:] or sequence):
+                        continue
+                    if flow.require_lineage and workspace.graph is not None:
+                        uncertainty.append(
+                            "symbolic Flow regression requires graph provenance paths for composed workspaces"
+                        )
+                        continue
+                    if flow.require_lineage and not self._flow_sequence_lineage(sequence, fields):
                         continue
                     incomplete = [
                         operation.entry_point.name
@@ -569,10 +630,6 @@ class Regressor:
                             f"symbolic Flow route semantics are incomplete: {', '.join(sorted(set(incomplete)))}"
                         )
                         continue
-                    examined += 1
-                    if examined > bound:
-                        uncertainty.append("symbolic Flow route bound reached")
-                        return traces, uncertainty, cores
                     transitions = tuple(operation.symbolic_transition for operation in sequence)
                     result = WP().derive(true, transitions)
                     if result.status is not Truth.EXACT or result.precondition is None:
@@ -581,18 +638,14 @@ class Regressor:
                         )
                         continue
                     for field in fields:
+                        source_name = f"input.{field}" if length == 1 else f"input.0.{field}"
                         source = Equal(
-                            Variable(f"input.{field}", Sort.STRING),
-                            Literal(flow.canary, Sort.STRING),
-                        )
-                        indexed_source = Equal(
-                            Variable(f"input.0.{field}", Sort.STRING),
+                            Variable(source_name, Sort.STRING),
                             Literal(flow.canary, Sort.STRING),
                         )
                         terms = tuple(initial_constraints) + (
                             Axiom(f"flow:{flow.source_entry}:{field}:{examined}", result.precondition),
                             source,
-                            indexed_source,
                         )
                         formula = Every(terms)
                         solved = _solve(
@@ -633,6 +686,160 @@ class Regressor:
                 )
         return traces, uncertainty, cores
 
+    def _symbolic_graph_flows(
+        self,
+        model: Model,
+        objective: Objective,
+        *,
+        workspace: Workspace,
+        solver: Zed | Stack,
+        solver_timeout_ms: int | None,
+    ) -> tuple[list[tuple[Mapping[str, Any], ...]], list[str], list[tuple[str, ...]]]:
+        """Regress Flow through a bounded graph route with explicit provenance."""
+        flows = _flow_predicates(objective)
+        traces: list[tuple[Mapping[str, Any], ...]] = []
+        uncertainty: list[str] = []
+        cores: list[tuple[str, ...]] = []
+        examined = 0
+        bound = min(objective.budget.max_states, 256)
+        true = Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL))
+        transforms = {item.transform_id: item for item in workspace.graph.transforms}
+
+        for flow in flows:
+            fields = self._flow_fields(model, workspace, flow)
+            if not fields:
+                uncertainty.append(
+                    f"symbolic graph Flow regression cannot identify a source field for {flow.source_entry}"
+                )
+                continue
+            found = False
+            for operation in workspace.operations(flow.source_entry):
+                routes = workspace.routes(operation)
+                for transitions, connections in routes:
+                    examined += 1
+                    if examined > bound:
+                        uncertainty.append("symbolic graph Flow route bound reached")
+                        return traces, uncertainty, cores
+                    if not any(
+                        transition.entry_point == flow.sink
+                        or transition.transition_id == flow.sink
+                        or transition.region_id == flow.sink
+                        or any(
+                            effect.observable == flow.sink
+                            for effect_id in transition.effect_ids
+                            for effect in workspace.graph.effects
+                            if effect.effect_id == effect_id
+                        )
+                        for transition in transitions
+                    ):
+                        continue
+                    steps, stage, missing = self._route_symbols(workspace, transitions, connections)
+                    if missing:
+                        uncertainty.append(
+                            f"symbolic graph Flow route is unknown: {', '.join(missing)}"
+                        )
+                        continue
+                    symbolic = operation.symbolic_transition
+                    if symbolic is not None:
+                        contract = workspace.contract_for(operation)
+                        if contract is None or not contract.complete:
+                            uncertainty.append(
+                                f"symbolic graph Flow endpoint is incomplete for {operation.entry_point.name}"
+                            )
+                            continue
+                        steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
+                    for field in fields:
+                        if flow.require_lineage:
+                            lineage = self._graph_lineage(transitions, connections, field, transforms)
+                            if lineage is None:
+                                uncertainty.append(
+                                    f"graph Flow provenance is unknown for {operation.entry_point.name}"
+                                )
+                                continue
+                            if not lineage:
+                                continue
+                        result = WP().derive(true, tuple(steps))
+                        if result.status is not Truth.EXACT or result.precondition is None:
+                            uncertainty.append(
+                                f"symbolic graph Flow preimage is unknown: {result.reason or 'unsupported route semantics'}"
+                            )
+                            continue
+                        formula = Every((
+                            *tuple(_initial_state_constraints(workspace.start().view())),
+                            Axiom(f"graph-flow:{flow.source_entry}:{field}:{examined}", result.precondition),
+                            Equal(
+                                Variable(f"route.0.{field}", Sort.STRING),
+                                Literal(flow.canary, Sort.STRING),
+                            ),
+                        ))
+                        solved = _solve(
+                            solver,
+                            Query(
+                                f"wp-graph-flow:{objective.objective_id}:{examined}:{field}",
+                                formula,
+                            ),
+                            timeout_ms=solver_timeout_ms,
+                        )
+                        if solved.status is Verdict.UNKNOWN:
+                            uncertainty.append(
+                                solved.unknown_reason or "symbolic graph Flow query returned UNKNOWN"
+                            )
+                            continue
+                        if solved.status is not Verdict.SAT:
+                            if solved.status is Verdict.UNSAT_BOUNDED and solved.unsat_core:
+                                cores.append(solved.unsat_core)
+                            continue
+                        request: dict[str, Any] = {}
+                        for name, value in solved.model.items():
+                            if name.startswith("route.0."):
+                                _put_request(request, name.removeprefix("route.0."), value)
+                        if request:
+                            traces.append(({
+                                "entry_point": operation.entry_point.name,
+                                "request": request,
+                            },))
+                            found = True
+                            break
+                    if found:
+                        break
+                if found:
+                    break
+            if not found:
+                uncertainty.append(
+                    f"no exact symbolic graph Flow route found for {flow.source_entry} to {flow.sink}"
+                )
+        return traces, uncertainty, cores
+
+    @staticmethod
+    def _graph_lineage(
+        transitions: Sequence[Any],
+        connections: Sequence[Any],
+        source: str,
+        transforms: Mapping[str, Any],
+    ) -> bool | None:
+        available = {source}
+        transform_ids: list[str] = []
+        for index, transition in enumerate(transitions):
+            transform_ids.extend(transition.transform_ids)
+            if index < len(connections) and connections[index].transform_id is not None:
+                transform_ids.append(connections[index].transform_id)
+        for transform_id in transform_ids:
+            transform = transforms.get(transform_id)
+            if transform is None or transform.provenance == "unknown":
+                return None
+            if transform.provenance == "discard":
+                return False
+            if not transform.provenance_paths:
+                return None
+            available = {
+                output
+                for output, inputs in transform.provenance_paths.items()
+                if any(item in available for item in inputs)
+            }
+            if not available:
+                return False
+        return bool(available)
+
     @staticmethod
     def _flow_sink(operation: Operation, flow: Flow) -> bool:
         return (
@@ -642,23 +849,58 @@ class Regressor:
         )
 
     @staticmethod
+    def _flow_sequence_lineage(sequence: Sequence[Operation], fields: Sequence[str]) -> bool:
+        available = set(fields)
+        for operation in sequence[1:]:
+            if not operation.provenance_paths:
+                return False
+            available = {
+                output
+                for output, inputs in operation.provenance_paths.items()
+                if any(item in available for item in inputs)
+            }
+            if not available:
+                return False
+        return bool(available)
+
+    @staticmethod
     def _flow_fields(model: Model, workspace: Workspace, flow: Flow) -> tuple[str, ...]:
         values: list[Mapping[str, Any]] = list(model.args())
-        values.extend(workspace.probes_for(flow.source_entry))
+        try:
+            values.extend(workspace.probes_for(flow.source_entry))
+        except Exception:
+            pass
         fields = {
-            str(key)
+            field
             for request in values
-            for key, value in request.items()
-            if isinstance(value, str)
+            for field in _request_string_fields(request)
         }
         for operation in workspace.operations(flow.source_entry):
             symbolic = operation.symbolic_transition
-            if symbolic is None:
-                continue
-            fields.update(_input_fields(symbolic.guard))
-            fields.update(_input_fields(symbolic.assignments))
-            fields.update(_input_fields(symbolic.alternatives))
+            if symbolic is not None:
+                fields.update(_input_fields(symbolic.guard))
+                fields.update(_input_fields(symbolic.assignments))
+                fields.update(_input_fields(symbolic.alternatives))
+            if workspace.graph is not None:
+                for transition in workspace._transitions(operation):
+                    for transform_id in transition.transform_ids:
+                        symbolic = workspace.symbolics.get(transform_id)
+                        if symbolic is not None:
+                            fields.update(_input_fields(symbolic.guard))
+                            fields.update(_input_fields(symbolic.assignments))
+                            fields.update(_input_fields(symbolic.alternatives))
         return tuple(sorted(fields))
+
+    @staticmethod
+    def _request_string_fields(value: Mapping[str, Any], prefix: str = "") -> tuple[str, ...]:
+        fields: list[str] = []
+        for key, item in value.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            if isinstance(item, Mapping):
+                fields.extend(Regressor._request_string_fields(item, path))
+            elif isinstance(item, str):
+                fields.append(path)
+        return tuple(fields)
 
     def _symbolic_workspace(
         self,
