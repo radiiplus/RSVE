@@ -683,6 +683,30 @@ supplied mutation function to create the next population. Both deduplicate
 candidate traces, enforce the same explicit bounds, and return
 `BUDGET_EXHAUSTED` when a budget stops exploration.
 
+For an end-to-end RSVE search, use `Guide`. It connects the objective to the
+existing regressor and workspace instead of requiring the caller to invent
+seeds, expansion, and assessment callbacks:
+
+```python
+from rsve import Authorization, Guide, Workspace
+
+guide = Guide(
+    workspace,
+    objective,
+    Authorization("investigator", frozenset({"lab"}), frozenset({"fixture"})),
+    harness_sinks={"controlled.sink"},
+)
+result = guide.search("frontier", archive=archive)
+```
+
+`Guide` obtains seeds from `Regressor.required_actions` and
+`required_traces`, expands entries using the workspace's operations and
+bounded probes, executes every candidate through `Workspace.moves`, and
+builds signatures from the resulting events and frames. Without an adapter,
+successful results are `MODEL_SAT`. Passing an authorized target adapter adds
+controlled replay; only accepted, stable replay results can be
+`VALIDATED_WITNESS`. The guide closes the adapter after the search.
+
 The complementary strategies are:
 
 - `Beam` evaluates a layer at a time and retains only the most novel bounded

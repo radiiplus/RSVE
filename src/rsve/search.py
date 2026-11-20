@@ -8,11 +8,14 @@ import json
 import math
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from .result import Status
 from .signature import Archive, Signature
+from .model import Authorization, Event, State
+from .objective import Objective
+from .workspace import Frame, Workspace
 
 
 @dataclass(frozen=True)
@@ -54,6 +57,241 @@ class Trial:
             raise ValueError("trial progress must be non-negative")
         if self.status is Status.VALIDATED_WITNESS and not (self.accepted and self.replayed and self.stable is True):
             raise ValueError("validated trials require accepted stable replay evidence")
+
+
+class Guide:
+    """Connect novelty search to RSVE regression and workspace execution.
+
+    The guide owns candidate discovery and assessment for a composed workspace.
+    Strategies remain responsible only for ordering the candidates they are
+    given. Model-only results are reported as ``MODEL_SAT``; adapter replay is
+    required before ``VALIDATED_WITNESS`` can be returned.
+    """
+
+    def __init__(
+        self,
+        workspace: Workspace,
+        objective: Objective,
+        authorization: Authorization,
+        *,
+        harness_sinks: set[str] | frozenset[str] = frozenset(),
+        adapter: Any | None = None,
+    ) -> None:
+        if workspace.model.target_id != objective.target_id:
+            raise ValueError("workspace and objective target identities must match")
+        objective.validate(
+            authorization,
+            harness_sinks=harness_sinks,
+            environment=workspace.start().environment.as_dict(),
+        )
+        self.workspace = workspace
+        self.objective = objective
+        self.authorization = authorization
+        self.adapter = adapter
+        from .planner import Regressor
+
+        self.plan = Regressor().regress(
+            workspace.model,
+            objective,
+            workspace=workspace,
+            solver_timeout_ms=objective.budget.solver_timeout_ms,
+        )
+        self.notes = list(self.plan.uncertainty)
+        self._requests: dict[str, tuple[Mapping[str, Any], ...]] | None = None
+        self._prepared = False
+        self._baseline: Any = None
+
+    def close(self) -> None:
+        if self._prepared and self.adapter is not None:
+            self.adapter.teardown()
+            self._prepared = False
+
+    def _prepare(self) -> None:
+        if self.adapter is not None and not self._prepared:
+            self.adapter.prepare()
+            self._baseline = self.adapter.snapshot()
+            self._prepared = True
+
+    def _entries(self) -> tuple[str, ...]:
+        return tuple(sorted({item.entry_point.name for item in self.workspace.operations()}))
+
+    def _domains(self) -> Mapping[str, tuple[Mapping[str, Any], ...]]:
+        if self._requests is not None:
+            return self._requests
+        values: dict[str, list[Mapping[str, Any]]] = {entry: [] for entry in self._entries()}
+        for entry, request in self.plan.required_actions:
+            values.setdefault(entry, []).append(dict(request))
+        for entry in tuple(values):
+            try:
+                values[entry].extend(self.workspace.probes_for(entry, self.objective.budget.max_states))
+            except Exception as exc:
+                self.notes.append(f"probe expansion for {entry} is unknown: {type(exc).__name__}")
+        model_requests = self.workspace.model.args()
+        for entry in values:
+            values[entry].extend(model_requests)
+            if not values[entry]:
+                values[entry].append({})
+            unique: dict[str, Mapping[str, Any]] = {}
+            for request in values[entry]:
+                key = json.dumps(dict(request), sort_keys=True, separators=(",", ":"), default=str)
+                unique.setdefault(key, dict(request))
+            values[entry] = list(unique.values())[: self.objective.budget.max_states]
+        self._requests = {entry: tuple(requests) for entry, requests in values.items()}
+        return self._requests
+
+    def seeds(self) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+        found: dict[str, tuple[Mapping[str, Any], ...]] = {}
+        for trace in self.plan.required_traces:
+            candidate = tuple(dict(item) for item in trace)
+            found.setdefault(self._key(candidate), candidate)
+        for entry, request in self.plan.required_actions:
+            candidate = ({"entry_point": entry, "request": dict(request)},)
+            found.setdefault(self._key(candidate), candidate)
+        if not found:
+            for entry, requests in self._domains().items():
+                for request in requests:
+                    candidate = ({"entry_point": entry, "request": dict(request)},)
+                    found.setdefault(self._key(candidate), candidate)
+        return tuple(found.values())
+
+    def expand(self, candidate: tuple[Mapping[str, Any], ...]) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+        if len(candidate) >= self.objective.budget.max_trace_length:
+            return ()
+        result: list[tuple[Mapping[str, Any], ...]] = []
+        for entry, requests in self._domains().items():
+            for request in requests:
+                if not self.workspace.model.allows(entry, request):
+                    continue
+                result.append(candidate + ({"entry_point": entry, "request": dict(request)},))
+        return tuple(result)
+
+    def _model(self, candidate: Sequence[Mapping[str, Any]]) -> tuple[tuple[Frame, tuple[Event, ...], bool], ...]:
+        frontier: list[tuple[Frame, tuple[Event, ...], bool]] = [(self.workspace.start(), (), False)]
+        for index, interaction in enumerate(candidate):
+            entry = str(interaction["entry_point"])
+            request = dict(interaction.get("request", {}))
+            if not self.workspace.model.allows(entry, request):
+                return ()
+            operations = self.workspace.operations(entry)
+            if not operations:
+                return ()
+            next_frontier: list[tuple[Frame, tuple[Event, ...], bool]] = []
+            for frame, events, uncertain in frontier:
+                for operation in operations:
+                    for move in self.workspace.moves(frame, entry, request, operation=operation):
+                        event = replace(move.event, ordering=len(events))
+                        next_frontier.append((move.after, events + (event,), uncertain or move.after.uncertain))
+                        if len(next_frontier) >= self.objective.budget.max_states:
+                            self.notes.append("workspace candidate branches were bounded by max_states")
+                            break
+                    if len(next_frontier) >= self.objective.budget.max_states:
+                        break
+                if len(next_frontier) >= self.objective.budget.max_states:
+                    break
+            frontier = next_frontier
+            if not frontier:
+                return ()
+        return tuple(frontier)
+
+    def _signature(self, events: Sequence[Event], frame: Frame) -> Signature:
+        profile = "workspace"
+        scope: dict[str, Any] = {
+            "model_version": self.workspace.model.model_version,
+            "build_hash": self.workspace.model.build_hash,
+            "objective_version": self.objective.version,
+        }
+        if self.adapter is not None:
+            try:
+                identity = self.adapter.identity()
+                profile = str(identity.get("profile_id", identity.get("version", "adapter")))
+                scope.update({str(key): value for key, value in identity.items()})
+            except Exception as exc:
+                self.notes.append(f"adapter identity is unknown: {type(exc).__name__}")
+        return Signature.make(
+            tuple(events),
+            frame,
+            target=self.workspace.model.target_id,
+            profile=profile,
+            keys=self.objective.state_keys,
+            scope=scope,
+        )
+
+    def _replay(self, candidate: tuple[Mapping[str, Any], ...], predicted: Trial) -> Trial:
+        self._prepare()
+        outcomes: list[bool] = []
+        signatures: list[str] = []
+        observed_events: tuple[Event, ...] = ()
+        try:
+            for _ in range(self.objective.budget.replay_runs):
+                self.adapter.reset(self._baseline)
+                observed_events = tuple(self.adapter.trace(candidate, self.authorization))
+                final = observed_events[-1].after if observed_events else self.workspace.model.initial_state
+                result = self.objective.evaluate(final, observed_events)
+                result = result and self.objective.satisfy(self.workspace.start().view(), observed_events)
+                outcomes.append(result)
+                signatures.append(json.dumps([event.canonical() for event in observed_events], sort_keys=True, default=str))
+        except Exception as exc:
+            return Trial(False, predicted.signature, f"authorized replay failed: {type(exc).__name__}", Status.UNKNOWN)
+        accepted = bool(outcomes) and all(outcomes)
+        stable = bool(outcomes) and len(set(outcomes)) == 1 and len(set(signatures)) == 1
+        status = Status.VALIDATED_WITNESS if accepted and stable and predicted.accepted else Status.MODEL_DIVERGENCE if accepted != predicted.accepted else Status.SAT_CANDIDATE
+        return Trial(accepted, predicted.signature, "replay did not match the model" if accepted != predicted.accepted else "", status, predicted.progress, True, stable)
+
+    def assess(self, candidate: tuple[Mapping[str, Any], ...]) -> Trial:
+        branches = self._model(candidate)
+        if not branches:
+            return Trial(False, None, "candidate has no modeled successor", Status.UNKNOWN)
+        best: tuple[float, Frame, tuple[Event, ...], bool, bool] | None = None
+        for frame, events, uncertain in branches:
+            satisfied = sum(predicate.evaluate(frame.view(), events) for predicate in self.objective.postconditions)
+            progress = satisfied / max(1, len(self.objective.postconditions))
+            accepted = self.objective.evaluate(frame.view(), events) and self.objective.satisfy(self.workspace.start().view(), events)
+            item = (progress, frame, events, uncertain, accepted)
+            if best is None or item[0] > best[0]:
+                best = item
+            if accepted and not uncertain:
+                signature = self._signature(events, frame)
+                trial = Trial(True, signature, status=Status.MODEL_SAT, progress=progress)
+                return self._replay(candidate, trial) if self.adapter is not None else trial
+        assert best is not None
+        progress, frame, events, uncertain, accepted = best
+        signature = self._signature(events, frame)
+        if accepted and uncertain:
+            return Trial(False, signature, "objective reached through an uncertain modeled branch", Status.UNKNOWN, progress)
+        return Trial(False, signature, "objective not reached in modeled branches", Status.UNKNOWN if uncertain else Status.SAT_CANDIDATE, progress)
+
+    @staticmethod
+    def _key(candidate: Sequence[Mapping[str, Any]]) -> str:
+        return json.dumps(list(candidate), sort_keys=True, separators=(",", ":"), default=str)
+
+    def search(
+        self,
+        strategy: str | Any = "frontier",
+        *,
+        budget: Bounds | None = None,
+        archive: Archive = Archive(),
+        **options: Any,
+    ) -> Found:
+        strategies = {
+            "mcts": Mcts,
+            "evolve": Evolve,
+            "beam": Beam,
+            "frontier": Frontier,
+            "anneal": Anneal,
+        }
+        selected = strategies[strategy] if isinstance(strategy, str) else strategy
+        runner = selected() if isinstance(selected, type) else selected
+        bounds = budget or Bounds(
+            max_candidates=self.objective.budget.max_states,
+            max_trace_length=max(1, self.objective.budget.max_trace_length),
+            max_time_ms=self.objective.budget.max_time_ms,
+        )
+        try:
+            if isinstance(runner, (Evolve, Anneal)):
+                return runner.search(self.seeds(), self.expand, self.assess, budget=bounds, archive=archive, **options)
+            return runner.search(self.seeds(), self.expand, self.assess, budget=bounds, archive=archive, **options)
+        finally:
+            self.close()
 
 
 class Explorer:

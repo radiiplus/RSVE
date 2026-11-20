@@ -1,6 +1,29 @@
 import unittest
 
-from rsve import Archive, Anneal, Beam, Bounds, Decision, Event, Evolve, Explorer, Frontier, Mcts, Signature, State, Trial
+from rsve import (
+    Archive,
+    Anneal,
+    Authorization,
+    Beam,
+    Bounds,
+    Decision,
+    Entry,
+    Event,
+    Evolve,
+    Explorer,
+    Frontier,
+    Guide,
+    Limits,
+    Mcts,
+    Model,
+    Objective,
+    Operation,
+    Same,
+    Signature,
+    State,
+    Trial,
+    Workspace,
+)
 from rsve.result import Status
 
 
@@ -183,6 +206,35 @@ class Suite(unittest.TestCase):
         )
         self.assertEqual(result.status, Status.BUDGET_EXHAUSTED)
         self.assertLessEqual(result.generated, 3)
+
+    def test_guide_connects_regression_workspace_and_novelty_search(self) -> None:
+        operation = Operation(
+            "finish",
+            Entry("finish"),
+            guard=lambda _state, request: request.get("value") == 1,
+            apply=lambda state, _request: state.update(done=True),
+            writes=frozenset({"done"}),
+        )
+        model = Model.build("guide-fixture", State({"done": False}), ({"value": 1},), (operation,))
+        objective = Objective(
+            "finish-objective",
+            "guide-fixture",
+            "guide-lab",
+            (Same("done", True),),
+            state_keys=frozenset({"done"}),
+            budget=Limits(max_trace_length=1, max_states=16, max_time_ms=1_000),
+        )
+        guide = Guide(
+            Workspace.flat(model),
+            objective,
+            Authorization("guide-test", frozenset({"guide-lab"}), frozenset({"guide-fixture"})),
+        )
+
+        result = guide.search("frontier")
+
+        self.assertEqual(result.status, Status.MODEL_SAT)
+        self.assertEqual(result.candidate[0]["request"], {"value": 1})
+        self.assertEqual(len(result.archive.states), 1)
 
 
 if __name__ == "__main__":
