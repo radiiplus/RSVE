@@ -9,6 +9,11 @@ RSVE is a deterministic, bounded program-analysis core for building an evidence-
 - model/reality trace divergence localization; and
 - JSON Lines artifact persistence with default secret redaction.
 
+For an AI-facing workflow covering authorization, workspace composition,
+symbolic regression, provenance-aware Flow objectives, replay, differential
+refinement, and result interpretation, read
+[`docs/rsve/ai-guide.md`](docs/rsve/ai-guide.md).
+
 The core deliberately does not claim global completeness. Every result carries its search budget, model provenance, and fidelity boundary. Runtime, instrumentation, solver, environment, and storage integrations implement the protocols in `rsve.adapter`.
 
 ## Quick start
