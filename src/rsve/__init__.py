@@ -126,6 +126,7 @@ from .environment import Drift, Signal, Step, World, Context
 from .optimize import Weights, Choice, Phase, Cost, Optimizer
 from .search import Explorer, Bounds, Found
 from .workspace import Frame, Move, Workspace
+from .signature import Archive, Level, Novelty, Signature
 from .graph import (
     Graph,
     Usage,
@@ -327,4 +328,8 @@ __all__ = [
     "Frame",
     "Move",
     "Workspace",
+    "Archive",
+    "Level",
+    "Novelty",
+    "Signature",
 ]

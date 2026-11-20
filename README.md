@@ -14,6 +14,10 @@ symbolic regression, provenance-aware Flow objectives, replay, differential
 refinement, and result interpretation, read
 [`docs/rsve/ai-guide.md`](docs/rsve/ai-guide.md).
 
+The guide also documents `Signature` and `Archive`, which provide
+profile-partitioned state, transition, and path novelty signals derived from
+existing execution evidence.
+
 The core deliberately does not claim global completeness. Every result carries its search budget, model provenance, and fidelity boundary. Runtime, instrumentation, solver, environment, and storage integrations implement the protocols in `rsve.adapter`.
 
 ## Quick start

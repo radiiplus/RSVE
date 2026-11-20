@@ -577,7 +577,63 @@ authorization, replay policy, and evidence requirements fixed. Optimization
 chooses among supplied equivalent realizations; it does not establish that a
 new realization is equivalent merely because it is cheaper.
 
-## 10. Common failure modes
+## 10. Behavior signatures and novelty
+
+Use behavior signatures to prioritize exploration after the semantic model
+and objective are established. Signatures are derived from existing `Event`,
+`State`, and workspace frame records; they do not replace execution semantics
+and they are not equivalence proofs.
+
+```python
+from rsve import Archive, Signature
+
+signature = Signature.make(
+    observed_events,
+    final_frame,
+    target="fixture",
+    profile="node-profile-1",
+    keys={"count", "done"},
+)
+
+archive, novelty = Archive().offer(signature)
+print(novelty.score, novelty.state, novelty.transition, novelty.path)
+```
+
+The signature has three behavior levels:
+
+- `state`: target, region, and environment configuration.
+- `transition`: decision, termination, guard, read/write footprint, effects,
+  state delta, representations, uncertainty, and reaction shape.
+- `path`: ordered transition composition plus resulting state/environment.
+
+Each level has `coarse` and `exact` digests. Coarse signatures preserve
+structure and selected objective-relevant values while abstracting other
+values by shape. Exact signatures include full state values and hashed
+observations/reactions. The `keys` argument defines the values that matter to
+the current objective; it is not a hardcoded universal state taxonomy.
+
+`Archive` keeps separate state, transition, and path sets, each partitioned
+by target and profile. A new request with the same behavior is not novel just
+because its input bytes differ. A new state, effect, or causal path can be
+novel independently. Call `seen(signature, Level.EXACT)` when a coarse match
+needs exact refinement.
+
+Use the archive as a ranking signal only:
+
+1. Execute or model a candidate using the normal workspace/planner path.
+2. Build a signature from its actual events and resulting frame.
+3. Offer it to the profile-partitioned archive.
+4. Prioritize candidates with useful novelty and objective progress.
+5. Keep the exact trace and evidence separately.
+
+Do not use a novel signature as proof of a vulnerability, reachability, or
+semantic difference. If two candidates share a coarse signature but later
+diverge, retain the counterexample and refine the selected keys or archive
+resolution. MCTS, evolutionary search, and other novelty-driven search
+strategies should be added only after their candidate ranking consumes these
+signatures rather than raw input uniqueness.
+
+## 11. Common failure modes
 
 | Symptom | Correct response |
 | --- | --- |
@@ -591,7 +647,7 @@ new realization is equivalent merely because it is cheaper.
 | Solver returns `UNKNOWN` | Record the unsupported theory or timeout; do not convert it to UNSAT. |
 | One probe finds a behavior | Report a bounded observation, not a universal rule. |
 
-## 11. Recommended AI response format
+## 12. Recommended AI response format
 
 When an AI model completes an RSVE investigation, return a compact report
 with these fields:
@@ -636,7 +692,7 @@ not merely request more computation. Examples are a missing sink-consumption
 contract, a direct correlation key at a boundary, a symbolic relation for a
 non-invertible transform, or a clean replay of the candidate.
 
-## 12. Minimal end-to-end template
+## 13. Minimal end-to-end template
 
 ```python
 from rsve import (
@@ -697,7 +753,7 @@ For a real controlled target, pass the adapter and retain the returned report
 and evidence artifacts. For a multi-region target, construct a graph-backed
 workspace and inspect `workspace.contracts()` before calling the planner.
 
-## 13. Boundaries to state explicitly
+## 14. Boundaries to state explicitly
 
 RSVE currently provides a strong foundation for bounded, evidence-backed
 analysis. It does not provide universal runtime instrumentation, arbitrary
