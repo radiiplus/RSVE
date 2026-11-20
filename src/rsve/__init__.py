@@ -124,7 +124,7 @@ from .wp import (
 from .semantic import Branch, Interpreter, Meaning
 from .environment import Drift, Signal, Step, World, Context
 from .optimize import Weights, Choice, Phase, Cost, Optimizer
-from .search import Explorer, Bounds, Found
+from .search import Explorer, Bounds, Found, Trial, Mcts, Evolve
 from .workspace import Frame, Move, Workspace
 from .signature import Archive, Level, Novelty, Signature
 from .graph import (
@@ -222,6 +222,9 @@ __all__ = [
     "Explorer",
     "Bounds",
     "Found",
+    "Trial",
+    "Mcts",
+    "Evolve",
     "Revision",
     "Delta",
     "Axiom",

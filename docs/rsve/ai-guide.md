@@ -629,9 +629,56 @@ Use the archive as a ranking signal only:
 Do not use a novel signature as proof of a vulnerability, reachability, or
 semantic difference. If two candidates share a coarse signature but later
 diverge, retain the counterexample and refine the selected keys or archive
-resolution. MCTS, evolutionary search, and other novelty-driven search
-strategies should be added only after their candidate ranking consumes these
-signatures rather than raw input uniqueness.
+resolution.
+
+RSVE provides two bounded novelty-driven strategies. Both require an
+assessment callback that returns `Trial(accepted, signature, detail)`; the
+callback is responsible for executing or modeling the candidate and deciding
+whether the objective was actually satisfied.
+
+```python
+from rsve import Bounds, Mcts, Signature, Trial
+
+def assess(candidate):
+    events, frame, accepted = run_authorized_workspace(candidate)
+    signature = Signature.make(
+        events,
+        frame,
+        target="fixture",
+        profile="profile-1",
+        keys={"done", "quota"},
+    )
+    return Trial(accepted, signature)
+
+result = Mcts().search(
+    seeds,
+    expand,
+    assess,
+    budget=Bounds(max_candidates=500, max_trace_length=4, max_time_ms=5_000),
+    archive=archive,
+)
+```
+
+`Mcts` uses deterministic UCB selection over expanded candidate traces and
+back-propagates objective acceptance plus behavior novelty. `Evolve` evaluates
+a bounded population, retains the most novel candidates, and calls the
+supplied mutation function to create the next population. Both deduplicate
+candidate traces, enforce the same explicit bounds, and return
+`BUDGET_EXHAUSTED` when a budget stops exploration.
+
+The callback should return `accepted=True` only for an objective result
+established within the declared model or replay scope. A missing signature is
+recorded as a limitation and contributes no novelty; it never becomes a
+synthetic signature. These strategies rank candidates and do not prove
+reachability, equivalence, exploitability, or safety. They must remain behind
+the same authorization, workspace, replay, and sink controls as ordinary
+planner execution.
+
+Use `Mcts` when interaction prefixes form a useful causal tree. Use `Evolve`
+when a domain has meaningful mutation operators and route diversity matters.
+Neither strategy should mutate raw bytes blindly when the target requires
+typed requests or representation-aware transformations; mutate authorized
+interaction structures and let the workspace produce the behavior signature.
 
 ## 11. Common failure modes
 
