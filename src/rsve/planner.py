@@ -28,7 +28,7 @@ from .result import (
     Reach,
 )
 from .solver import Answer, Query, Stack, Zed, Unknown
-from .wp import WP, Truth
+from .wp import Symbolic, WP, Truth
 from .workspace import Frame, Workspace
 
 
@@ -317,9 +317,11 @@ class Regressor:
         uncertainty: list[str] = []
         cores: list[tuple[str, ...]] = []
         examined = 0
+        model_operations = {(item.name, item.entry_point.name) for item in model.ops()}
         for operation in workspace.operations():
             symbolic = operation.symbolic_transition
-            if symbolic is None:
+            synthetic = (operation.name, operation.entry_point.name) not in model_operations
+            if symbolic is None and not synthetic:
                 continue
             routes = workspace.routes(operation)
             for transitions, connections in routes:
@@ -333,6 +335,12 @@ class Regressor:
                         f"workspace symbolic route for {operation.entry_point.name} is unknown: {', '.join(missing)}"
                     )
                     continue
+                if symbolic is None:
+                    symbolic = Symbolic(
+                        f"workspace-end:{operation.name}",
+                        operation.entry_point.name,
+                        Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL)),
+                    )
                 steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
                 result = WP().derive(postcondition, tuple(steps))
                 if result.status is not Truth.EXACT or result.precondition is None:

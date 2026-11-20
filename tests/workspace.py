@@ -34,6 +34,8 @@ from rsve import (
     Direction,
     Port,
     Add,
+    Equal,
+    Literal,
     Range,
     Sort,
     Symbolic,
@@ -331,6 +333,74 @@ class Suite(unittest.TestCase):
         )
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
 
+    def test_connected_graph_effect_updates_destination_region(self):
+        model = Model("region-route-fixture", State({"done": False}), (({"value": "ok"},)), ())
+        left = Persona("left-region", "test", "target", "graph", "1")
+        right = Persona("right-region", "test", "target", "graph", "1")
+        graph = Graph("region-route-workspace").persona(left).persona(right)
+        graph = graph.zone(Zone("a", "left-region", "a")).zone(Zone("b", "right-region", "b"))
+        graph = graph.value(Representation("raw", "mapping"))
+        graph = graph.value(Representation("mid", "text"))
+        graph = graph.value(Representation("final", "mapping"))
+        graph = graph.transform(Transform(
+            "parse-region",
+            "raw",
+            "mid",
+            "fixture.parse-region",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.UNKNOWN,
+            Loss.NONE,
+        ))
+        graph = graph.transform(Transform(
+            "bridge-region",
+            "mid",
+            "final",
+            "fixture.bridge-region",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.UNKNOWN,
+            Loss.NONE,
+        ))
+        graph = graph.guard(Recognizer("accept-region", "final", "fixture.accept-region", None, "b"))
+        graph = graph.effect(Effect("finish-region", "state", ("b.done",)))
+        graph = graph.transition(Transition("start-region", "route", "raw", "mid", ("parse-region",), region_id="a"))
+        graph = graph.transition(Transition(
+            "finish-region",
+            "internal",
+            "final",
+            "final",
+            recognizer_ids=("accept-region",),
+            effect_ids=("finish-region",),
+            region_id="b",
+        ))
+        graph = graph.port(Port("a-out-region", "a", "out", Direction.OUTPUT, "mid", "text"))
+        graph = graph.port(Port("b-in-region", "b", "in", Direction.INPUT, "final", "mapping"))
+        graph = graph.connect(
+            "a-out-region",
+            "b-in-region",
+            connection_id="a-to-b-region",
+            transform_id="bridge-region",
+        )
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            regions={"a": State({"done": False}), "b": State({"done": False})},
+            transforms={
+                "parse-region": lambda value, _state: value["value"],
+                "bridge-region": lambda value, _state: {"value": value},
+            },
+            recognizers={"accept-region": lambda value, _state: value.get("value") == "ok"},
+            effects={"finish-region": lambda state, _value: state.update(done=True)},
+            entries={"route"},
+        )
+        moves = workspace.moves(workspace.start(), "route", {"value": "ok"})
+        self.assertEqual(len(moves), 1)
+        self.assertTrue(moves[0].after.regions["b"].get("done"))
+        self.assertFalse(moves[0].after.target.get("done"))
+
     def test_symbolic_regression_crosses_graph_transform(self):
         operation = Operation(
             "finish",
@@ -388,6 +458,87 @@ class Suite(unittest.TestCase):
         report = Planner().plan(model, objective, auth, workspace=workspace)
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"amount": 3})
+
+    def test_symbolic_regression_crosses_graph_only_effect_route(self):
+        model = Model("graph-effect-fixture", State({"done": False}), (), ())
+        left = Persona("effect-left", "test", "target", "graph", "1")
+        right = Persona("effect-right", "test", "target", "graph", "1")
+        graph = Graph("graph-effect-workspace").persona(left).persona(right)
+        graph = graph.zone(Zone("a", "effect-left", "a")).zone(Zone("b", "effect-right", "b"))
+        graph = graph.value(Representation("raw-effect", "mapping"))
+        graph = graph.value(Representation("mid-effect", "mapping"))
+        graph = graph.value(Representation("final-effect", "mapping"))
+        graph = graph.transform(Transform(
+            "parse-effect",
+            "raw-effect",
+            "mid-effect",
+            "fixture.parse-effect",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.BIJECTIVE,
+            Loss.NONE,
+        ))
+        graph = graph.transform(Transform(
+            "bridge-effect",
+            "mid-effect",
+            "final-effect",
+            "fixture.bridge-effect",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.BIJECTIVE,
+            Loss.NONE,
+        ))
+        graph = graph.guard(Recognizer("accept-effect", "final-effect", "fixture.accept-effect", None, "b"))
+        graph = graph.effect(Effect("finish-effect", "state", ("b.done",)))
+        graph = graph.transition(Transition("start-effect", "route", "raw-effect", "mid-effect", ("parse-effect",), region_id="a"))
+        graph = graph.transition(Transition(
+            "finish-effect",
+            "internal",
+            "final-effect",
+            "final-effect",
+            recognizer_ids=("accept-effect",),
+            effect_ids=("finish-effect",),
+            region_id="b",
+        ))
+        graph = graph.port(Port("a-out-effect", "a", "out", Direction.OUTPUT, "mid-effect", "mapping"))
+        graph = graph.port(Port("b-in-effect", "b", "in", Direction.INPUT, "final-effect", "mapping"))
+        graph = graph.connect(
+            "a-out-effect",
+            "b-in-effect",
+            connection_id="a-to-b-effect",
+            transform_id="bridge-effect",
+        )
+        same = Equal(Variable("input.value", Sort.STRING), Literal("ok", Sort.STRING))
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            regions={"a": State({}), "b": State({"done": False})},
+            transforms={"parse-effect": lambda value, _state: value, "bridge-effect": lambda value, _state: value},
+            recognizers={"accept-effect": lambda value, _state: value.get("value") == "ok"},
+            effects={"finish-effect": lambda state, _value: state.update(done=True)},
+            symbolics={
+                "parse-effect": Symbolic("parse-effect-symbolic", "route", same, {"output.value": Variable("input.value", Sort.STRING)}),
+                "bridge-effect": Symbolic("bridge-effect-symbolic", "route", same, {"output.value": Variable("input.value", Sort.STRING)}),
+                "accept-effect": Symbolic("accept-effect-symbolic", "route", same),
+                "finish-effect": Symbolic("finish-effect-symbolic", "route", same, {"state.b.done": Literal(True, Sort.BOOL)}),
+            },
+            entries={"route"},
+        )
+        objective = Objective(
+            "graph-effect",
+            "graph-effect-fixture",
+            "lab",
+            (Same("b.done", True),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("graph-effect-tests", frozenset({"lab"}), frozenset({"graph-effect-fixture"}))
+        backward = Regressor().regress(model, objective, workspace=workspace)
+        self.assertIn(("route", {"value": "ok"}), backward.required_actions)
+        report = Planner().plan(model, objective, auth, workspace=workspace)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual(report.witness.interactions[0]["request"], {"value": "ok"})
 
 
 if __name__ == "__main__":

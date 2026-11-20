@@ -51,6 +51,16 @@ class Move:
 
 
 @dataclass(frozen=True)
+class GraphResult:
+    """One graph route outcome plus its region-scoped successor state."""
+
+    outcome: Outcome
+    request: Mapping[str, Any]
+    target: State
+    regions: Mapping[str, State]
+
+
+@dataclass(frozen=True)
 class Workspace:
     """Execute flat models and graph-backed compositions through one boundary."""
 
@@ -185,13 +195,16 @@ class Workspace:
                 for outcome in item.branches(self._local(frame, item), request):
                     moves.extend(self._move(item, outcome, frame, entry, request, source=request))
                 continue
-            for outcome, transformed in self._outcomes(item, frame, request):
+            for result in self._outcomes(item, frame, request):
+                outcome = result.outcome
                 if outcome.decision is Decision.ACCEPT:
-                    for branch in item.branches(outcome.after, transformed):
+                    routed = replace(frame, target=result.target, regions=dict(result.regions))
+                    for branch in item.branches(self._local(routed, item), result.request):
                         combined = self._combine(outcome, branch)
-                        moves.extend(self._move(item, combined, frame, entry, transformed, source=request))
+                        moves.extend(self._move(item, combined, routed, entry, result.request, source=request))
                 else:
-                    moves.extend(self._move(item, outcome, frame, entry, request, source=request))
+                    routed = replace(frame, target=result.target, regions=dict(result.regions))
+                    moves.extend(self._move(item, outcome, routed, entry, request, source=request))
         return tuple(moves)
 
     def _transitions(self, operation: Operation) -> tuple[Any, ...]:
@@ -213,7 +226,7 @@ class Workspace:
         operation: Operation,
         frame: Frame,
         request: Mapping[str, Any],
-    ) -> tuple[tuple[Outcome, Mapping[str, Any]], ...]:
+    ) -> tuple[GraphResult, ...]:
         transitions = self._transitions(operation)
         interpreter = Interpreter(
             self.graph,
@@ -221,9 +234,16 @@ class Workspace:
             recognizers=self.recognizers,
             effects=self.effects,
         )
-        lowered: list[tuple[Outcome, Mapping[str, Any]]] = []
+        lowered: list[GraphResult] = []
         for transition in transitions:
-            lowered.extend(self._walk(interpreter, transition, request, self._local(frame, operation), (transition.transition_id,)))
+            lowered.extend(self._walk(
+                interpreter,
+                transition,
+                request,
+                frame.target,
+                frame.regions,
+                (transition.transition_id,),
+            ))
         return tuple(lowered)
 
     def _walk(
@@ -231,36 +251,60 @@ class Workspace:
         interpreter: Interpreter,
         transition: Any,
         value: Any,
-        state: State,
+        target: State,
+        regions: Mapping[str, State],
         seen: tuple[str, ...],
-    ) -> tuple[tuple[Outcome, Mapping[str, Any]], ...]:
+    ) -> tuple[GraphResult, ...]:
+        owned = transition.region_id is not None and transition.region_id in regions
+        state = regions.get(transition.region_id, target)
         outcomes = interpreter.outcomes(transition.transition_id, value, state=state)
-        results: list[tuple[Outcome, Mapping[str, Any]]] = []
+        results: list[GraphResult] = []
         for outcome in outcomes:
+            next_target = target
+            next_regions = dict(regions)
+            if not owned:
+                next_target = outcome.after
+            else:
+                next_regions[transition.region_id] = outcome.after
             if outcome.decision is not Decision.ACCEPT:
-                results.append((outcome, value if isinstance(value, Mapping) else {"value": value}))
+                results.append(GraphResult(
+                    outcome,
+                    value if isinstance(value, Mapping) else {"value": value},
+                    next_target,
+                    next_regions,
+                ))
                 continue
             edges = self._edges(transition)
             if not edges:
                 mapped = self._map(transition.transition_id, outcome.observation.get("value"), value)
                 if mapped is None:
-                    results.append((replace(
-                        outcome,
-                        decision=Decision.UNKNOWN,
-                        uncertainty=outcome.uncertainty + (f"no request mapping for {transition.transition_id}",),
-                    ), value if isinstance(value, Mapping) else {"value": value}))
+                    results.append(GraphResult(
+                        replace(
+                            outcome,
+                            decision=Decision.UNKNOWN,
+                            uncertainty=outcome.uncertainty + (f"no request mapping for {transition.transition_id}",),
+                        ),
+                        value if isinstance(value, Mapping) else {"value": value},
+                        next_target,
+                        next_regions,
+                    ))
                 else:
-                    results.append((outcome, mapped))
+                    results.append(GraphResult(outcome, mapped, next_target, next_regions))
                 continue
             for edge in edges:
                 destinations = self._destinations(edge)
                 converted = self._convert(edge, outcome.observation.get("value"), outcome.after)
                 if converted is None:
-                    results.append((replace(
-                        outcome,
-                        decision=Decision.UNKNOWN,
-                        uncertainty=outcome.uncertainty + (f"opaque connection: {edge.connection_id}",),
-                    ), value if isinstance(value, Mapping) else {"value": value}))
+                    results.append(GraphResult(
+                        replace(
+                            outcome,
+                            decision=Decision.UNKNOWN,
+                            uncertainty=outcome.uncertainty + (f"opaque connection: {edge.connection_id}",),
+                        ),
+                        value if isinstance(value, Mapping) else {"value": value},
+                        next_target,
+                        next_regions,
+                    ))
                     continue
                 if not converted:
                     continue
@@ -268,32 +312,48 @@ class Workspace:
                     for converted_value in converted:
                         mapped = self._map(transition.transition_id, converted_value, value)
                         if mapped is not None:
-                            results.append((outcome, mapped))
+                            results.append(GraphResult(outcome, mapped, next_target, next_regions))
                     continue
                 for next_value in converted:
                     for destination in destinations:
                         if destination.transition_id in seen:
-                            results.append((replace(
-                                outcome,
-                                decision=Decision.UNKNOWN,
-                                uncertainty=outcome.uncertainty + (f"cyclic graph route at {destination.transition_id}",),
-                            ), value if isinstance(value, Mapping) else {"value": value}))
+                            results.append(GraphResult(
+                                replace(
+                                    outcome,
+                                    decision=Decision.UNKNOWN,
+                                    uncertainty=outcome.uncertainty + (f"cyclic graph route at {destination.transition_id}",),
+                                ),
+                                value if isinstance(value, Mapping) else {"value": value},
+                                next_target,
+                                next_regions,
+                            ))
                             continue
                         if len(seen) >= self.graph.budget.max_depth:
-                            results.append((replace(
-                                outcome,
-                                decision=Decision.UNKNOWN,
-                                uncertainty=outcome.uncertainty + ("graph route depth budget reached",),
-                            ), value if isinstance(value, Mapping) else {"value": value}))
+                            results.append(GraphResult(
+                                replace(
+                                    outcome,
+                                    decision=Decision.UNKNOWN,
+                                    uncertainty=outcome.uncertainty + ("graph route depth budget reached",),
+                                ),
+                                value if isinstance(value, Mapping) else {"value": value},
+                                next_target,
+                                next_regions,
+                            ))
                             continue
-                        for next_outcome, mapped in self._walk(
+                        for next_result in self._walk(
                             interpreter,
                             destination,
                             next_value,
-                            outcome.after,
+                            next_target,
+                            next_regions,
                             seen + (destination.transition_id,),
                         ):
-                            results.append((self._join(outcome, next_outcome), mapped))
+                            results.append(GraphResult(
+                                self._join(outcome, next_result.outcome),
+                                next_result.request,
+                                next_result.target,
+                                next_result.regions,
+                            ))
         return tuple(results)
 
     def _edges(self, transition: Any) -> tuple[Any, ...]:

@@ -208,3 +208,11 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** A callable transform cannot be inverted soundly by inspection. Explicit symbolic bindings let backward regression and forward execution share a route while preserving `UNKNOWN` for opaque or relational semantics. The original source request is retained separately from the transformed operation request for replay.
 
 **Rejected:** Treating runtime callables as identity or automatically deriving inverses, making graph metadata solver semantics, or reporting a model-solved transformed request as the original interaction.
+
+## ADR-0030: Carry owned region state through graph routes
+
+**Decision:** Graph route evaluation carries both the global target state and initialized owner-region states. A transition reads and writes its owner when that region is present in the frame; otherwise it uses the legacy global projection. Destination-region effects survive into the endpoint operation and objective view. Graph-only routes may be regressed when their transforms, recognizers, and effects have explicit symbolic bindings.
+
+**Reason:** A region map that only affects visited-state keys is not executable composition. The compatibility fallback keeps existing graphs valid while making independently initialized regions semantically meaningful.
+
+**Rejected:** Copying the entire target state into every region, treating region IDs as proof of ownership without frame state, or merging region effects into global state without an explicit projection.
