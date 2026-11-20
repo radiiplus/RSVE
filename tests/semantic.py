@@ -80,6 +80,58 @@ class Suite(unittest.TestCase):
         self.assertIsNone(unknown.lineage)
         self.assertIn("provenance transfer is unknown", unknown.uncertainty)
 
+    def test_value_provenance_requires_explicit_paths_and_combines_inputs(self):
+        profile = Persona("p", "fixture", "target", "synthetic", "1")
+        graph = Graph("value-lineage-workspace").persona(profile).zone(Zone("region", "p", "region"))
+        graph = graph.value(Representation("input", "mapping")).value(Representation("output", "mapping"))
+        graph = graph.transform(Transform(
+            "combine",
+            "input",
+            "output",
+            "fixture.combine",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.UNKNOWN,
+            Loss.NONE,
+            provenance="combine",
+            provenance_paths={"payload": ("left", "right")},
+        ))
+        graph = graph.transform(Transform(
+            "implicit",
+            "input",
+            "output",
+            "fixture.implicit",
+            "1",
+            Partiality.TOTAL,
+            Relation.FUNCTION,
+            Invertibility.UNKNOWN,
+            Loss.NONE,
+            provenance="combine",
+        ))
+        graph = graph.transition(Transition("combine", "combine", "input", "output", ("combine",)))
+        graph = graph.transition(Transition("implicit", "implicit", "input", "output", ("implicit",)))
+        interpreter = Interpreter(
+            graph,
+            transforms={"combine": lambda value, _state: {"payload": value}, "implicit": lambda value, _state: value},
+        )
+        combined = interpreter.outcomes(
+            "combine",
+            {"left": "l", "right": "r"},
+            origins={"left": ("source:left",), "right": ("source:right",)},
+        )[0]
+        self.assertEqual(
+            combined.origins,
+            {"payload": ("source:left", "source:right")},
+        )
+        implicit = interpreter.outcomes(
+            "implicit",
+            {"left": "l", "right": "r"},
+            origins={"left": ("source:left",), "right": ("source:right",)},
+        )[0]
+        self.assertIsNone(implicit.origins)
+        self.assertTrue(any("value provenance paths are required" in reason for reason in implicit.uncertainty))
+
 
 if __name__ == "__main__":
     unittest.main()

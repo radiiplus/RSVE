@@ -29,6 +29,7 @@ class Frame:
     regions: Mapping[str, State] = field(default_factory=dict)
     aliases: tuple[tuple[str, ...], ...] = ()
     lineage: tuple[str, ...] | None = None
+    origins: Mapping[str, tuple[str, ...]] | None = None
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -39,6 +40,7 @@ class Frame:
             "regions": {key: value.canonical() for key, value in sorted(self.regions.items())},
             "aliases": self.aliases,
             "lineage": self.lineage,
+            "origins": self.origins,
         }
 
     def view(self) -> State:
@@ -233,7 +235,7 @@ class Workspace:
             if semantic is not None and semantic.relation == "unknown":
                 limitations.append("symbolic relation is unknown")
             records.append(Semantic(
-                operation.name,
+                self._operation_id(operation),
                 reference,
                 version,
                 forward,
@@ -256,10 +258,16 @@ class Workspace:
                     limitations.append("symbolic predicate is unavailable")
                 if semantic is not None and semantic.relation == "unknown":
                     limitations.append("symbolic relation is unknown")
+                if semantic is not None and not self._matches(
+                    recognizer.actual_predicate_ref,
+                    recognizer.semantics_version,
+                    semantic,
+                ):
+                    limitations.append("forward and backward semantics references do not match")
                 records.append(Semantic(
                     recognizer.recognizer_id,
                     recognizer.actual_predicate_ref,
-                    "1",
+                    recognizer.semantics_version,
                     forward,
                     backward,
                     forward and backward and not limitations,
@@ -279,10 +287,16 @@ class Workspace:
                     limitations.append("symbolic effect relation is unavailable")
                 if semantic is not None and semantic.relation == "unknown":
                     limitations.append("symbolic relation is unknown")
+                if semantic is not None and not self._matches(
+                    effect.semantics_ref,
+                    effect.semantics_version,
+                    semantic,
+                ):
+                    limitations.append("forward and backward semantics references do not match")
                 records.append(Semantic(
                     effect.effect_id,
-                    effect.observable,
-                    "1",
+                    effect.semantics_ref,
+                    effect.semantics_version,
                     forward,
                     backward,
                     forward and backward and not limitations,
@@ -296,6 +310,13 @@ class Workspace:
     def contract(self, semantic_id: str) -> Semantic | None:
         """Return the authoritative semantic contract for one graph binding."""
         return next((item for item in self.contracts() if item.semantic_id == semantic_id), None)
+
+    @staticmethod
+    def _operation_id(operation: Operation) -> str:
+        return f"operation:{operation.entry_point.name}:{operation.name}"
+
+    def contract_for(self, operation: Operation) -> Semantic | None:
+        return self.contract(self._operation_id(operation))
 
     def _transform_entries(self, transform_id: str) -> tuple[str, ...]:
         entries = [
@@ -312,8 +333,6 @@ class Workspace:
 
     @staticmethod
     def _matches(reference: str, version: str, semantic: Symbolic) -> bool:
-        if semantic.semantics_ref == "rsve.symbolic/1":
-            return True
         return semantic.semantics_ref == reference and semantic.semantics_version == version
 
     def start(self) -> Frame:
@@ -473,7 +492,8 @@ class Workspace:
                 frame.target,
                 frame.regions,
                 (transition.transition_id,),
-                (entry,),
+                _request_lineage(entry, frame.lineage),
+                _request_origins(entry, request, frame.origins),
             ))
         return tuple(lowered)
 
@@ -486,6 +506,7 @@ class Workspace:
         regions: Mapping[str, State],
         seen: tuple[str, ...],
         lineage: tuple[str, ...] | None,
+        origins: Mapping[str, tuple[str, ...]] | None,
     ) -> tuple[GraphResult, ...]:
         owned = transition.region_id is not None
         if owned and transition.region_id not in regions:
@@ -502,7 +523,13 @@ class Workspace:
                 dict(regions),
             ),)
         state = regions[transition.region_id] if owned else target
-        outcomes = interpreter.outcomes(transition.transition_id, value, state=state, lineage=lineage)
+        outcomes = interpreter.outcomes(
+            transition.transition_id,
+            value,
+            state=state,
+            lineage=lineage,
+            origins=origins,
+        )
         results: list[GraphResult] = []
         for outcome in outcomes:
             next_target = target
@@ -546,7 +573,13 @@ class Workspace:
                             f"uncorrelated connection: {edge.connection_id}",
                         ),
                     )
-                converted = self._convert(edge, outcome.observation.get("value"), outcome.after, outcome.lineage)
+                converted = self._convert(
+                    edge,
+                    outcome.observation.get("value"),
+                    outcome.after,
+                    outcome.lineage,
+                    outcome.origins,
+                )
                 if converted is None:
                     results.append(GraphResult(
                         replace(
@@ -576,11 +609,12 @@ class Workspace:
                     ))
                     continue
                 if not destinations:
-                    for converted_value, converted_lineage, transfer_reason in converted:
+                    for converted_value, converted_lineage, transfer_reason, converted_origins in converted:
                         mapped = self._map(transition.transition_id, converted_value, value)
                         mapped_outcome = replace(
                             edge_outcome,
                             lineage=converted_lineage,
+                            origins=converted_origins,
                             uncertainty=edge_outcome.uncertainty + ((transfer_reason,) if transfer_reason else ()),
                         )
                         if mapped is None:
@@ -599,10 +633,11 @@ class Workspace:
                         else:
                             results.append(GraphResult(mapped_outcome, mapped, next_target, next_regions))
                     continue
-                for next_value, next_lineage, transfer_reason in converted:
+                for next_value, next_lineage, transfer_reason, next_origins in converted:
                     routed_outcome = replace(
                         edge_outcome,
                         lineage=next_lineage,
+                        origins=next_origins,
                         uncertainty=edge_outcome.uncertainty + ((transfer_reason,) if transfer_reason else ()),
                     )
                     for destination in destinations:
@@ -638,6 +673,7 @@ class Workspace:
                             next_regions,
                             seen + (destination.transition_id,),
                             next_lineage,
+                            next_origins,
                         ):
                             results.append(GraphResult(
                                 self._join(routed_outcome, next_result.outcome),
@@ -700,9 +736,10 @@ class Workspace:
         value: Any,
         state: State,
         lineage: tuple[str, ...] | None,
-    ) -> tuple[tuple[Any, tuple[str, ...] | None, str | None], ...] | None:
+        origins: Mapping[str, tuple[str, ...]] | None,
+    ) -> tuple[tuple[Any, tuple[str, ...] | None, str | None, Mapping[str, tuple[str, ...]] | None], ...] | None:
         if edge.transform_id is None:
-            return ((value, lineage, None),)
+            return ((value, lineage, None, origins),)
         evaluator = self.transforms.get(edge.transform_id)
         if evaluator is None:
             return None
@@ -716,7 +753,13 @@ class Workspace:
             )
             mode = getattr(transform, "provenance", "unknown")
             transferred = _lineage(mode, lineage)
-            return tuple((item, transferred[0], transferred[1]) for item in values)
+            transferred_origins = _transfer_origins(
+                mode,
+                getattr(transform, "provenance_paths", {}),
+                origins,
+            )
+            reason = "; ".join(item for item in (transferred[1], transferred_origins[1]) if item) or None
+            return tuple((item, transferred[0], reason, transferred_origins[0]) for item in values)
         except Exception:
             return None
 
@@ -729,7 +772,8 @@ class Workspace:
             writes=first.writes | second.writes,
             evidence=first.evidence + second.evidence,
             uncertainty=first.uncertainty + second.uncertainty,
-            lineage=first.lineage if first.lineage is not None else second.lineage,
+            lineage=second.lineage if second.lineage is not None else first.lineage,
+            origins=second.origins if second.origins is not None else first.origins,
         )
 
     def _map(self, transition_id: str, value: Any, original: Any) -> Mapping[str, Any] | None:
@@ -751,7 +795,8 @@ class Workspace:
                 reads=graph.reads | operation.reads,
                 writes=graph.writes | operation.writes,
                 uncertainty=graph.uncertainty + operation.uncertainty,
-                lineage=graph.lineage,
+                lineage=operation.lineage if operation.lineage is not None else graph.lineage,
+                origins=operation.origins if operation.origins is not None else graph.origins,
             )
         if graph.decision is Decision.REJECT:
             return graph
@@ -761,7 +806,8 @@ class Workspace:
             reads=graph.reads | operation.reads,
             writes=graph.writes | operation.writes,
             evidence=graph.evidence + operation.evidence,
-            lineage=graph.lineage,
+            lineage=operation.lineage if operation.lineage is not None else graph.lineage,
+            origins=operation.origins if operation.origins is not None else graph.origins,
         )
 
     def _move(
@@ -783,7 +829,10 @@ class Workspace:
         reasons = list(frame.reasons) + list(outcome.uncertainty)
         lineage = outcome.lineage
         if lineage is None and not any("provenance" in reason for reason in outcome.uncertainty):
-            lineage = frame.lineage or (entry,)
+            lineage = frame.lineage if frame.lineage is not None else (entry,)
+        origins = outcome.origins
+        if origins is None and not any("provenance" in reason for reason in outcome.uncertainty):
+            origins = frame.origins if frame.origins is not None else _request_origins(entry, request)
         transition = None
         if self.world is not None:
             if item.name in self.world.transitions:
@@ -829,6 +878,7 @@ class Workspace:
                 regions,
                 frame.aliases,
                 lineage,
+                origins,
             )
             after = self._sync(after, item, branch)
             event = branch.event(
@@ -897,7 +947,7 @@ class Workspace:
                 continue
             for alias in group:
                 target, environment, regions = self._write(target, environment, regions, alias, value)
-        return Frame(target, environment, frame.uncertain, frame.reasons, regions, frame.aliases, frame.lineage)
+        return Frame(target, environment, frame.uncertain, frame.reasons, regions, frame.aliases, frame.lineage, frame.origins)
 
     @staticmethod
     def _read(frame: Frame, key: str) -> Any:
@@ -936,6 +986,48 @@ def _lineage(mode: str, lineage: tuple[str, ...] | None) -> tuple[tuple[str, ...
     if mode == "discard":
         return (), None
     return None, "provenance transfer is unknown"
+
+
+def _request_origins(
+    entry: str,
+    request: Mapping[str, Any],
+    previous: Mapping[str, tuple[str, ...]] | None = None,
+) -> dict[str, tuple[str, ...]]:
+    result = dict(previous or {})
+    result.update({
+        str(key): (f"{entry}:{key}",)
+        for key in request
+    })
+    return result
+
+
+def _request_lineage(entry: str, previous: tuple[str, ...] | None) -> tuple[str, ...]:
+    """Add a new interaction origin without reviving discarded lineage."""
+    return tuple(dict.fromkeys((previous or ()) + (entry,)))
+
+
+def _transfer_origins(
+    mode: str,
+    paths: Mapping[str, tuple[str, ...]],
+    origins: Mapping[str, tuple[str, ...]] | None,
+) -> tuple[Mapping[str, tuple[str, ...]] | None, str | None]:
+    if origins is None:
+        return None, "value provenance is already unknown"
+    if mode == "discard":
+        return {}, None
+    if mode not in {"preserve", "duplicate", "combine"}:
+        return None, "value provenance transfer is unknown"
+    if not paths:
+        return None, "value provenance paths are required for value-level transfer"
+    result: dict[str, tuple[str, ...]] = {}
+    for output, inputs in paths.items():
+        values: list[str] = []
+        for source in inputs:
+            values.extend(origins.get(source, ()))
+        result[output] = tuple(dict.fromkeys(values))
+    if any(not values for values in result.values()):
+        return None, "value provenance transfer is incomplete"
+    return result, None
 
 
 def _merge(state: State, values: Mapping[str, Any]) -> State:

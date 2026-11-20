@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, Mapping, Sequence
 
 from .logic import (
+    Arithmetic,
     Every,
     Either,
     Constraint,
@@ -47,6 +48,7 @@ class Test(Predicate):
 
     def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         environment = state.as_dict()
+        environment.update({f"state.{key}": value for key, value in state.as_dict().items()})
         if trace:
             environment.update({f"event.{key}": value for key, value in trace[-1].observation.items()})
         return _evaluate_constraint(self.constraint, environment)
@@ -78,9 +80,13 @@ class Flow(Predicate):
 
     def evaluate(self, state: State, trace: Sequence[Event]) -> bool:
         source_seen = False
+        source_origins: set[str] = set()
         for event in trace:
             if event.entry_point == self.source_entry and _contains(event.request, self.canary):
                 source_seen = True
+                for key, value in event.request.items():
+                    if _contains(value, self.canary):
+                        source_origins.add(str(key))
             if source_seen and (
                 event.component == self.sink
                 or event.operation == self.sink
@@ -93,6 +99,10 @@ class Flow(Predicate):
                     if not any(
                         isinstance(item, Mapping)
                         and item.get("source_entry") == self.source_entry
+                        and (
+                            item.get("source_path") in source_origins
+                            or _contains(item.get("value"), self.canary)
+                        )
                         for item in lineage
                     ):
                         continue
@@ -231,6 +241,7 @@ class Objective(Schema):
     permitted_sinks: frozenset[str] = frozenset()
     environment_boundaries: Mapping[str, str] = field(default_factory=dict)
     allowed_state_changes: frozenset[str] = frozenset()
+    state_keys: frozenset[str] = frozenset()
     checkpoints: tuple[Predicate, ...] = ()
     assumptions: tuple[str, ...] = ()
     profile_requirements: tuple[Need, ...] = ()
@@ -333,6 +344,7 @@ class Objective(Schema):
                 "permitted_sinks": sorted(self.permitted_sinks),
                 "environment_boundaries": dict(self.environment_boundaries),
                 "allowed_state_changes": sorted(self.allowed_state_changes),
+                "state_keys": sorted(self.state_keys),
                 "checkpoints": [predicate.to_record() for predicate in self.checkpoints],
                 "assumptions": list(self.assumptions),
                 "profile_requirements": [requirement.to_record() for requirement in self.profile_requirements],
@@ -356,6 +368,7 @@ class Objective(Schema):
             permitted_sinks=frozenset(payload.get("permitted_sinks", ())),
             environment_boundaries=dict(payload.get("environment_boundaries", {})),
             allowed_state_changes=frozenset(payload.get("allowed_state_changes", ())),
+            state_keys=frozenset(payload.get("state_keys", ())),
             checkpoints=tuple(_predicate_from_record(item) for item in payload.get("checkpoints", ())),
             assumptions=tuple(payload.get("assumptions", ())),
             profile_requirements=tuple(Need.from_record(item) for item in payload.get("profile_requirements", ())),
@@ -378,6 +391,13 @@ def _evaluate_constraint(node: Constraint, environment: Mapping[str, Any]) -> bo
             return environment.get(term.name)
         if isinstance(term, Literal):
             return term.value
+        if isinstance(term, Arithmetic):
+            left, right = value(term.left), value(term.right)
+            if term.operator == "+":
+                return left + right
+            if term.operator == "-":
+                return left - right
+            return left * right
         raise ValueError(f"constraint term is not a value: {type(term).__name__}")
 
     if isinstance(node, Equal):

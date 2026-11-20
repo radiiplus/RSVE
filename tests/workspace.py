@@ -5,6 +5,7 @@ from rsve import (
     Authorization,
     Context,
     Decision,
+    Flow,
     Entry,
     Graph,
     Limits,
@@ -589,6 +590,8 @@ class Suite(unittest.TestCase):
                     "route",
                     Range(Variable("input.amount", Sort.INT), 1, 10),
                     {"output.amount": Add(Variable("input.amount", Sort.INT), Variable("input.amount", Sort.INT))},
+                semantics_ref="fixture.scale",
+                semantics_version="1",
                 ),
             },
             entries={"route"},
@@ -639,7 +642,7 @@ class Suite(unittest.TestCase):
             Loss.NONE,
         ))
         graph = graph.guard(Recognizer("accept-effect", "final-effect", "fixture.accept-effect", None, "b"))
-        graph = graph.effect(Effect("finish-effect", "state", ("b.done",)))
+        graph = graph.effect(Effect("finish-effect", "state", ("b.done",), semantics_ref="fixture.finish-effect"))
         graph = graph.transition(Transition("start-effect", "route", "raw-effect", "mid-effect", ("parse-effect",), region_id="a"))
         graph = graph.transition(Transition(
             "finish-effect",
@@ -667,10 +670,10 @@ class Suite(unittest.TestCase):
             recognizers={"accept-effect": lambda value, _state: value.get("value") == "ok"},
             effects={"finish-effect": lambda state, _value: state.update(done=True)},
             symbolics={
-                "parse-effect": Symbolic("parse-effect-symbolic", "route", same, {"output.value": Variable("input.value", Sort.STRING)}),
-                "bridge-effect": Symbolic("bridge-effect-symbolic", "route", same, {"output.value": Variable("input.value", Sort.STRING)}),
-                "accept-effect": Symbolic("accept-effect-symbolic", "route", same),
-                "finish-effect": Symbolic("finish-effect-symbolic", "route", same, {"state.b.done": Literal(True, Sort.BOOL)}),
+                "parse-effect": Symbolic("parse-effect-symbolic", "route", same, {"output.value": Variable("input.value", Sort.STRING)}, semantics_ref="fixture.parse-effect", semantics_version="1"),
+                "bridge-effect": Symbolic("bridge-effect-symbolic", "route", same, {"output.value": Variable("input.value", Sort.STRING)}, semantics_ref="fixture.bridge-effect", semantics_version="1"),
+                "accept-effect": Symbolic("accept-effect-symbolic", "route", same, semantics_ref="fixture.accept-effect", semantics_version="1"),
+                "finish-effect": Symbolic("finish-effect-symbolic", "route", same, {"state.b.done": Literal(True, Sort.BOOL)}, semantics_ref="fixture.finish-effect", semantics_version="1"),
             },
             entries={"route"},
         )
@@ -891,6 +894,37 @@ class Suite(unittest.TestCase):
         self.assertTrue(record.complete)
         self.assertEqual(Semantic.from_record(record.to_record()), record)
 
+        graph = graph.guard(Recognizer("contract-guard", "out-contract", "fixture.guard", None, "region"))
+        graph = graph.effect(Effect("contract-effect", "state", ("done",), semantics_ref="fixture.effect"))
+        guarded = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"contract-transform": lambda value, _state: value},
+            recognizers={"contract-guard": lambda _value, _state: True},
+            effects={"contract-effect": lambda state, _value: state.update(done=True)},
+            symbolics={
+                "contract-transform": symbolic,
+                "contract-guard": Symbolic(
+                    "guard-symbolic",
+                    "contract",
+                    Literal(True, Sort.BOOL),
+                    semantics_ref="wrong.guard",
+                    semantics_version="1",
+                ),
+                "contract-effect": Symbolic(
+                    "effect-symbolic",
+                    "contract",
+                    Literal(True, Sort.BOOL),
+                    semantics_ref="wrong.effect",
+                    semantics_version="1",
+                ),
+            },
+        )
+        self.assertFalse(guarded.contract("contract-guard").complete)
+        self.assertFalse(guarded.contract("contract-effect").complete)
+        self.assertTrue(any("references do not match" in item for item in guarded.contract("contract-guard").limitations))
+        self.assertTrue(any("references do not match" in item for item in guarded.contract("contract-effect").limitations))
+
         bounded = Workspace.flat(
             model,
             graph=graph,
@@ -902,6 +936,29 @@ class Suite(unittest.TestCase):
         self.assertFalse(bounded_record.backward)
         self.assertFalse(bounded_record.complete)
         self.assertIn("bounded by concrete probes", bounded_record.limitations[0])
+
+    def test_discarded_value_provenance_is_not_resurrected(self):
+        source = Operation(
+            "source",
+            Entry("source"),
+            relation=lambda state, _request: (
+                Outcome(Decision.ACCEPT, state, lineage=(), origins={}),
+            ),
+        )
+        sink = Operation(
+            "sink",
+            Entry("sink"),
+            component="controlled.sink",
+        )
+        model = Model("provenance-fixture", State({}), ({"proof": "RSVE-CANARY"}, {}), (source, sink))
+        workspace = Workspace.flat(model)
+        first = workspace.moves(workspace.start(), "source", {"proof": "RSVE-CANARY"}, operation=source)
+        self.assertEqual(len(first), 1)
+        second = workspace.moves(first[0].after, "sink", {}, operation=sink)
+        self.assertEqual(len(second), 1)
+        self.assertEqual(second[0].after.origins, {})
+        objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
+        self.assertFalse(objective.evaluate(second[0].after.view(), (first[0].event, second[0].event)))
 
     def test_alias_groups_sync_and_resource_ownership_is_enforced(self):
         update = Operation(

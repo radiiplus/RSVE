@@ -131,6 +131,7 @@ class Transform(Schema):
     evidence: tuple[Evidence, ...] = ()
     complete: bool = False
     provenance: str = "unknown"
+    provenance_paths: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.transform_id or not self.semantics_ref or not self.semantics_version:
@@ -171,6 +172,7 @@ class Recognizer(Schema):
     state_dependencies: tuple[str, ...] = ()
     dominates_effect: bool = False
     evidence: tuple[Evidence, ...] = ()
+    semantics_version: str = "1"
 
 
 @dataclass(frozen=True)
@@ -179,6 +181,8 @@ class Effect(Schema):
     observable: str
     state_effects: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
+    semantics_ref: str = "rsve.effect"
+    semantics_version: str = "1"
 
 
 @dataclass(frozen=True)

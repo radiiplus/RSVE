@@ -138,6 +138,7 @@ class Outcome:
     uncertainty: tuple[str, ...] = ()
     id: str = ""
     lineage: tuple[str, ...] | None = None
+    origins: Mapping[str, tuple[str, ...]] | None = None
 
     def __iter__(self):
         """Keep tuple-unpacking compatible with the original execute API."""
@@ -155,7 +156,18 @@ class Outcome:
         order: int = 0,
     ) -> "Event":
         observation = dict(self.observation)
-        if self.lineage is not None:
+        if self.origins is not None:
+            records = []
+            for path, values in sorted(self.origins.items()):
+                for origin in values:
+                    source, _, source_path = origin.partition(":")
+                    records.append({
+                        "source_entry": source,
+                        "source_path": source_path,
+                        "path": path,
+                    })
+            observation.setdefault("data_lineage", tuple(records))
+        elif self.lineage is not None:
             observation.setdefault(
                 "data_lineage",
                 tuple({"source_entry": source} for source in self.lineage),

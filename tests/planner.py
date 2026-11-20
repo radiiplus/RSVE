@@ -247,10 +247,19 @@ class Suite(unittest.TestCase):
                 )),
             ),
             allowed_state_changes=frozenset({"count"}),
+            state_keys=frozenset({"count", "fixed"}),
             budget=Limits(max_trace_length=1),
         )
         backward = Regressor().regress(model, objective)
         self.assertIn(("constraint.increment", {"amount": 2}), backward.required_actions)
+        branch = operation.branches(model.initial_state, {"amount": 2})[0]
+        event = branch.event(
+            operation.name,
+            operation.entry_point.name,
+            {"amount": 2},
+            model.initial_state,
+        )
+        self.assertTrue(objective.evaluate(branch.after, (event,)))
 
     def test_flow_lineage_survives_representation_change_without_literal_match(self):
         source = Outcome(
@@ -258,12 +267,14 @@ class Suite(unittest.TestCase):
             State({}),
             observation={"encoded": "opaque"},
             lineage=("source",),
+            origins={"proof": ("source:proof",)},
         ).event("source", "source", {"proof": "RSVE-CANARY"}, State({}))
         sink = Outcome(
             Decision.ACCEPT,
             State({}),
             observation={"sink": "controlled.sink", "value": "different-representation"},
             lineage=("source",),
+            origins={"payload": ("source:proof",)},
         ).event("store", "store", {"value": "different-representation"}, State({}))
         objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
         self.assertTrue(objective.evaluate(State({}), (source, sink)))

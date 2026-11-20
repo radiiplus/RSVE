@@ -84,7 +84,11 @@ def _transform_is_lossy(transform: Any) -> bool:
     return marker.value != "none" if hasattr(marker, "value") else bool(marker)
 
 
-def _predicate_constraint(predicate: Any, initial: State | None) -> Constraint | None:
+def _predicate_constraint(
+    predicate: Any,
+    initial: State | None,
+    state_keys: frozenset[str] = frozenset(),
+) -> Constraint | None:
     """Compile state-only objective predicates without weakening their meaning."""
     if isinstance(predicate, Same):
         sort = _sort_for(predicate.expected)
@@ -97,21 +101,25 @@ def _predicate_constraint(predicate: Any, initial: State | None) -> Constraint |
     if isinstance(predicate, Test):
         return predicate.constraint if _state_constraint(predicate.constraint) else None
     if isinstance(predicate, All):
-        terms = tuple(_predicate_constraint(item, initial) for item in predicate.predicates)
+        terms = tuple(_predicate_constraint(item, initial, state_keys) for item in predicate.predicates)
         return Every(terms) if terms and all(term is not None for term in terms) else None
     if isinstance(predicate, Some):
-        terms = tuple(_predicate_constraint(item, initial) for item in predicate.predicates)
+        terms = tuple(_predicate_constraint(item, initial, state_keys) for item in predicate.predicates)
         return Either(tuple(term for term in terms if term is not None)) if terms and all(term is not None for term in terms) else None
     if isinstance(predicate, Not):
-        term = _predicate_constraint(predicate.predicate, initial)
+        term = _predicate_constraint(predicate.predicate, initial, state_keys)
         return Negate(term) if term is not None else None
     if isinstance(predicate, Changes):
-        if initial is None:
+        if initial is None or not state_keys:
             return None
         terms: list[Constraint] = []
-        for key, value in sorted(initial.as_dict().items()):
+        initial_values = initial.as_dict()
+        for key in sorted(state_keys):
             if key in predicate.keys:
                 continue
+            if key not in initial_values:
+                return None
+            value = initial_values[key]
             sort = _sort_for(value)
             if sort is None:
                 return None
@@ -151,11 +159,15 @@ def _state_value(value: Any) -> bool:
 
 def _symbolic_postcondition(objective: Objective, initial: State | None = None) -> Constraint | None:
     constraints = tuple(
-        _predicate_constraint(predicate, initial)
+        _predicate_constraint(predicate, initial, objective.state_keys)
         for predicate in objective.postconditions
     )
     if objective.allowed_state_changes:
-        changes = _predicate_constraint(Changes(objective.allowed_state_changes), initial)
+        changes = _predicate_constraint(
+            Changes(objective.allowed_state_changes),
+            initial,
+            objective.state_keys,
+        )
         constraints += (changes,)
     if not constraints or any(item is None for item in constraints):
         return None
@@ -272,12 +284,14 @@ class Regressor:
             symbolic_actions, symbolic_uncertainty, action_cores = self._symbolic_actions(
                 model,
                 objective,
+                workspace=workspace,
                 solver=session,
                 solver_timeout_ms=solver_timeout_ms,
             )
             symbolic_traces, sequence_uncertainty, trace_cores = self._symbolic_traces(
                 model,
                 objective,
+                workspace=workspace,
                 solver=session,
                 solver_timeout_ms=solver_timeout_ms,
             )
@@ -336,6 +350,7 @@ class Regressor:
         model: Model,
         objective: Objective,
         *,
+        workspace: Workspace,
         solver: Zed | Stack,
         solver_timeout_ms: int | None,
     ) -> tuple[list[tuple[Mapping[str, Any], ...]], list[str], list[tuple[str, ...]]]:
@@ -355,6 +370,16 @@ class Regressor:
         examined = 0
         for length in range(2, objective.budget.max_trace_length + 1):
             for sequence in product(symbolic_operations, repeat=length):
+                incomplete = [
+                    operation.entry_point.name
+                    for operation in sequence
+                    if (contract := workspace.contract_for(operation)) is None or not contract.complete
+                ]
+                if incomplete:
+                    uncertainty.append(
+                        f"symbolic sequence semantics are incomplete: {', '.join(sorted(set(incomplete)))}"
+                    )
+                    continue
                 examined += 1
                 if examined > min(objective.budget.max_states, 256):
                     uncertainty.append("multi-step symbolic sequence bound reached")
@@ -434,19 +459,19 @@ class Regressor:
                         f"workspace symbolic route for {operation.entry_point.name} is unknown: {', '.join(missing)}"
                     )
                     continue
+                endpoint_contract = workspace.contract_for(operation)
+                if symbolic is not None and (endpoint_contract is None or not endpoint_contract.complete):
+                    uncertainty.append(
+                        f"workspace endpoint semantics for {operation.entry_point.name} are incomplete: "
+                        f"{'; '.join(endpoint_contract.limitations) if endpoint_contract else 'semantic contract is missing'}"
+                    )
+                    continue
                 if symbolic is None:
                     symbolic = Symbolic(
                         f"workspace-end:{operation.name}",
                         operation.entry_point.name,
                         Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL)),
                     )
-                endpoint_contract = workspace.contract(operation.name)
-                if endpoint_contract is not None and not endpoint_contract.complete:
-                    uncertainty.append(
-                        f"workspace endpoint semantics for {operation.entry_point.name} are incomplete: "
-                        f"{'; '.join(endpoint_contract.limitations) or 'contract is incomplete'}"
-                    )
-                    continue
                 resource_reason = workspace.symbolic_resource_reason(operation, symbolic)
                 if resource_reason is not None:
                     uncertainty.append(resource_reason)
@@ -558,9 +583,9 @@ class Regressor:
                 symbolic = workspace.symbolics.get(transform_id)
                 if symbolic is None:
                     missing.append(f"transform:{transform_id}")
-                elif (contract := workspace.contract(transform_id)) is not None and not contract.complete:
+                elif (contract := workspace.contract(transform_id)) is None or not contract.complete:
                     missing.append(
-                        f"transform:{transform_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                        f"transform:{transform_id} ({'; '.join(contract.limitations) if contract else 'semantic contract is missing'})"
                     )
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage + 1}."))
@@ -569,9 +594,9 @@ class Regressor:
                 symbolic = workspace.symbolics.get(recognizer_id)
                 if symbolic is None:
                     missing.append(f"recognizer:{recognizer_id}")
-                elif (contract := workspace.contract(recognizer_id)) is not None and not contract.complete:
+                elif (contract := workspace.contract(recognizer_id)) is None or not contract.complete:
                     missing.append(
-                        f"recognizer:{recognizer_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                        f"recognizer:{recognizer_id} ({'; '.join(contract.limitations) if contract else 'semantic contract is missing'})"
                     )
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
@@ -579,9 +604,9 @@ class Regressor:
                 symbolic = workspace.symbolics.get(effect_id)
                 if symbolic is None:
                     missing.append(f"effect:{effect_id}")
-                elif (contract := workspace.contract(effect_id)) is not None and not contract.complete:
+                elif (contract := workspace.contract(effect_id)) is None or not contract.complete:
                     missing.append(
-                        f"effect:{effect_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                        f"effect:{effect_id} ({'; '.join(contract.limitations) if contract else 'semantic contract is missing'})"
                     )
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
@@ -591,9 +616,9 @@ class Regressor:
                     symbolic = workspace.symbolics.get(transform_id)
                     if symbolic is None:
                         missing.append(f"connection:{transform_id}")
-                    elif (contract := workspace.contract(transform_id)) is not None and not contract.complete:
+                    elif (contract := workspace.contract(transform_id)) is None or not contract.complete:
                         missing.append(
-                            f"connection:{transform_id} ({'; '.join(contract.limitations) or 'semantic contract incomplete'})"
+                            f"connection:{transform_id} ({'; '.join(contract.limitations) if contract else 'semantic contract is missing'})"
                         )
                     else:
                         steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage + 1}."))
@@ -605,6 +630,7 @@ class Regressor:
         model: Model,
         objective: Objective,
         *,
+        workspace: Workspace,
         solver: Zed | Stack,
         solver_timeout_ms: int | None,
     ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str], list[tuple[str, ...]]]:
@@ -620,6 +646,13 @@ class Regressor:
         for operation in model.ops():
             transition = operation.symbolic_transition
             if transition is None:
+                continue
+            contract = workspace.contract_for(operation)
+            if contract is None or not contract.complete:
+                uncertainty.append(
+                    f"symbolic semantics for {operation.entry_point.name} are incomplete: "
+                    f"{'; '.join(contract.limitations) if contract else 'semantic contract is missing'}"
+                )
                 continue
             result = wp_engine.derive(postcondition, (transition,))
             if result.status is not Truth.EXACT or result.precondition is None:
