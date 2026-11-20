@@ -15,7 +15,7 @@ from .logic import Axiom, Either, Every, Constraint, Equal, Literal, Negate, Sor
 from .diff import Analyzer
 from .index import Index
 from .model import Authorization, Decision, Operation, State, Event, Model
-from .objective import All, Changes, Flow, Guard, Not, Order, Some, Test, Objective, Same
+from .objective import All, Changes, Flow, Guard, Not, Order, Some, Test, Objective, Same, _contains
 from .result import (
     Report,
     Status,
@@ -218,6 +218,37 @@ def _request_for_step(model: Mapping[str, Any], index: int) -> dict[str, Any]:
     return request
 
 
+def _replace_canary(value: Any, canary: str) -> tuple[Any, ...]:
+    """Generate bounded request-shape-preserving canary substitutions."""
+    if isinstance(value, Mapping):
+        results: list[dict[str, Any]] = []
+        for key, item in value.items():
+            for replacement in _replace_canary(item, canary):
+                updated = dict(value)
+                updated[key] = replacement
+                results.append(updated)
+        return tuple(results)
+    if isinstance(value, list):
+        results = []
+        for index, item in enumerate(value):
+            for replacement in _replace_canary(item, canary):
+                updated = list(value)
+                updated[index] = replacement
+                results.append(updated)
+        return tuple(results)
+    if isinstance(value, tuple):
+        return tuple(tuple(replacement if index == item_index else item for index, item in enumerate(value))
+                     for item_index, item in enumerate(value)
+                     for replacement in _replace_canary(item, canary))
+    if isinstance(value, str):
+        return (canary,)
+    return ()
+
+
+def _flow_predicates(objective: Objective) -> tuple[Flow, ...]:
+    return tuple(predicate for predicate in objective._predicates() if isinstance(predicate, Flow))
+
+
 class Regressor:
     """Derive bounded preimages for supported concrete operations.
 
@@ -248,6 +279,31 @@ class Regressor:
         )
         if needed and not indexed:
             uncertainty.append("no indexed writer was found for the objective state keys")
+        flow_requests: dict[str, tuple[Mapping[str, Any], ...]] = {}
+        for flow in _flow_predicates(objective):
+            known: list[Mapping[str, Any]] = []
+            candidates = list(model.args()) + list(workspace.probes_for(flow.source_entry, objective.budget.max_states))
+            for candidate in candidates:
+                if _contains(candidate, flow.canary):
+                    known.append(dict(candidate))
+                else:
+                    known.extend(
+                        replacement
+                        for replacement in _replace_canary(candidate, flow.canary)
+                        if isinstance(replacement, Mapping)
+                    )
+            unique: dict[str, Mapping[str, Any]] = {}
+            for candidate in known:
+                unique.setdefault(self._request_key(candidate), candidate)
+            flow_requests[flow.source_entry] = tuple(
+                unique[key] for key in sorted(unique)[:objective.budget.max_states]
+            )
+            if flow_requests[flow.source_entry]:
+                uncertainty.append(
+                    f"flow canary for {flow.source_entry} was concretized by bounded request-shape substitution"
+                )
+                for request in flow_requests[flow.source_entry]:
+                    actions.append((flow.source_entry, dict(request)))
         for operation in operations:
             requests: list[Mapping[str, Any]] = []
             seen_requests: set[str] = set()
@@ -258,7 +314,8 @@ class Regressor:
                 uncertainty.append(
                     f"probe expansion for {operation.entry_point.name} is unknown: {type(exc).__name__}"
                 )
-            for candidate in model.args() + probes:
+            candidates = model.args() + probes + flow_requests.get(operation.entry_point.name, ())
+            for candidate in candidates:
                 key = self._request_key(candidate)
                 if key in seen_requests:
                     continue

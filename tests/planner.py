@@ -286,6 +286,29 @@ class Suite(unittest.TestCase):
         ).event("store", "store", {"value": "RSVE-CANARY"}, State({}))
         self.assertFalse(objective.evaluate(State({}), (source, forged)))
 
+    def test_flow_objective_seeds_canary_from_known_request_shape(self):
+        source = Operation("source", Entry("source"), component="source")
+        sink = Operation("sink", Entry("sink"), component="controlled.sink")
+        model = Model(
+            "node-fixture",
+            State({}),
+            ({"proof": "ordinary"},),
+            (source, sink),
+        )
+        objective = Objective(
+            "flow-goal",
+            "node-fixture",
+            "node-lab",
+            (Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True),),
+            budget=Limits(max_trace_length=2),
+        )
+        report = Planner(harness_sinks={"controlled.sink"}).plan(model, objective, self.authorization)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual(report.witness.interactions[0], {
+            "entry_point": "source",
+            "request": {"proof": "RSVE-CANARY"},
+        })
+
     def test_finite_relational_symbolic_route_guides_candidate_synthesis(self):
         operation = Operation(
             "relation.finish",

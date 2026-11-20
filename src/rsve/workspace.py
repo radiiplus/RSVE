@@ -845,7 +845,7 @@ class Workspace:
             else (None,)
         )
         for reaction in reactions:
-            branch = outcome
+            branch = replace(outcome, lineage=lineage, origins=origins)
             successor = target
             current = environment
             branch_uncertain = uncertain
