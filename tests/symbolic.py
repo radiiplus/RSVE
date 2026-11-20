@@ -70,6 +70,26 @@ class Suite(unittest.TestCase):
         self.assertIsNone(result.precondition)
         self.assertIn("relational", result.reason or "")
 
+    def test_finite_relation_has_exact_existential_preimage(self):
+        relation = Symbolic(
+            "finite",
+            "finite",
+            Range(self.amount, 1, 10),
+            relation="relation",
+            deterministic=False,
+            alternatives=(
+                {"state.count": self.amount},
+                {"state.count": Add(self.amount, Literal(1, Sort.INT))},
+            ),
+        )
+        post = Equal(self.state_count, Literal(3, Sort.INT))
+        result = WP().derive(post, (relation,))
+        self.assertEqual(result.status, Truth.EXACT)
+        solved = Zed().solve(Query("finite-relation", result.precondition))
+        self.assertEqual(solved.status, Verdict.SAT)
+        self.assertIn(solved.model["input.amount"], (2, 3))
+        self.assertEqual(Symbolic.from_record(relation.to_record()), relation)
+
 
 if __name__ == "__main__":
     unittest.main()

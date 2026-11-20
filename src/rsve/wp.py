@@ -31,10 +31,11 @@ class Truth(str, Enum):
 
 @dataclass(frozen=True)
 class Symbolic(Schema):
-    """A platform-neutral deterministic transition relation.
+    """A platform-neutral transition relation.
 
     Variables name pre-state values. ``assignments`` maps state variables to
     post-state expressions; variables absent from the map are unchanged.
+    ``alternatives`` gives an explicit finite relational successor set.
     """
 
     transition_id: str
@@ -45,6 +46,7 @@ class Symbolic(Schema):
     deterministic: bool = True
     semantics_ref: str = "rsve.symbolic/1"
     assumptions: tuple[str, ...] = ()
+    alternatives: tuple[Mapping[str, Constraint], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.transition_id or not self.entry_point:
@@ -64,7 +66,15 @@ class Symbolic(Schema):
             deterministic=self.deterministic,
             semantics_ref=self.semantics_ref,
             assumptions=self.assumptions,
+            alternatives=tuple(
+                {rename(key): _rename(value, rename) for key, value in branch.items()}
+                for branch in self.alternatives
+            ),
         )
+
+    def variants(self) -> tuple[Mapping[str, Constraint], ...]:
+        """Return explicit successor assignments for relational regression."""
+        return self.alternatives or (self.assignments,)
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -79,6 +89,10 @@ class Symbolic(Schema):
                 "deterministic": self.deterministic,
                 "semantics_ref": self.semantics_ref,
                 "assumptions": list(self.assumptions),
+                "alternatives": [
+                    {key: value.to_record() for key, value in sorted(branch.items())}
+                    for branch in self.alternatives
+                ],
             },
         }
 
@@ -98,6 +112,13 @@ class Symbolic(Schema):
             deterministic=bool(payload.get("deterministic", True)),
             semantics_ref=payload.get("semantics_ref", "rsve.symbolic/1"),
             assumptions=tuple(payload.get("assumptions", ())),
+            alternatives=tuple(
+                {
+                    key: Constraint.from_record(value)
+                    for key, value in branch.items()
+                }
+                for branch in payload.get("alternatives", ())
+            ),
         )
 
 
@@ -143,17 +164,36 @@ class WP:
         assumptions: list[str] = []
         for transition in reversed(tuple(transitions)):
             if not transition.deterministic or transition.relation != "function":
+                if transition.relation == "relation" and transition.alternatives:
+                    variants = transition.variants()
+                else:
+                    return Preimage(
+                        Truth.UNKNOWN,
+                        postcondition,
+                        None,
+                        tuple(item.transition_id for item in transitions),
+                        self._query(postcondition, transitions),
+                        "nondeterministic or relational transitions require explicit finite alternatives",
+                        tuple(assumptions) + transition.assumptions,
+                    )
+            else:
+                variants = transition.variants()
+            if not variants:
                 return Preimage(
                     Truth.UNKNOWN,
                     postcondition,
                     None,
                     tuple(item.transition_id for item in transitions),
                     self._query(postcondition, transitions),
-                    "nondeterministic or relational transitions require an explicit relational preimage",
+                    "transition has no successor assignment",
                     tuple(assumptions) + transition.assumptions,
                 )
             try:
-                current = Every((transition.guard, _substitute(current, transition.assignments)))
+                options = tuple(
+                    Every((transition.guard, _substitute(current, assignments)))
+                    for assignments in variants
+                )
+                current = options[0] if len(options) == 1 else Either(options)
                 assumptions.extend(transition.assumptions)
             except Opaque as exc:
                 return Preimage(

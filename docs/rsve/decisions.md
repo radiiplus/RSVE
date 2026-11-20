@@ -216,3 +216,11 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** A region map that only affects visited-state keys is not executable composition. The compatibility fallback keeps existing graphs valid while making independently initialized regions semantically meaningful.
 
 **Rejected:** Copying the entire target state into every region, treating region IDs as proof of ownership without frame state, or merging region effects into global state without an explicit projection.
+
+## ADR-0031: Regress only explicitly enumerated relations
+
+**Decision:** `Symbolic.alternatives` represents a finite set of successor assignment relations. `WP` computes their existential preimage as a shared-guard disjunction, and the planner may synthesize one satisfying branch. Relational records without explicit alternatives remain `UNKNOWN`; possible reachability does not imply guaranteed reachability.
+
+**Reason:** A nondeterministic transition needs branch semantics before it can be regressed. A finite disjunction is solver-compatible and auditable without inventing an inverse or treating an opaque relation as identity.
+
+**Rejected:** Regressing a single assignment from a nondeterministic record, dropping alternatives, or presenting one solver branch as a universal guarantee.

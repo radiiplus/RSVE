@@ -3,6 +3,7 @@ from pathlib import Path
 
 from rsve import (
     Add,
+    Literal,
     Authorization,
     Decision,
     Order,
@@ -214,6 +215,41 @@ class Suite(unittest.TestCase):
         report = Planner().plan(model, objective, auth)
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"amount": 2})
+
+    def test_finite_relational_symbolic_route_guides_candidate_synthesis(self):
+        operation = Operation(
+            "relation.finish",
+            Entry("relation.finish"),
+            relation=lambda state, request: (
+                Outcome(Decision.ACCEPT, state.update(count=request["amount"]), terminal=True),
+                Outcome(Decision.ACCEPT, state.update(count=request["amount"] + 1), terminal=True),
+            ),
+            symbolic_transition=Symbolic(
+                "relation-finish-symbolic",
+                "relation.finish",
+                Range(Variable("input.amount", Sort.INT), 1, 10),
+                relation="relation",
+                deterministic=False,
+                alternatives=(
+                    {"state.count": Variable("input.amount", Sort.INT)},
+                    {"state.count": Add(Variable("input.amount", Sort.INT), Literal(1, Sort.INT))},
+                ),
+            ),
+        )
+        model = Model("relation-lab", State({"count": 0}), (), (operation,))
+        objective = Objective(
+            "relation-reach",
+            "relation-lab",
+            "node-lab",
+            (Same("count", 3),),
+            budget=Limits(max_trace_length=1),
+        )
+        auth = Authorization("relation-tests", frozenset({"node-lab"}), frozenset({"relation-lab"}))
+        backward = Regressor().regress(model, objective)
+        self.assertTrue(any(entry == "relation.finish" and request.get("amount") in (2, 3) for entry, request in backward.required_actions))
+        report = Planner().plan(model, objective, auth)
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertIn(report.witness.interactions[0]["request"]["amount"], (2, 3))
 
     def test_symbolic_regression_reuses_incremental_session_and_records_cores(self):
         operation = Operation(
