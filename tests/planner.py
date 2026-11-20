@@ -3,14 +3,17 @@ from pathlib import Path
 
 from rsve import (
     Add,
+    All,
     Literal,
     Authorization,
     Decision,
     Order,
     Entry,
     Flow,
+    Changes,
     Range,
     Guard,
+    Not,
     Planner,
     Need,
     Objective,
@@ -19,8 +22,10 @@ from rsve import (
     Outcome,
     State,
     Same,
+    Some,
     Sort,
     Symbolic,
+    Test,
     Event,
     Loss,
     Invertibility,
@@ -215,6 +220,60 @@ class Suite(unittest.TestCase):
         report = Planner().plan(model, objective, auth)
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.witness.interactions[0]["request"], {"amount": 2})
+
+    def test_symbolic_planning_compiles_constraint_predicates_and_changes(self):
+        operation = Operation(
+            "constraint.increment",
+            Entry("constraint.increment"),
+            guard=lambda _state, request: request.get("amount") == 2,
+            apply=lambda state, request: state.update(count=request["amount"]),
+            symbolic_transition=Symbolic(
+                "constraint-increment",
+                "constraint.increment",
+                Range(Variable("input.amount", Sort.INT), 1, 3),
+                {"state.count": Variable("input.amount", Sort.INT)},
+            ),
+        )
+        model = Model("constraint-lab", State({"count": 0, "fixed": 7}), (), (operation,))
+        objective = Objective(
+            "constraint-goal",
+            "constraint-lab",
+            "node-lab",
+            (
+                All((
+                    Test(Range(Variable("state.count", Sort.INT), 2, 2)),
+                    Some((Same("count", 2), Same("count", 3))),
+                    Not(Same("fixed", 8)),
+                )),
+            ),
+            allowed_state_changes=frozenset({"count"}),
+            budget=Limits(max_trace_length=1),
+        )
+        backward = Regressor().regress(model, objective)
+        self.assertIn(("constraint.increment", {"amount": 2}), backward.required_actions)
+
+    def test_flow_lineage_survives_representation_change_without_literal_match(self):
+        source = Outcome(
+            Decision.ACCEPT,
+            State({}),
+            observation={"encoded": "opaque"},
+            lineage=("source",),
+        ).event("source", "source", {"proof": "RSVE-CANARY"}, State({}))
+        sink = Outcome(
+            Decision.ACCEPT,
+            State({}),
+            observation={"sink": "controlled.sink", "value": "different-representation"},
+            lineage=("source",),
+        ).event("store", "store", {"value": "different-representation"}, State({}))
+        objective = Flow("source", "RSVE-CANARY", "controlled.sink", require_lineage=True)
+        self.assertTrue(objective.evaluate(State({}), (source, sink)))
+
+        forged = Outcome(
+            Decision.ACCEPT,
+            State({}),
+            observation={"sink": "controlled.sink", "value": "RSVE-CANARY", "data_lineage": ({"source_entry": "other"},)},
+        ).event("store", "store", {"value": "RSVE-CANARY"}, State({}))
+        self.assertFalse(objective.evaluate(State({}), (source, forged)))
 
     def test_finite_relational_symbolic_route_guides_candidate_synthesis(self):
         operation = Operation(

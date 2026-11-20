@@ -11,6 +11,20 @@ An objective may also carry graph-owned `profile_requirements` for hard scoped r
 - along-trace guard invariants;
 - conjunction, disjunction, and negation of those predicates.
 
+With `require_lineage=True`, `Flow` requires sink evidence linking the event
+to the declared source entry; literal canary presence alone is not enough.
+The workspace carries this evidence as `data_lineage` on event observations.
+Graph transforms declare provenance modes (`preserve`, `duplicate`, `combine`,
+`discard`, or `unknown`). Unknown transfer remains explicit uncertainty rather
+than becoming identity or loss, so a lineage-requiring Flow objective cannot
+pass through it.
+
+Symbolic regression compiles state predicates through the existing constraint
+AST. `Same`, `Test`, `Changes`, `All`, `Some`, and `Not` are supported when
+their child constraints and value sorts are supported. `Flow`, `Order`, and
+`Guard` remain trace predicates evaluated by bounded forward or replay
+execution; they are not represented as final-state equalities.
+
 `Planner` combines exact weakest-precondition regression for operations that expose a `Symbolic`, Z3 model extraction, bounded concrete preimage enumeration, and deterministic forward exploration over `(entry, state)` candidates. `Workspace.contracts()` distinguishes exact forward/backward semantic bindings from forward-only or probe-bounded bindings. The planner does not construct inverses for opaque or information-losing transforms. A model-only candidate is `SAT_CANDIDATE`; adapter replay from a clean snapshot must observe the objective and satisfy the stability policy before `VALIDATED_WITNESS` is returned. `Witness.model_aligned` separately records whether differential comparison found a model/reality mismatch.
 
 `Analyzer` aligns semantic operation/entry events while tolerating known adapter-only events, but reports unexpected semantic events instead of skipping them. It reports the first justified divergence, then can create an immutable `Delta`, including explicit assumption demotions for unresolved model/environment gaps. A runtime guard rejection adds an explicit interaction exclusion to a new `Model` revision and records invalidated query IDs. Prior experiments remain unchanged.

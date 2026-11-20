@@ -93,7 +93,6 @@ class Flow(Predicate):
                     if not any(
                         isinstance(item, Mapping)
                         and item.get("source_entry") == self.source_entry
-                        and _contains(item.get("value"), self.canary)
                         for item in lineage
                     ):
                         continue

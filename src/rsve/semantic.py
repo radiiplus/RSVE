@@ -24,6 +24,7 @@ class Branch:
     recognizer_results: tuple[tuple[str, bool | None], ...] = ()
     state: State = field(default_factory=State)
     reasons: tuple[str, ...] = ()
+    lineage: tuple[str, ...] | None = None
 
 
 TransformEvaluator = Callable[[Any, State], Any | Iterable[Any]]
@@ -53,23 +54,24 @@ class Interpreter:
         value: Any,
         *,
         state: State | None = None,
+        lineage: tuple[str, ...] | None = None,
     ) -> tuple[Branch, ...]:
         transition = next((item for item in self.graph.transitions if item.transition_id == transition_id), None)
         if transition is None:
             return (Branch(value, Meaning.UNKNOWN, reasons=(f"unknown transition: {transition_id}",)),)
-        branches = (Branch(value, Meaning.ACCEPTED, state=state or State()),)
+        branches = (Branch(value, Meaning.ACCEPTED, state=state or State(), lineage=lineage),)
         for transform_id in transition.transform_ids:
             transform = next((item for item in self.graph.transforms if item.transform_id == transform_id), None)
             if transform is None:
                 branches = tuple(
-                    Branch(item.value, Meaning.UNKNOWN, item.representations, item.recognizer_results, item.state, item.reasons + (f"unknown transform: {transform_id}",))
+                    Branch(item.value, Meaning.UNKNOWN, item.representations, item.recognizer_results, item.state, item.reasons + (f"unknown transform: {transform_id}",), None)
                     for item in branches
                 )
                 continue
             evaluator = self.transforms.get(transform_id)
             if evaluator is None:
                 branches = tuple(
-                    Branch(item.value, Meaning.UNKNOWN, item.representations + (transform.output_representation,), item.recognizer_results, item.state, item.reasons + (f"opaque transform: {transform_id}",))
+                    Branch(item.value, Meaning.UNKNOWN, item.representations + (transform.output_representation,), item.recognizer_results, item.state, item.reasons + (f"opaque transform: {transform_id}",), None)
                     for item in branches
                 )
                 continue
@@ -90,18 +92,21 @@ class Interpreter:
                             branch.reasons + (
                                 f"transform relation returned no successors without completeness evidence: {transform_id}",
                             ),
+                            None,
                         ))
                         continue
                     for output in values:
-                        expanded.append(Branch(output, branch.status, branch.representations + (transform.output_representation,), branch.recognizer_results, branch.state, branch.reasons))
+                        lineage, reason = _transfer(transform.provenance, branch.lineage)
+                        reasons = branch.reasons + ((reason,) if reason else ())
+                        expanded.append(Branch(output, branch.status, branch.representations + (transform.output_representation,), branch.recognizer_results, branch.state, reasons, lineage))
                 except Exception as exc:
-                    expanded.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations + (transform.output_representation,), branch.recognizer_results, branch.state, branch.reasons + (f"transform {transform_id} failed: {type(exc).__name__}",)))
+                    expanded.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations + (transform.output_representation,), branch.recognizer_results, branch.state, branch.reasons + (f"transform {transform_id} failed: {type(exc).__name__}",), None))
             branches = tuple(expanded)
         for recognizer_id in transition.recognizer_ids:
             evaluator = self.recognizers.get(recognizer_id)
             if evaluator is None:
                 branches = tuple(
-                    Branch(item.value, Meaning.UNKNOWN, item.representations, item.recognizer_results + ((recognizer_id, None),), item.state, item.reasons + (f"opaque recognizer: {recognizer_id}",))
+                    Branch(item.value, Meaning.UNKNOWN, item.representations, item.recognizer_results + ((recognizer_id, None),), item.state, item.reasons + (f"opaque recognizer: {recognizer_id}",), item.lineage)
                     for item in branches
                 )
                 continue
@@ -114,9 +119,9 @@ class Interpreter:
                         if branch.status is Meaning.UNKNOWN
                         else branch.status if accepted else Meaning.REJECTED
                     )
-                    checked.append(Branch(branch.value, status, branch.representations, branch.recognizer_results + ((recognizer_id, accepted),), branch.state, branch.reasons))
+                    checked.append(Branch(branch.value, status, branch.representations, branch.recognizer_results + ((recognizer_id, accepted),), branch.state, branch.reasons, branch.lineage))
                 except Exception as exc:
-                    checked.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations, branch.recognizer_results + ((recognizer_id, None),), branch.state, branch.reasons + (f"recognizer {recognizer_id} failed: {type(exc).__name__}",)))
+                    checked.append(Branch(branch.value, Meaning.UNKNOWN, branch.representations, branch.recognizer_results + ((recognizer_id, None),), branch.state, branch.reasons + (f"recognizer {recognizer_id} failed: {type(exc).__name__}",), None))
             branches = tuple(checked)
         for effect_id in transition.effect_ids:
             evaluator = self.effects.get(effect_id)
@@ -129,6 +134,7 @@ class Interpreter:
                         item.recognizer_results,
                         item.state,
                         item.reasons + (f"opaque effect: {effect_id}",),
+                        item.lineage,
                     )
                     for item in branches
                 )
@@ -143,6 +149,7 @@ class Interpreter:
                         branch.recognizer_results,
                         evaluator(branch.state, branch.value),
                         branch.reasons,
+                        branch.lineage,
                     ))
                 except Exception as exc:
                     applied.append(Branch(
@@ -152,6 +159,7 @@ class Interpreter:
                         branch.recognizer_results,
                         branch.state,
                         branch.reasons + (f"effect {effect_id} failed: {type(exc).__name__}",),
+                        None,
                     ))
             branches = tuple(applied)
         return branches
@@ -162,13 +170,14 @@ class Interpreter:
         value: Any,
         *,
         state: State | None = None,
+        lineage: tuple[str, ...] | None = None,
     ) -> tuple[Outcome, ...]:
         """Lower supported graph semantics into the canonical outcome model."""
         transition = next(
             (item for item in self.graph.transitions if item.transition_id == transition_id),
             None,
         )
-        branches = self.execute(transition_id, value, state=state)
+        branches = self.execute(transition_id, value, state=state, lineage=lineage)
         if transition is None:
             return tuple(
                 Outcome(
@@ -179,6 +188,7 @@ class Interpreter:
                     mode=Mode.ABSTRACT,
                     evidence=(transition_id,),
                     uncertainty=branch.reasons,
+                    lineage=branch.lineage,
                 )
                 for branch in branches
             )
@@ -221,6 +231,7 @@ class Interpreter:
                     mode=Mode.ABSTRACT,
                     evidence=(transition_id,),
                     uncertainty=branch.reasons,
+                    lineage=branch.lineage,
                 )
             )
         return tuple(results)
@@ -232,3 +243,13 @@ def _relation_values(value: Any) -> tuple[Any, ...]:
     if isinstance(value, Iterable):
         return tuple(value)
     return (value,)
+
+
+def _transfer(mode: str, lineage: tuple[str, ...] | None) -> tuple[tuple[str, ...] | None, str | None]:
+    if lineage is None:
+        return None, "provenance is already unknown"
+    if mode in {"preserve", "duplicate", "combine"}:
+        return lineage, None
+    if mode == "discard":
+        return (), None
+    return None, "provenance transfer is unknown"

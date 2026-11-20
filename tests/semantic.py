@@ -16,6 +16,7 @@ from rsve import (
     Meaning,
     Transform,
     Transition,
+    State,
 )
 
 
@@ -51,6 +52,33 @@ class Suite(unittest.TestCase):
         opaque = Interpreter(graph).execute("path", b" CANARY ")
         self.assertEqual(opaque[0].status, Meaning.UNKNOWN)
         self.assertTrue(any("opaque transform" in reason for reason in opaque[0].reasons))
+
+    def test_provenance_transfer_is_explicit(self):
+        profile = Persona("p", "fixture", "target", "synthetic", "1")
+        graph = Graph("lineage-workspace").persona(profile).zone(Zone("region", "p", "region"))
+        graph = graph.value(Representation("lineage-in", "text")).value(Representation("lineage-out", "bytes"))
+        for mode in ("preserve", "duplicate", "combine", "discard", "unknown"):
+            graph = graph.transform(Transform(
+                f"lineage-{mode}",
+                "lineage-in",
+                "lineage-out",
+                f"fixture.lineage.{mode}",
+                "1",
+                Partiality.TOTAL,
+                Relation.FUNCTION,
+                Invertibility.UNKNOWN,
+                Loss.NONE,
+                provenance=mode,
+            ))
+            graph = graph.transition(Transition(f"lineage-{mode}", f"lineage-{mode}", "lineage-in", "lineage-out", (f"lineage-{mode}",)))
+        interpreter = Interpreter(graph, transforms={f"lineage-{mode}": lambda value, _state: value for mode in ("preserve", "duplicate", "combine", "discard", "unknown")})
+        self.assertEqual(interpreter.outcomes("lineage-preserve", "encoded", lineage=("source",))[0].lineage, ("source",))
+        self.assertEqual(interpreter.outcomes("lineage-duplicate", "encoded", lineage=("source",))[0].lineage, ("source",))
+        self.assertEqual(interpreter.outcomes("lineage-combine", "encoded", lineage=("source",))[0].lineage, ("source",))
+        self.assertEqual(interpreter.outcomes("lineage-discard", "encoded", lineage=("source",))[0].lineage, ())
+        unknown = interpreter.outcomes("lineage-unknown", "encoded", lineage=("source",))[0]
+        self.assertIsNone(unknown.lineage)
+        self.assertIn("provenance transfer is unknown", unknown.uncertainty)
 
 
 if __name__ == "__main__":

@@ -130,10 +130,13 @@ class Transform(Schema):
     state_effects: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
     complete: bool = False
+    provenance: str = "unknown"
 
     def __post_init__(self) -> None:
         if not self.transform_id or not self.semantics_ref or not self.semantics_version:
             raise ValueError("transform identity and semantics reference/version are required")
+        if self.provenance not in {"preserve", "duplicate", "combine", "discard", "unknown"}:
+            raise ValueError("unsupported provenance transfer mode")
 
 
 @dataclass(frozen=True)

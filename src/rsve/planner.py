@@ -11,11 +11,11 @@ from itertools import product
 from typing import Any, Callable, Mapping, Sequence
 
 from .adapter import Target
-from .logic import Axiom, Every, Constraint, Equal, Literal, Sort, Variable
+from .logic import Axiom, Either, Every, Constraint, Equal, Literal, Negate, Sort, Variable
 from .diff import Analyzer
 from .index import Index
 from .model import Authorization, Decision, Operation, State, Event, Model
-from .objective import All, Some, Objective, Same
+from .objective import All, Changes, Flow, Guard, Not, Order, Some, Test, Objective, Same
 from .result import (
     Report,
     Status,
@@ -84,21 +84,80 @@ def _transform_is_lossy(transform: Any) -> bool:
     return marker.value != "none" if hasattr(marker, "value") else bool(marker)
 
 
-def _symbolic_postcondition(objective: Objective) -> Constraint | None:
-    constraints: list[Constraint] = []
-    for predicate in objective.postconditions:
-        if not isinstance(predicate, Same):
-            return None
+def _predicate_constraint(predicate: Any, initial: State | None) -> Constraint | None:
+    """Compile state-only objective predicates without weakening their meaning."""
+    if isinstance(predicate, Same):
         sort = _sort_for(predicate.expected)
         if sort is None:
             return None
-        constraints.append(
-            Equal(
-                Variable(f"state.{predicate.key}", sort),
-                Literal(predicate.expected, sort),
-            )
+        return Equal(
+            Variable(f"state.{predicate.key}", sort),
+            Literal(predicate.expected, sort),
         )
-    if not constraints:
+    if isinstance(predicate, Test):
+        return predicate.constraint if _state_constraint(predicate.constraint) else None
+    if isinstance(predicate, All):
+        terms = tuple(_predicate_constraint(item, initial) for item in predicate.predicates)
+        return Every(terms) if terms and all(term is not None for term in terms) else None
+    if isinstance(predicate, Some):
+        terms = tuple(_predicate_constraint(item, initial) for item in predicate.predicates)
+        return Either(tuple(term for term in terms if term is not None)) if terms and all(term is not None for term in terms) else None
+    if isinstance(predicate, Not):
+        term = _predicate_constraint(predicate.predicate, initial)
+        return Negate(term) if term is not None else None
+    if isinstance(predicate, Changes):
+        if initial is None:
+            return None
+        terms: list[Constraint] = []
+        for key, value in sorted(initial.as_dict().items()):
+            if key in predicate.keys:
+                continue
+            sort = _sort_for(value)
+            if sort is None:
+                return None
+            terms.append(Equal(
+                Variable(f"state.{key}", sort),
+                Literal(value, sort),
+            ))
+        if not terms:
+            return Equal(Literal(True, Sort.BOOL), Literal(True, Sort.BOOL))
+        return terms[0] if len(terms) == 1 else Every(tuple(terms))
+    if isinstance(predicate, (Flow, Guard, Order)):
+        return None
+    return None
+
+
+def _state_constraint(node: Constraint) -> bool:
+    """Reject event/trace variables from final-state symbolic compilation."""
+    if isinstance(node, Variable):
+        return node.name.startswith("state.")
+    if is_dataclass(node):
+        return all(
+            _state_value(value)
+            for item in fields(node)
+            if item.name not in {"sort", "operator", "relation", "name", "width"}
+            for value in (getattr(node, item.name),)
+        )
+    return True
+
+
+def _state_value(value: Any) -> bool:
+    if isinstance(value, Constraint):
+        return _state_constraint(value)
+    if isinstance(value, (tuple, list)):
+        return all(_state_value(item) for item in value)
+    return True
+
+
+def _symbolic_postcondition(objective: Objective, initial: State | None = None) -> Constraint | None:
+    constraints = tuple(
+        _predicate_constraint(predicate, initial)
+        for predicate in objective.postconditions
+    )
+    if objective.allowed_state_changes:
+        changes = _predicate_constraint(Changes(objective.allowed_state_changes), initial)
+        constraints += (changes,)
+    if not constraints or any(item is None for item in constraints):
         return None
     return constraints[0] if len(constraints) == 1 else Every(tuple(constraints))
 
@@ -286,9 +345,9 @@ class Regressor:
         )
         if len(symbolic_operations) < 1 or objective.budget.max_trace_length < 2:
             return [], [], []
-        postcondition = _symbolic_postcondition(objective)
+        postcondition = _symbolic_postcondition(objective, model.initial_state)
         if postcondition is None:
-            return [], ["multi-step symbolic regression supports Same postconditions only"], []
+            return [], ["multi-step symbolic regression supports only state predicates with supported constraints"], []
         initial_constraints = _initial_state_constraints(model.initial_state)
         traces: list[tuple[Mapping[str, Any], ...]] = []
         uncertainty: list[str] = []
@@ -348,9 +407,9 @@ class Regressor:
         """Regress supported graph routes into their original entry request."""
         if workspace.graph is None and workspace.world is None and not workspace.aliases and not workspace.resources:
             return [], [], []
-        postcondition = _symbolic_postcondition(objective)
+        postcondition = _symbolic_postcondition(objective, model.initial_state)
         if postcondition is None:
-            return [], ["workspace symbolic regression supports Same postconditions only"], []
+            return [], ["workspace symbolic regression supports only state predicates with supported constraints"], []
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
         cores: list[tuple[str, ...]] = []
@@ -551,9 +610,9 @@ class Regressor:
     ) -> tuple[list[tuple[str, Mapping[str, Any]]], list[str], list[tuple[str, ...]]]:
         if not any(operation.symbolic_transition is not None for operation in model.operations):
             return [], [], []
-        postcondition = _symbolic_postcondition(objective)
+        postcondition = _symbolic_postcondition(objective, model.initial_state)
         if postcondition is None:
-            return [], ["symbolic backward planning supports Same postconditions only"], []
+            return [], ["symbolic backward planning supports only state predicates with supported constraints"], []
         actions: list[tuple[str, Mapping[str, Any]]] = []
         uncertainty: list[str] = []
         cores: list[tuple[str, ...]] = []

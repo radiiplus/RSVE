@@ -28,6 +28,7 @@ class Frame:
     reasons: tuple[str, ...] = ()
     regions: Mapping[str, State] = field(default_factory=dict)
     aliases: tuple[tuple[str, ...], ...] = ()
+    lineage: tuple[str, ...] | None = None
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -37,6 +38,7 @@ class Frame:
             "reasons": self.reasons,
             "regions": {key: value.canonical() for key, value in sorted(self.regions.items())},
             "aliases": self.aliases,
+            "lineage": self.lineage,
         }
 
     def view(self) -> State:
@@ -422,7 +424,7 @@ class Workspace:
                 for outcome in item.branches(self._local(frame, item), request):
                     moves.extend(self._move(item, outcome, frame, entry, request, source=request))
                 continue
-            for result in self._outcomes(item, frame, request):
+            for result in self._outcomes(item, frame, entry, request):
                 outcome = result.outcome
                 if outcome.decision is Decision.ACCEPT:
                     routed = replace(frame, target=result.target, regions=dict(result.regions))
@@ -452,6 +454,7 @@ class Workspace:
         self,
         operation: Operation,
         frame: Frame,
+        entry: str,
         request: Mapping[str, Any],
     ) -> tuple[GraphResult, ...]:
         transitions = self._transitions(operation)
@@ -470,6 +473,7 @@ class Workspace:
                 frame.target,
                 frame.regions,
                 (transition.transition_id,),
+                (entry,),
             ))
         return tuple(lowered)
 
@@ -481,6 +485,7 @@ class Workspace:
         target: State,
         regions: Mapping[str, State],
         seen: tuple[str, ...],
+        lineage: tuple[str, ...] | None,
     ) -> tuple[GraphResult, ...]:
         owned = transition.region_id is not None
         if owned and transition.region_id not in regions:
@@ -497,7 +502,7 @@ class Workspace:
                 dict(regions),
             ),)
         state = regions[transition.region_id] if owned else target
-        outcomes = interpreter.outcomes(transition.transition_id, value, state=state)
+        outcomes = interpreter.outcomes(transition.transition_id, value, state=state, lineage=lineage)
         results: list[GraphResult] = []
         for outcome in outcomes:
             next_target = target
@@ -541,13 +546,13 @@ class Workspace:
                             f"uncorrelated connection: {edge.connection_id}",
                         ),
                     )
-                converted = self._convert(edge, outcome.observation.get("value"), outcome.after)
+                converted = self._convert(edge, outcome.observation.get("value"), outcome.after, outcome.lineage)
                 if converted is None:
                     results.append(GraphResult(
                         replace(
                             edge_outcome,
                             decision=Decision.UNKNOWN,
-                            uncertainty=outcome.uncertainty + (f"opaque connection: {edge.connection_id}",),
+                                    uncertainty=edge_outcome.uncertainty + (f"opaque connection: {edge.connection_id}",),
                         ),
                         value if isinstance(value, Mapping) else {"value": value},
                         next_target,
@@ -571,12 +576,17 @@ class Workspace:
                     ))
                     continue
                 if not destinations:
-                    for converted_value in converted:
+                    for converted_value, converted_lineage, transfer_reason in converted:
                         mapped = self._map(transition.transition_id, converted_value, value)
+                        mapped_outcome = replace(
+                            edge_outcome,
+                            lineage=converted_lineage,
+                            uncertainty=edge_outcome.uncertainty + ((transfer_reason,) if transfer_reason else ()),
+                        )
                         if mapped is None:
                             results.append(GraphResult(
                                 replace(
-                                    edge_outcome,
+                                    mapped_outcome,
                                     decision=Decision.UNKNOWN,
                                     uncertainty=edge_outcome.uncertainty + (
                                         f"no request mapping for {transition.transition_id}",
@@ -587,14 +597,19 @@ class Workspace:
                                 next_regions,
                             ))
                         else:
-                            results.append(GraphResult(edge_outcome, mapped, next_target, next_regions))
+                            results.append(GraphResult(mapped_outcome, mapped, next_target, next_regions))
                     continue
-                for next_value in converted:
+                for next_value, next_lineage, transfer_reason in converted:
+                    routed_outcome = replace(
+                        edge_outcome,
+                        lineage=next_lineage,
+                        uncertainty=edge_outcome.uncertainty + ((transfer_reason,) if transfer_reason else ()),
+                    )
                     for destination in destinations:
                         if destination.transition_id in seen:
                             results.append(GraphResult(
                                 replace(
-                                    outcome,
+                                    routed_outcome,
                                     decision=Decision.UNKNOWN,
                                     uncertainty=outcome.uncertainty + (f"cyclic graph route at {destination.transition_id}",),
                                 ),
@@ -606,9 +621,9 @@ class Workspace:
                         if len(seen) >= self.graph.budget.max_depth:
                             results.append(GraphResult(
                                 replace(
-                                    outcome,
+                                    routed_outcome,
                                     decision=Decision.UNKNOWN,
-                                    uncertainty=outcome.uncertainty + ("graph route depth budget reached",),
+                                    uncertainty=routed_outcome.uncertainty + ("graph route depth budget reached",),
                                 ),
                                 value if isinstance(value, Mapping) else {"value": value},
                                 next_target,
@@ -622,9 +637,10 @@ class Workspace:
                             next_target,
                             next_regions,
                             seen + (destination.transition_id,),
+                            next_lineage,
                         ):
                             results.append(GraphResult(
-                                    self._join(edge_outcome, next_result.outcome),
+                                self._join(routed_outcome, next_result.outcome),
                                 next_result.request,
                                 next_result.target,
                                 next_result.regions,
@@ -678,17 +694,29 @@ class Workspace:
             and (transition.region_id is None or transition.region_id == destination_region)
         )
 
-    def _convert(self, edge: Any, value: Any, state: State) -> tuple[Any, ...] | None:
+    def _convert(
+        self,
+        edge: Any,
+        value: Any,
+        state: State,
+        lineage: tuple[str, ...] | None,
+    ) -> tuple[tuple[Any, tuple[str, ...] | None, str | None], ...] | None:
         if edge.transform_id is None:
-            return (value,)
+            return ((value, lineage, None),)
         evaluator = self.transforms.get(edge.transform_id)
         if evaluator is None:
             return None
         try:
             values = evaluator(value, state)
             if isinstance(values, (str, bytes, bytearray, Mapping)) or values is None:
-                return (values,)
-            return tuple(values)
+                values = (values,)
+            transform = next(
+                (item for item in self.graph.transforms if item.transform_id == edge.transform_id),
+                None,
+            )
+            mode = getattr(transform, "provenance", "unknown")
+            transferred = _lineage(mode, lineage)
+            return tuple((item, transferred[0], transferred[1]) for item in values)
         except Exception:
             return None
 
@@ -701,6 +729,7 @@ class Workspace:
             writes=first.writes | second.writes,
             evidence=first.evidence + second.evidence,
             uncertainty=first.uncertainty + second.uncertainty,
+            lineage=first.lineage if first.lineage is not None else second.lineage,
         )
 
     def _map(self, transition_id: str, value: Any, original: Any) -> Mapping[str, Any] | None:
@@ -722,6 +751,7 @@ class Workspace:
                 reads=graph.reads | operation.reads,
                 writes=graph.writes | operation.writes,
                 uncertainty=graph.uncertainty + operation.uncertainty,
+                lineage=graph.lineage,
             )
         if graph.decision is Decision.REJECT:
             return graph
@@ -731,6 +761,7 @@ class Workspace:
             reads=graph.reads | operation.reads,
             writes=graph.writes | operation.writes,
             evidence=graph.evidence + operation.evidence,
+            lineage=graph.lineage,
         )
 
     def _move(
@@ -750,6 +781,9 @@ class Workspace:
         environment = _merge(frame.environment, outcome.environment)
         uncertain = frame.uncertain or outcome.decision is Decision.UNKNOWN
         reasons = list(frame.reasons) + list(outcome.uncertainty)
+        lineage = outcome.lineage
+        if lineage is None and not any("provenance" in reason for reason in outcome.uncertainty):
+            lineage = frame.lineage or (entry,)
         transition = None
         if self.world is not None:
             if item.name in self.world.transitions:
@@ -794,6 +828,7 @@ class Workspace:
                 tuple(branch_reasons),
                 regions,
                 frame.aliases,
+                lineage,
             )
             after = self._sync(after, item, branch)
             event = branch.event(
@@ -862,7 +897,7 @@ class Workspace:
                 continue
             for alias in group:
                 target, environment, regions = self._write(target, environment, regions, alias, value)
-        return Frame(target, environment, frame.uncertain, frame.reasons, regions, frame.aliases)
+        return Frame(target, environment, frame.uncertain, frame.reasons, regions, frame.aliases, frame.lineage)
 
     @staticmethod
     def _read(frame: Frame, key: str) -> Any:
@@ -891,6 +926,16 @@ class Workspace:
                 updated[region] = updated[region].update(**{local: value})
                 return target, environment, updated
         return target.update(**{key: value}), environment, updated
+
+
+def _lineage(mode: str, lineage: tuple[str, ...] | None) -> tuple[tuple[str, ...] | None, str | None]:
+    if lineage is None:
+        return None, "provenance is already unknown"
+    if mode in {"preserve", "duplicate", "combine"}:
+        return lineage, None
+    if mode == "discard":
+        return (), None
+    return None, "provenance transfer is unknown"
 
 
 def _merge(state: State, values: Mapping[str, Any]) -> State:

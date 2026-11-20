@@ -137,6 +137,7 @@ class Outcome:
     evidence: tuple[str, ...] = ()
     uncertainty: tuple[str, ...] = ()
     id: str = ""
+    lineage: tuple[str, ...] | None = None
 
     def __iter__(self):
         """Keep tuple-unpacking compatible with the original execute API."""
@@ -153,13 +154,19 @@ class Outcome:
         component: str = "",
         order: int = 0,
     ) -> "Event":
+        observation = dict(self.observation)
+        if self.lineage is not None:
+            observation.setdefault(
+                "data_lineage",
+                tuple({"source_entry": source} for source in self.lineage),
+            )
         return Event(
             operation=operation,
             entry_point=entry,
             request=dict(request),
             before=before,
             after=self.after,
-            observation=dict(self.observation),
+            observation=observation,
             fidelity=self.fidelity,
             mode=self.mode,
             component=component,

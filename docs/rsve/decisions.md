@@ -280,3 +280,11 @@ Solver results are valid only within their recorded model revision and execution
 **Reason:** A transform or relation record alone is metadata. The planner must know whether it can execute the relation, regress it, or only sample it within a finite scope. Keeping status in one record prevents a forward-only evaluator from being mistaken for an exact inverse.
 
 **Rejected:** Inferring inverses from callables, treating a symbolic record without a forward evaluator as replayable, or treating probe coverage as complete semantics.
+
+## ADR-0039: Separate state compilation from trace provenance
+
+**Decision:** Symbolic objective compilation supports state predicates that map exactly to the existing constraint AST: `Same`, `Test`, `Changes`, `All`, `Some`, and `Not`. Temporal predicates such as `Flow`, `Order`, and `Guard` remain trace-level requirements. Flow lineage is carried through executable graph transforms using explicit provenance modes and is required for lineage-aware sink validation.
+
+**Reason:** A temporal source-to-sink condition cannot be soundly reduced to a final-state equality. Separating the two domains allows the existing solver/WP subset to grow without fabricating a predictive data-flow model.
+
+**Rejected:** Treating literal canary occurrence as provenance, compiling Flow into an equality, or treating unspecified provenance transfer as preservation.
