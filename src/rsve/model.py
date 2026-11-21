@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
+from copy import deepcopy
 from typing import Any, Callable, Iterable, Mapping, TypeAlias
 
 Primitive: TypeAlias = None | bool | int | float | str | bytes
@@ -12,6 +13,7 @@ Request: TypeAlias = Mapping[str, Value]
 Check: TypeAlias = Callable[["State", tuple["Event", ...]], bool]
 Guard: TypeAlias = Callable[["State", Request], bool]
 Change: TypeAlias = Callable[["State", Request], "State"]
+FailureChange: TypeAlias = Callable[["State", Request, Exception], "State"]
 View: TypeAlias = Callable[["State", Request, "State"], Mapping[str, Value]]
 
 
@@ -225,7 +227,12 @@ class Operation:
     deny_unknown: frozenset[str] = frozenset()
     deny_env: Mapping[str, Value] = field(default_factory=dict)
     env: Mapping[str, Value] = field(default_factory=dict)
-    stop: bool = True
+    stop: bool = False
+    error_handler: FailureChange | None = None
+    stop_on_error: bool = False
+    error_effects: tuple[str, ...] = ()
+    error_writes: frozenset[str] = frozenset()
+    error_unknown: frozenset[str] = frozenset()
     reads: frozenset[str] = frozenset()
     writes: frozenset[str] = frozenset()
     must: frozenset[str] = frozenset()
@@ -235,6 +242,8 @@ class Operation:
     relation_complete: bool = False
     provenance_paths: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     provenance_inputs: tuple[str, ...] = ()
+    request_candidates: Callable[[State, Any], Iterable[Request]] | None = None
+    client_id: str = ""
 
     def __post_init__(self) -> None:
         for transform in self.transforms:
@@ -270,11 +279,11 @@ class Operation:
                     ),)
                 return values
             except Exception as exc:  # model failures remain explicit outcomes
-                return (self._error(state, exc),)
+                return (self._error(state, request, exc),)
         try:
             accepted = bool(self.guard(state, request))
         except Exception as exc:
-            return (self._error(state, exc),)
+            return (self._error(state, request, exc),)
         if not accepted:
             next_state = self.deny(state, request) if self.deny is not None else state
             observation = dict(self.watch(state, request, next_state)) if self.watch else {}
@@ -300,7 +309,7 @@ class Operation:
             next_state = self.apply(state, request)
             observation = dict(self.observe(state, request, next_state))
         except Exception as exc:
-            return (self._error(state, exc),)
+            return (self._error(state, request, exc),)
         return (Outcome(
             decision=Decision.ACCEPT,
             after=next_state,
@@ -323,16 +332,30 @@ class Operation:
         """Return the first modeled branch; use branches for relations."""
         return self.branches(state, request)[0]
 
-    def _error(self, state: State, error: Exception) -> Outcome:
+    def _error(self, state: State, request: Request, error: Exception) -> Outcome:
+        after = state
+        uncertainty = [f"{type(error).__name__}: operation failed"]
+        aftermath_modeled = self.error_handler is not None
+        if self.error_handler is not None:
+            try:
+                after = self.error_handler(state, request, error)
+            except Exception as handler_error:
+                aftermath_modeled = False
+                uncertainty.append(f"error handler failed: {type(handler_error).__name__}")
+        else:
+            uncertainty.append("error aftermath has no modeled state handler")
         return Outcome(
             decision=Decision.ERROR,
-            after=state,
-            terminal=True,
+            after=after,
+            effects=self.error_effects,
+            writes=self.error_writes,
+            unknown=self.error_unknown or (frozenset() if aftermath_modeled else frozenset({"error-aftermath"})),
+            terminal=self.stop_on_error,
             guard=None,
             fidelity=self.fidelity,
             mode=self.mode,
             evidence=(self.provenance,),
-            uncertainty=(f"{type(error).__name__}: {error}",),
+            uncertainty=tuple(uncertainty),
         )
 
 
@@ -370,6 +393,7 @@ class Event:
     reaction: dict[str, Value] = field(default_factory=dict)
     uncertainty: tuple[str, ...] = ()
     source: dict[str, Value] = field(default_factory=dict)
+    client_id: str = ""
 
     def __post_init__(self) -> None:
         if self.guard_result is False and self.decision is Decision.ACCEPT:
@@ -390,6 +414,7 @@ class Event:
             "trace_id": self.trace_id,
             "parent_event_id": self.parent_event_id,
             "component": self.component,
+            "client_id": self.client_id,
             "input_representation": self.input_representation,
             "output_representation": self.output_representation,
             "state_before_id": self.state_before_id,
@@ -495,6 +520,8 @@ class Model:
     excluded_interactions: tuple[tuple[str, str], ...] = ()
     demoted_assumptions: tuple[str, ...] = ()
     learned_exclusions: tuple[Exclusion, ...] = ()
+    observed_transitions: tuple[Event, ...] = ()
+    refinement_gaps: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.target_id:
@@ -525,6 +552,81 @@ class Model:
             return False
         return not any(item.matches(entry_point, request) for item in self.learned_exclusions)
 
+    def record_observations(self, events: Iterable[Event]) -> "Model":
+        """Add exact-context runtime facts without generalizing their behavior."""
+        records = list(self.observed_transitions)
+        keys = {repr(_canonical(item.canonical())) for item in records}
+        for event in events:
+            if getattr(event.fidelity, "value", event.fidelity) != Fidelity.OBSERVED.value:
+                continue
+            key = repr(_canonical(event.canonical()))
+            if key not in keys:
+                records.append(deepcopy(event))
+                keys.add(key)
+        if len(records) == len(self.observed_transitions):
+            return self
+        return replace(
+            self,
+            model_version=f"{self.model_version}.observed{len(records)}",
+            observed_transitions=tuple(records),
+        )
+
+    def record_refinement_gap(self, identity: str) -> "Model":
+        if not identity or identity in self.refinement_gaps:
+            return self
+        gaps = self.refinement_gaps + (identity,)
+        return replace(
+            self,
+            model_version=f"{self.model_version}.gap{len(gaps)}",
+            refinement_gaps=gaps,
+        )
+
+    def observations_for(
+        self,
+        entry_point: str,
+        request: Request,
+        before: State,
+        *,
+        component: str = "",
+        environment: Mapping[str, Any] | None = None,
+        client_id: str = "",
+        operation: str = "",
+    ) -> tuple[Event, ...]:
+        request_key = repr(_canonical(dict(request)))
+        environment_key = repr(_canonical(dict(environment or {})))
+        matches = tuple(
+            event for event in self.observed_transitions
+            if event.entry_point == entry_point
+            and (not operation or event.operation == operation)
+            and repr(_canonical(event.request)) == request_key
+            and event.before == before
+            and (not component or not event.component or event.component == component)
+            and (not event.environment or repr(_canonical(event.environment)) == environment_key)
+            and (not event.client_id or event.client_id == client_id)
+        )
+        outcomes: dict[str, Event] = {}
+        for event in matches:
+            key = repr(_canonical({
+                "decision": event.decision.value,
+                "after": event.after.canonical(),
+                "observation": event.observation,
+                "effects": event.effects,
+                "reads": event.reads,
+                "writes": event.writes,
+                "reaction": event.reaction,
+                "terminal": event.terminal,
+                "guard": event.guard_result,
+            }))
+            prior = outcomes.get(key)
+            if prior is None:
+                outcomes[key] = event
+            else:
+                outcomes[key] = replace(
+                    prior,
+                    evidence_refs=tuple(dict.fromkeys(prior.evidence_refs + event.evidence_refs)),
+                )
+        return tuple(outcomes.values())
+
     def exclude(self, entry_point: str, request: Request, *, assumption: str | None = None) -> "Model":
         exclusion = (entry_point, repr(_canonical(dict(request))))
         assumptions = self.assumptions + ((assumption,) if assumption else ())
@@ -539,6 +641,8 @@ class Model:
             excluded_interactions=tuple(sorted(set(self.excluded_interactions + (exclusion,)))),
             demoted_assumptions=self.demoted_assumptions,
             learned_exclusions=self.learned_exclusions,
+            observed_transitions=self.observed_transitions,
+            refinement_gaps=self.refinement_gaps,
         )
 
     def demote(self, assumptions: Iterable[str]) -> "Model":
@@ -554,6 +658,8 @@ class Model:
             excluded_interactions=self.excluded_interactions,
             demoted_assumptions=demoted,
             learned_exclusions=self.learned_exclusions,
+            observed_transitions=self.observed_transitions,
+            refinement_gaps=self.refinement_gaps,
         )
 
     def learn(self, exclusion: Exclusion) -> "Model":
@@ -569,4 +675,6 @@ class Model:
             excluded_interactions=self.excluded_interactions,
             demoted_assumptions=self.demoted_assumptions,
             learned_exclusions=learned,
+            observed_transitions=self.observed_transitions,
+            refinement_gaps=self.refinement_gaps,
         )

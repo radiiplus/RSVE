@@ -92,6 +92,9 @@ from .result import (
     Status,
     Divergence,
     Grade,
+    EvidenceLevel,
+    DiscoveryEvidence,
+    discovery_evidence,
     Proof,
     Verdict,
     Witness,
@@ -122,11 +125,23 @@ from .wp import (
     Truth,
 )
 from .semantic import Branch, Interpreter, Meaning
-from .environment import Drift, Signal, Step, World, Context
+from .transforms import (
+    UTF8Decoder,
+    ObservedTransformModel,
+    ObservedTransformResult,
+    TransformObservation,
+)
+from .environment import Drift, Signal, Step, World, Context, Schedule, ScheduledEvent, ReactionResult
 from .optimize import Weights, Choice, Phase, Cost, Optimizer
-from .search import Explorer, Bounds, Found, Trial, Guide, Mcts, Evolve, Beam, Frontier, Anneal
+from .search import CandidatePriority, Explorer, Bounds, Found, Trial, Guide, Mcts, Evolve, Beam, Frontier, Anneal, Portfolio
 from .workspace import Frame, Move, Workspace
 from .signature import Archive, Level, Novelty, Signature
+from .source import SourceFunction, SourceIndex, FormulaCompiler, CompiledFormula, CompiledAssignment, CompiledExit
+from .source_profile import BindingSpace, SourceSymbolBinding, SourceFunctionProfile, SourceProfile
+from .source_semantics import LoweringResult, SourceSemanticLowerer
+from .relaxation import Alternative, AlternativeStatus, RelaxationAnalyzer, RelaxationReport
+from .memory import Memory, MemoryTransaction, MemoryFault, MemoryFaultKind, Pointer, SliceRef, MapRef, StructValue, ArrayValue, index_constraint
+from .callgraph import CallGraph, CallGraphBuilder, CallRelation
 from .graph import (
     Graph,
     Usage,
@@ -165,6 +180,9 @@ __all__ = [
     "Report",
     "Reach",
     "Status",
+    "EvidenceLevel",
+    "DiscoveryEvidence",
+    "discovery_evidence",
     "Residual",
     "All",
     "Add",
@@ -220,6 +238,7 @@ __all__ = [
     "Cost",
     "Optimizer",
     "Explorer",
+    "CandidatePriority",
     "Bounds",
     "Found",
     "Trial",
@@ -229,6 +248,7 @@ __all__ = [
     "Beam",
     "Frontier",
     "Anneal",
+    "Portfolio",
     "Revision",
     "Delta",
     "Axiom",
@@ -270,6 +290,9 @@ __all__ = [
     "Step",
     "World",
     "Context",
+    "Schedule",
+    "ScheduledEvent",
+    "ReactionResult",
     "match",
     "Goal",
     "Ast",
@@ -339,4 +362,19 @@ __all__ = [
     "Level",
     "Novelty",
     "Signature",
+    "SourceFunction",
+    "SourceIndex",
+    "BindingSpace",
+    "SourceSymbolBinding",
+    "SourceFunctionProfile",
+    "SourceProfile",
+    "LoweringResult",
+    "SourceSemanticLowerer",
+    "Alternative",
+    "AlternativeStatus",
+    "RelaxationAnalyzer",
+    "RelaxationReport",
+    "ObservedTransformModel",
+    "ObservedTransformResult",
+    "TransformObservation",
 ]

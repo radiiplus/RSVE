@@ -546,7 +546,7 @@ class Suite(unittest.TestCase):
             Planner().plan(fixture_model(), objective, self.authorization, adapter=adapter)
         adapter.teardown()
 
-    def test_wrong_guard_diverges_and_refinement_excludes_counterexample(self):
+    def test_wrong_guard_divergence_is_refined_at_observed_context(self):
         objective = Objective(
             "reach-eleven",
             "node-fixture",
@@ -570,7 +570,9 @@ class Suite(unittest.TestCase):
             adapter.teardown()
         refinement = Analyzer().refine(model, report.divergences, observed, invalidated_queries=("q-1",))
         self.assertIn("q-1", refinement.delta.invalidated_queries)
-        self.assertFalse(refinement.model.allows(report.witness.interactions[0]["entry_point"], {"amount": 11}))
+        self.assertTrue(refinement.model.allows(report.witness.interactions[0]["entry_point"], {"amount": 11}))
+        self.assertTrue(refinement.model.observed_transitions)
+        self.assertTrue(any(item.fidelity.value == "observed" for item in refinement.model.observed_transitions))
 
     def test_unexpected_semantic_events_diverge_and_demote_assumptions(self):
         before = State({"count": 0})
@@ -591,6 +593,8 @@ class Suite(unittest.TestCase):
         refinement = analyzer.refine(model, divergences, (unexpected, expected))
         self.assertEqual(refinement.delta.demoted_assumptions, ("trusted declared surface",))
         self.assertIn("trusted declared surface", refinement.model.demoted_assumptions)
+        self.assertTrue(refinement.model.refinement_gaps)
+        self.assertNotEqual(refinement.model.model_version, model.model_version)
 
     def test_counterexample_probes_promote_only_bounded_numeric_region(self):
         before = State({"count": 0})

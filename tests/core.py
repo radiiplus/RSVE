@@ -17,9 +17,12 @@ from rsve import (
     State,
     Event,
     Model,
+    Fidelity,
 )
 from rsve.engine import Denied
-from rsve.result import Status, Grade, Verdict
+from rsve.result import (
+    Status, Grade, Verdict, EvidenceLevel, Report, Proof, Witness, Reach,
+)
 from rsve.acceptance import compare, gap
 from rsve import (
     Every,
@@ -83,6 +86,8 @@ class Suite(unittest.TestCase):
         self.assertIsNotNone(report.witness)
         assert report.witness is not None
         self.assertEqual([event.request for event in report.witness.events], [{"amount": 2}])
+        self.assertIn(EvidenceLevel.MODEL_REACHABLE, {item.level for item in report.evidence})
+        self.assertEqual(report.witness.evidence, report.evidence)
 
     def test_unauthorized_objective_is_rejected(self) -> None:
         with self.assertRaises(Denied):
@@ -99,6 +104,8 @@ class Suite(unittest.TestCase):
         self.assertEqual(report.status, Status.UNSAT_BOUNDED)
         self.assertEqual(report.proof.status, Verdict.UNSAT_BOUNDED)
         self.assertEqual(report.gaps[0].kind, Grade.BOUND)
+        self.assertIn(EvidenceLevel.BOUNDED_EXHAUSTION, {item.level for item in report.evidence})
+        self.assertNotIn(EvidenceLevel.REPLAY_VALIDATED, {item.level for item in report.evidence})
 
     def test_effect_lemmas_are_validated_on_trace_checkpoints(self) -> None:
         objective = Goal(
@@ -119,6 +126,29 @@ class Suite(unittest.TestCase):
         self.assertEqual(report.status, Status.BUDGET_EXHAUSTED)
         self.assertEqual(report.proof.status, Verdict.UNKNOWN)
         self.assertEqual(report.gaps[0].kind, Grade.EVENT_BUDGET)
+        self.assertIn(EvidenceLevel.HYPOTHESIZED, {item.level for item in report.evidence})
+        self.assertNotIn(EvidenceLevel.BOUNDED_EXHAUSTION, {item.level for item in report.evidence})
+
+    def test_report_carries_observed_and_replay_validated_evidence(self):
+        observed = Event(
+            "increment", "lab.increment", {"amount": 2}, State({"count": 0}),
+            State({"count": 2}), fidelity=Fidelity.OBSERVED,
+        )
+        report = Report(
+            status=Status.VALIDATED_WITNESS,
+            target_id="fixture",
+            objective="reach-two",
+            witness=Witness("reach-two", "fixture", (observed,), State({"count": 2})),
+            proof=Proof(Verdict.SAT, 1, 1, 1, "fixture-lab", "reach-two"),
+            replay_runs=2,
+            replay_stable=True,
+            reachability=Reach.POSSIBLE,
+            execution_profile_id="profile-a",
+        )
+        levels = {item.level for item in report.evidence}
+        self.assertIn(EvidenceLevel.OBSERVED, levels)
+        self.assertIn(EvidenceLevel.REPLAY_VALIDATED, levels)
+        self.assertEqual(report.witness.evidence, report.evidence)
 
     def test_reconcile_localizes_first_divergence(self) -> None:
         report = self.engine.analyze(fixture_model(), self.objective, self.auth, Budget(max_depth=2))
@@ -237,9 +267,17 @@ class Suite(unittest.TestCase):
         self.assertEqual(unsat.status.value, "UNSAT_BOUNDED")
         self.assertTrue(set(unsat.unsat_core) >= {"nonnegative", "negative"})
         self.assertEqual(set(unsat.named_assertions), {"nonnegative", "negative"})
+        byte_value = adapter.solve(Query(
+            "byte-value",
+            Equal(Variable("payload", Sort.BYTES), Literal(b"x", Sort.BYTES)),
+            scope,
+        ))
+        self.assertEqual(byte_value.status.value, "SAT")
+        self.assertEqual(byte_value.model["payload"], b"x")
+
         unknown = adapter.solve(Query(
-            "unknown",
-            Equal(Variable("payload", Sort.BYTES), Literal("x", Sort.BYTES)),
+            "unsupported-sort",
+            Equal(Variable("enum", Sort.ENUM), Literal("x", Sort.ENUM)),
             scope,
         ))
         self.assertEqual(unknown.status.value, "UNKNOWN")

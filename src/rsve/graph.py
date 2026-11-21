@@ -8,7 +8,7 @@ as proof that an interaction occurred.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any, Iterable, Mapping, Protocol, Sequence
 
@@ -441,6 +441,153 @@ class Graph(Schema):
             graph = graph.register(manifest)
         return graph
 
+    @staticmethod
+    def qualified(namespace: str, identity: str) -> str:
+        if not namespace or not identity:
+            raise ValueError("composition namespace and identity are required")
+        return f"{namespace}::{identity}"
+
+    @classmethod
+    def compose(
+        cls,
+        graph_id: str,
+        parts: Sequence[tuple[str, "Graph"]],
+    ) -> "Graph":
+        """Flatten independent profile graphs under explicit namespaces."""
+        if not graph_id or not parts:
+            raise ValueError("composition requires a graph id and at least one profile graph")
+        namespaces = [namespace for namespace, _ in parts]
+        if any(not item for item in namespaces) or len(namespaces) != len(set(namespaces)):
+            raise ValueError("composition namespaces must be non-empty and unique")
+
+        profiles: list[Persona] = []
+        regions: list[Zone] = []
+        ports: list[Port] = []
+        connections: list[Connection] = []
+        capabilities: list[Manifest] = []
+        extensions: list[Extension] = []
+        bindings: list[Binding] = []
+        representations: list[Representation] = []
+        transforms: list[Transform] = []
+        recognizers: list[Recognizer] = []
+        effects: list[Effect] = []
+        transitions: list[Transition] = []
+        slots: list[Slot] = []
+        budgets: list[Quota] = []
+        active_graphs: set[int] = set()
+        per_region_events: dict[str, int] = {}
+
+        def add_graph(namespace: str, source: Graph) -> None:
+            if id(source) in active_graphs:
+                raise ValueError(f"recursive nested graph: {source.graph_id}")
+            active_graphs.add(id(source))
+            p = lambda value: cls.qualified(namespace, value)
+            profile_ids = {item.profile_id: p(item.profile_id) for item in source.profiles}
+            region_ids = {item.region_id: p(item.region_id) for item in source.regions}
+            port_ids = {item.port_id: p(item.port_id) for item in source.ports}
+            capability_ids = {item.extension_id: p(item.extension_id) for item in source.capabilities}
+            extension_ids = {item.extension_instance_id: p(item.extension_instance_id) for item in source.extensions}
+            binding_ids = {item.binding_id: p(item.binding_id) for item in source.bindings}
+            representation_ids = {item.representation_id: p(item.representation_id) for item in source.representations}
+            transform_ids = {item.transform_id: p(item.transform_id) for item in source.transforms}
+            recognizer_ids = {item.recognizer_id: p(item.recognizer_id) for item in source.recognizers}
+            effect_ids = {item.effect_id: p(item.effect_id) for item in source.effects}
+            transition_ids = {item.transition_id: p(item.transition_id) for item in source.transitions}
+            slot_ids = {item.slot_id: p(item.slot_id) for item in source.state_slots}
+
+            profiles.extend(replace(item, profile_id=profile_ids[item.profile_id]) for item in source.profiles)
+            regions.extend(replace(
+                item,
+                region_id=region_ids[item.region_id],
+                profile_id=profile_ids[item.profile_id],
+                child_graph_id=p(item.child_graph_id) if item.child_graph_id else None,
+            ) for item in source.regions)
+            ports.extend(replace(
+                item,
+                port_id=port_ids[item.port_id],
+                region_id=region_ids[item.region_id],
+                representation_id=representation_ids[item.representation_id],
+            ) for item in source.ports)
+            capabilities.extend(replace(item, extension_id=capability_ids[item.extension_id]) for item in source.capabilities)
+            extensions.extend(replace(
+                item,
+                extension_instance_id=extension_ids[item.extension_instance_id],
+                extension_id=capability_ids.get(item.extension_id, p(item.extension_id)),
+            ) for item in source.extensions)
+            bindings.extend(replace(
+                item,
+                binding_id=binding_ids[item.binding_id],
+                profile_instance_id=profile_ids[item.profile_instance_id],
+                extension_instance_id=extension_ids[item.extension_instance_id],
+                attached_regions=tuple(region_ids[value] for value in item.attached_regions),
+                provided_ports=tuple(port_ids[value] for value in item.provided_ports),
+                consumed_ports=tuple(port_ids[value] for value in item.consumed_ports),
+            ) for item in source.bindings)
+            representations.extend(replace(item, representation_id=representation_ids[item.representation_id]) for item in source.representations)
+            transforms.extend(replace(
+                item,
+                transform_id=transform_ids[item.transform_id],
+                input_representation=representation_ids[item.input_representation],
+                output_representation=representation_ids[item.output_representation],
+            ) for item in source.transforms)
+            recognizers.extend(replace(
+                item,
+                recognizer_id=recognizer_ids[item.recognizer_id],
+                input_representation=representation_ids[item.input_representation],
+            ) for item in source.recognizers)
+            effects.extend(replace(item, effect_id=effect_ids[item.effect_id]) for item in source.effects)
+            transitions.extend(replace(
+                item,
+                transition_id=transition_ids[item.transition_id],
+                input_representation=representation_ids[item.input_representation],
+                output_representation=representation_ids[item.output_representation],
+                transform_ids=tuple(transform_ids[value] for value in item.transform_ids),
+                recognizer_ids=tuple(recognizer_ids[value] for value in item.recognizer_ids),
+                effect_ids=tuple(effect_ids[value] for value in item.effect_ids),
+                region_id=region_ids[item.region_id] if item.region_id else None,
+            ) for item in source.transitions)
+            slots.extend(replace(
+                item,
+                slot_id=slot_ids[item.slot_id],
+                region_id=region_ids[item.region_id],
+                representation_id=representation_ids[item.representation_id],
+                dependencies=tuple(slot_ids.get(value, p(value)) for value in item.dependencies),
+            ) for item in source.state_slots)
+            connections.extend(replace(
+                item,
+                connection_id=p(item.connection_id),
+                source_port_id=port_ids[item.source_port_id],
+                destination_port_id=port_ids[item.destination_port_id],
+                output_representation=representation_ids[item.output_representation],
+                input_representation=representation_ids[item.input_representation],
+                transform_id=transform_ids[item.transform_id] if item.transform_id else None,
+                source_binding_id=binding_ids[item.source_binding_id] if item.source_binding_id else None,
+                destination_binding_id=binding_ids[item.destination_binding_id] if item.destination_binding_id else None,
+            ) for item in source.connections)
+            budgets.append(source.budget)
+            per_region_events.update({p(region): limit for region, limit in source.budget.per_region_events.items()})
+            for child in source.nested_graphs:
+                add_graph(cls.qualified(namespace, child.graph_id), child)
+            active_graphs.remove(id(source))
+
+        for namespace, graph in parts:
+            add_graph(namespace, graph)
+        budget = Quota(
+            max_events=min(item.max_events for item in budgets),
+            max_time_ms=min(item.max_time_ms for item in budgets),
+            max_depth=min(item.max_depth for item in budgets),
+            per_region_events=per_region_events,
+        )
+        return cls(
+            graph_id=graph_id,
+            profiles=tuple(profiles), regions=tuple(regions), ports=tuple(ports),
+            connections=tuple(connections), capabilities=tuple(capabilities),
+            extensions=tuple(extensions), bindings=tuple(bindings),
+            representations=tuple(representations), transforms=tuple(transforms),
+            recognizers=tuple(recognizers), effects=tuple(effects), transitions=tuple(transitions),
+            state_slots=tuple(slots), budget=budget,
+        )
+
     def persona(self, profile: Persona) -> "Graph":
         if profile.profile_id in {item.profile_id for item in self.profiles}:
             raise ValueError(f"duplicate profile id: {profile.profile_id}")
@@ -561,6 +708,42 @@ class Graph(Schema):
             raise ValueError(f"duplicate transition: {transition.transition_id}")
         return self._replace(transitions=self.transitions + (transition,))
 
+    def transition_composition_issues(self, transition_id: str) -> tuple[str, ...]:
+        """Check the declared representation order of one transform/recognizer chain."""
+        transition = next((item for item in self.transitions if item.transition_id == transition_id), None)
+        if transition is None:
+            return ()
+        if not transition.transform_ids:
+            if transition.input_representation != transition.output_representation:
+                return (
+                    "transition changes representation without a declared transform",
+                )
+            return ()
+        transforms = {item.transform_id: item for item in self.transforms}
+        expected = transition.input_representation
+        issues = []
+        for transform_id in transition.transform_ids:
+            transform = transforms.get(transform_id)
+            if transform is None:
+                continue
+            if transform.input_representation != expected:
+                issues.append(
+                    f"transform {transform_id} expects {transform.input_representation} after {expected}"
+                )
+            expected = transform.output_representation
+        if expected != transition.output_representation:
+            issues.append(
+                f"transform chain ends at {expected}, transition declares {transition.output_representation}"
+            )
+        recognizers = {item.recognizer_id: item for item in self.recognizers}
+        for recognizer_id in transition.recognizer_ids:
+            recognizer = recognizers.get(recognizer_id)
+            if recognizer is not None and recognizer.input_representation != expected:
+                issues.append(
+                    f"recognizer {recognizer_id} expects {recognizer.input_representation} after transform chain output {expected}"
+                )
+        return tuple(issues)
+
     def slot(self, slot: Slot) -> "Graph":
         if slot.slot_id in {item.slot_id for item in self.state_slots}:
             raise ValueError(f"duplicate state slot: {slot.slot_id}")
@@ -602,6 +785,10 @@ class Graph(Schema):
             missing = set(transition.transform_ids) - transform_ids | set(transition.recognizer_ids) - recognizer_ids | set(transition.effect_ids) - effect_ids
             if missing:
                 errors.append(f"transition {transition.transition_id} references unknown semantics: {sorted(missing)}")
+            errors.extend(
+                f"transition {transition.transition_id}: {issue}"
+                for issue in self.transition_composition_issues(transition.transition_id)
+            )
         for binding in self.bindings:
             if binding.extension_instance_id not in extension_ids:
                 errors.append(f"binding {binding.binding_id} references unknown extension")

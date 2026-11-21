@@ -55,6 +55,47 @@ class Suite(unittest.TestCase):
         self.assertEqual(first.state["coarse"], second.state["coarse"])
         self.assertNotEqual(first.state["exact"], second.state["exact"])
 
+    def test_archive_refines_coarse_state_after_distinct_continuations(self):
+        def signature(mode, continuation):
+            intermediate = State({"count": 1, "mode": mode})
+            final = State({"count": 1, "mode": mode, "done": True})
+            first = Event(
+                operation="prepare",
+                entry_point="prepare",
+                request={},
+                before=State({"count": 0}),
+                after=intermediate,
+                component="fixture.state",
+                guard_result=True,
+                decision=Decision.ACCEPT,
+                writes=frozenset({"count", "mode"}),
+                ordering=0,
+            )
+            second = Event(
+                operation=continuation,
+                entry_point=continuation,
+                request={},
+                before=intermediate,
+                after=final,
+                component="fixture.state",
+                guard_result=True,
+                decision=Decision.ACCEPT,
+                reads=frozenset({"mode"}),
+                writes=frozenset({"done"}),
+                ordering=1,
+            )
+            return Signature.make((first, second), final, target="fixture", profile="profile-a", keys={"count"})
+
+        first = signature("a", "continue-a")
+        second = signature("b", "continue-b")
+        self.assertEqual(first.state_continuations[0][0], second.state_continuations[0][0])
+
+        archive, _ = Archive().offer(first)
+        archive, novelty = archive.offer(second)
+        self.assertTrue(novelty.state)
+        self.assertEqual(len(archive.refinements), 2)
+        self.assertFalse(archive.offer(first)[1].state)
+
     def test_scope_partitions_behavior_archives(self):
         first = Signature.make((self.event(1),), State({"count": 1}), target="fixture", profile="profile-a", scope={"chain": 1})
         second = Signature.make((self.event(1),), State({"count": 1}), target="fixture", profile="profile-a", scope={"chain": 2})

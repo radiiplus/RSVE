@@ -6,11 +6,12 @@ from dataclasses import dataclass, field, replace
 import json
 from typing import Any, Callable, Iterable, Mapping
 
-from .environment import Context, Signal, World
-from .graph import Graph, Quality, Shape
+from .environment import Context, Signal, Step, World
+from .graph import Fit, Graph, Quality, Shape
 from .ir import Partiality, Relation, Semantic
-from .model import Decision, Entry, Event, Model, Operation, Outcome, State
+from .model import Decision, Entry, Event, Fidelity, Model, Operation, Outcome, State
 from .semantic import Interpreter
+from .transforms import ObservedTransformModel
 from .wp import Symbolic
 
 
@@ -30,6 +31,9 @@ class Frame:
     aliases: tuple[tuple[str, ...], ...] = ()
     lineage: tuple[str, ...] | None = None
     origins: Mapping[str, tuple[str, ...]] | None = None
+    logical_step: int = 0
+    pending_events: tuple[Any, ...] = ()
+    clients: Mapping[str, State] = field(default_factory=dict)
 
     def canonical(self) -> dict[str, Any]:
         return {
@@ -41,6 +45,14 @@ class Frame:
             "aliases": self.aliases,
             "lineage": self.lineage,
             "origins": self.origins,
+            "logical_step": self.logical_step,
+            "pending_events": tuple({
+                "event_id": item.event_id,
+                "transition_id": item.transition_id,
+                "due_step": item.due_step,
+                "payload": dict(item.payload),
+            } for item in self.pending_events),
+            "clients": {key: value.canonical() for key, value in sorted(self.clients.items())},
         }
 
     def view(self) -> State:
@@ -48,7 +60,12 @@ class Frame:
         values = self.target.as_dict()
         for region, state in self.regions.items():
             values.update({f"{region}.{key}": value for key, value in state.as_dict().items()})
+        for client, state in self.clients.items():
+            values.update({f"client.{client}.{key}": value for key, value in state.as_dict().items()})
         values.update({f"env.{key}": value for key, value in self.environment.as_dict().items()})
+        values["env.logical_step"] = self.logical_step
+        values["env.pending_count"] = len(self.pending_events)
+        values["env.pending_transitions"] = tuple(item.transition_id for item in self.pending_events)
         for group in self.aliases:
             shared = next((values[key] for key in group if values.get(key, _MISSING) is not _MISSING), _MISSING)
             if shared is not _MISSING:
@@ -78,6 +95,29 @@ class GraphResult:
 
 
 @dataclass(frozen=True)
+class ClientAction:
+    entry: str
+    request: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class InterleavingRun:
+    order: tuple[str, ...]
+    moves: tuple[Move, ...]
+    final: Frame
+    completed: bool
+    reasons: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class InterleavingExploration:
+    runs: tuple[InterleavingRun, ...]
+    complete: bool
+    explored_prefixes: int
+    reasons: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class Workspace:
     """Execute flat models and graph-backed compositions through one boundary."""
 
@@ -95,6 +135,8 @@ class Workspace:
     resources: Mapping[str, str] = field(default_factory=dict)
     probes: Mapping[str, tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
     expanders: Mapping[str, Probe] = field(default_factory=dict)
+    scope_id: str = "workspace"
+    scope_unknowns: tuple[str, ...] = ()
 
     @classmethod
     def flat(
@@ -107,6 +149,7 @@ class Workspace:
         transforms: Mapping[str, Callable[[Any, State], Any | tuple[Any, ...]]] | None = None,
         recognizers: Mapping[str, Callable[[Any, State], bool]] | None = None,
         regions: Mapping[str, State] | None = None,
+        clients: Mapping[str, State] | None = None,
         effects: Mapping[str, Callable[[State, Any], State]] | None = None,
         mappers: Mapping[str, Callable[[Any, Mapping[str, Any]], Mapping[str, Any]]] | None = None,
         entries: frozenset[str] | set[str] = frozenset(),
@@ -135,7 +178,15 @@ class Workspace:
             model,
             graph,
             world,
-            Frame(model.initial_state, initial_environment, regions=initial_regions, aliases=tuple(aliases)),
+            Frame(
+                model.initial_state,
+                initial_environment,
+                regions=initial_regions,
+                aliases=tuple(aliases),
+                logical_step=world.initial.logical_step if world is not None else 0,
+                pending_events=world.initial.pending if world is not None else (),
+                clients=dict(clients or {}),
+            ),
             dict(transforms or {}),
             dict(recognizers or {}),
             dict(effects or {}),
@@ -149,9 +200,36 @@ class Workspace:
         )
 
     def probes_for(self, entry: str, limit: int | None = None) -> tuple[Mapping[str, Any], ...]:
-        """Return a deterministic, finite concrete probe domain for an entry."""
+        """Return a deterministic, finite concrete probe domain for an entry.
+
+        Inputs observed at the first transform of a route are added as seeds.
+        They remain probes: their presence does not establish transform
+        completeness or behavior outside the exact recorded input/state pair.
+        """
         bound = max(0, limit if limit is not None else 256)
+        if bound == 0:
+            return ()
         candidates = list(self.probes.get(entry, ()))
+        first_transform_ids = {
+            transition.transform_ids[0]
+            for transition in (self.graph.transitions if self.graph is not None else ())
+            if transition.entry_point == entry and transition.transform_ids
+        }
+        first_transform_ids.update(
+            operation.transforms[0].transform_id
+            for operation in self.operations(entry)
+            if operation.transforms
+        )
+        for transform_id in sorted(first_transform_ids):
+            evaluator = self.transforms.get(transform_id)
+            if not isinstance(evaluator, ObservedTransformModel):
+                continue
+            candidates.extend(
+                evaluator.probe_inputs(
+                    max(0, bound - len(candidates)),
+                    mappings_only=True,
+                )
+            )
         expander = self.expanders.get(entry)
         if expander is not None and len(candidates) < bound:
             candidates.extend(expander(bound - len(candidates)))
@@ -182,9 +260,12 @@ class Workspace:
                     known_transforms.add(transform.transform_id)
         for transform in transforms:
             semantic = self.symbolics.get(transform.transform_id)
-            forward = transform.transform_id in self.transforms
+            evaluator = self.transforms.get(transform.transform_id)
+            forward = evaluator is not None
             backward = semantic is not None
             limitations: list[str] = []
+            if isinstance(evaluator, ObservedTransformModel):
+                limitations.append("observations are exact-context samples and do not establish the full transform relation")
             if not forward:
                 limitations.append("forward evaluator is unavailable")
             if not backward:
@@ -339,10 +420,99 @@ class Workspace:
         if self.initial is not None:
             return self.initial
         environment = self.world.initial.environment if self.world is not None else State()
-        return Frame(self.model.initial_state, environment, aliases=self.aliases)
+        return Frame(
+            self.model.initial_state,
+            environment,
+            aliases=self.aliases,
+            logical_step=self.world.initial.logical_step if self.world is not None else 0,
+            pending_events=self.world.initial.pending if self.world is not None else (),
+            clients=self.initial.clients if self.initial is not None else {},
+        )
 
     def validate(self) -> Any:
         return self.graph.validate() if self.graph is not None else None
+
+    def component_view(self, region_id: str) -> "Workspace":
+        """Project this workspace onto one region and retain omitted seams as unknowns."""
+        if self.graph is None:
+            raise ValueError("component views require a graph-backed workspace")
+        regions = {region.region_id for region in self.graph.regions}
+        if region_id not in regions:
+            raise KeyError(f"unknown graph region: {region_id}")
+
+        ports = {port.port_id: port for port in self.graph.ports}
+        local_ports = tuple(port for port in self.graph.ports if port.region_id == region_id)
+        local_port_ids = {port.port_id for port in local_ports}
+        local_connections = tuple(
+            edge for edge in self.graph.connections
+            if edge.source_port_id in local_port_ids and edge.destination_port_id in local_port_ids
+        )
+        local_binding_ids = {
+            binding_id
+            for edge in local_connections
+            for binding_id in (edge.source_binding_id, edge.destination_binding_id)
+            if binding_id is not None
+        }
+        seams = tuple(sorted(
+            f"unknown seam {edge.connection_id}: "
+            f"{ports[edge.source_port_id].region_id if edge.source_port_id in ports else 'missing-region'}"
+            f"->{ports[edge.destination_port_id].region_id if edge.destination_port_id in ports else 'missing-region'}"
+            for edge in self.graph.connections
+            if edge not in local_connections
+            and (edge.source_port_id in local_port_ids or edge.destination_port_id in local_port_ids)
+        ))
+        local_operations = tuple(
+            operation for operation in self.model.operations
+            if operation.component == region_id
+        )
+        omitted_operations = tuple(
+            f"component scope {region_id} omits operation {operation.name} "
+            f"from {operation.component or 'unscoped/global region'}"
+            for operation in self.model.operations
+            if operation.component != region_id
+        )
+        local_entries = {operation.entry_point.name for operation in local_operations}
+        local_transitions = tuple(
+            transition for transition in self.graph.transitions
+            if transition.region_id == region_id
+        )
+        omitted_transitions = tuple(
+            f"component scope {region_id} omits transition {transition.transition_id} "
+            f"from {transition.region_id or 'unscoped/global region'}"
+            for transition in self.graph.transitions
+            if transition.region_id != region_id
+        )
+        projected_graph = replace(
+            self.graph,
+            graph_id=f"{self.graph.graph_id}:component:{region_id}",
+            regions=tuple(region for region in self.graph.regions if region.region_id == region_id),
+            ports=local_ports,
+            connections=local_connections,
+            transitions=local_transitions,
+            bindings=tuple(
+                binding for binding in self.graph.bindings
+                if binding.binding_id in local_binding_ids
+                or not binding.attached_regions
+                or set(binding.attached_regions) <= {region_id}
+            ),
+        )
+        initial = self.start()
+        projected_initial = replace(
+            initial,
+            regions={region_id: initial.regions[region_id]} if region_id in initial.regions else {},
+        )
+        projected_model = replace(self.model, operations=local_operations)
+        return replace(
+            self,
+            model=projected_model,
+            graph=projected_graph,
+            initial=projected_initial,
+            entries=frozenset(local_entries),
+            scope_id=f"component:{region_id}",
+            scope_unknowns=tuple(dict.fromkeys(self.scope_unknowns + seams + omitted_operations + omitted_transitions + (
+                f"component scope {region_id} omits other regions and their interactions",
+            ))),
+        )
 
     def operations(self, entry: str | None = None) -> tuple[Operation, ...]:
         """Return model operations plus executable graph-only entry routes."""
@@ -439,6 +609,50 @@ class Workspace:
             if item.component and self.graph is not None and item.component in {region.region_id for region in self.graph.regions} and item.component not in frame.regions:
                 moves.extend(self._missing_region(item, frame, entry, request))
                 continue
+            observations = self.model.observations_for(
+                entry,
+                request,
+                self._local(frame, item),
+                component=item.component,
+                environment=frame.environment.as_dict(),
+                client_id=item.client_id,
+                operation=item.name,
+            )
+            if observations:
+                for observed in observations:
+                    reason = "observed transition is specific to this exact request and pre-state; successor completeness is unknown"
+                    outcome = Outcome(
+                        observed.decision,
+                        observed.after,
+                        observation=observed.observation,
+                        effects=observed.effects,
+                        reads=observed.reads,
+                        writes=observed.writes,
+                        environment=observed.reaction,
+                        terminal=observed.terminal,
+                        guard=observed.guard_result,
+                        fidelity=Fidelity.OBSERVED,
+                        mode=observed.mode,
+                        evidence=observed.evidence_refs,
+                        uncertainty=(reason,),
+                    )
+                    for move in self._move(item, outcome, frame, entry, request, source=request):
+                        after = replace(
+                            move.after,
+                            uncertain=True,
+                            reasons=tuple(dict.fromkeys(move.after.reasons + (reason,))),
+                        )
+                        event = replace(
+                            move.event,
+                            event_id=observed.event_id,
+                            run_id=observed.run_id,
+                            trace_id=observed.trace_id,
+                            evidence_source=observed.evidence_source,
+                            timestamp_ns=observed.timestamp_ns,
+                            uncertainty=tuple(dict.fromkeys(move.event.uncertainty + (reason,))),
+                        )
+                        moves.append(replace(move, after=after, event=event))
+                continue
             if not self._transitions(item):
                 for outcome in item.branches(self._local(frame, item), request):
                     moves.extend(self._move(item, outcome, frame, entry, request, source=request))
@@ -455,6 +669,136 @@ class Workspace:
                     moves.extend(self._move(item, outcome, routed, entry, request, source=request))
         return tuple(moves)
 
+    def explore_interleavings(
+        self,
+        client_actions: Mapping[str, Iterable[ClientAction | tuple[str, Mapping[str, Any]]]],
+        *,
+        frame: Frame | None = None,
+        max_schedules: int = 256,
+        max_expansions: int = 10000,
+        max_branches_per_action: int = 256,
+        max_total_steps: int = 128,
+    ) -> InterleavingExploration:
+        """Explore bounded order-preserving schedules for exactly two clients.
+
+        Each client's program order is preserved; choices between clients are
+        explored against one shared Frame. This predicts modeled schedules and
+        does not observe Go goroutines, CPU scheduling, or kernel execution.
+        """
+        if len(client_actions) != 2 or any(not name for name in client_actions):
+            raise ValueError("interleaving exploration requires exactly two named clients")
+        if min(max_schedules, max_expansions, max_branches_per_action, max_total_steps) <= 0:
+            raise ValueError("interleaving bounds must be positive")
+        clients = tuple(sorted(client_actions))
+        actions: dict[str, tuple[ClientAction, ...]] = {}
+        total_steps = 0
+        for client in clients:
+            normalized = []
+            for item in client_actions[client]:
+                if total_steps >= max_total_steps:
+                    raise ValueError("interleaving action count exceeds max_total_steps")
+                action = item if isinstance(item, ClientAction) else ClientAction(str(item[0]), dict(item[1]))
+                normalized.append(action)
+                total_steps += 1
+            actions[client] = tuple(normalized)
+        if any(not sequence for sequence in actions.values()):
+            raise ValueError("both clients need at least one modeled action")
+        initial = frame or self.start()
+        indices0 = tuple(0 for _ in clients)
+        runs: list[InterleavingRun] = []
+        explored = 0
+        truncated = False
+        reasons: list[str] = []
+
+        def visit(
+            current: Frame,
+            indices: tuple[int, ...],
+            order: tuple[str, ...],
+            moves_so_far: tuple[Move, ...],
+            run_reasons: tuple[str, ...] = (),
+        ) -> None:
+            nonlocal explored, truncated
+            if truncated:
+                return
+            if all(indices[i] >= len(actions[client]) for i, client in enumerate(clients)):
+                if len(runs) >= max_schedules:
+                    truncated = True
+                    reasons.append("interleaving schedule cap reached")
+                    return
+                runs.append(InterleavingRun(order, moves_so_far, current, True, run_reasons))
+                return
+            if explored >= max_expansions:
+                truncated = True
+                reasons.append("interleaving prefix expansion cap reached")
+                return
+            explored += 1
+            for client_index, client in enumerate(clients):
+                action_index = indices[client_index]
+                if action_index >= len(actions[client]):
+                    continue
+                action = actions[client][action_index]
+                candidates = tuple(
+                    item for item in self.operations(action.entry) if item.client_id == client
+                )
+                if not candidates:
+                    if len(runs) < max_schedules:
+                        runs.append(InterleavingRun(
+                            order + (client,), moves_so_far, current, False,
+                            run_reasons + (f"no operation for client {client!r} at {action.entry!r}",),
+                        ))
+                    else:
+                        truncated = True
+                        reasons.append("interleaving schedule cap reached")
+                    continue
+                successors: list[Move] = []
+                action_truncated = False
+                for operation in candidates:
+                    candidate_moves = self.moves(current, action.entry, action.request, operation=operation)
+                    remaining = max_branches_per_action - len(successors)
+                    if len(candidate_moves) > remaining:
+                        successors.extend(candidate_moves[:remaining])
+                        action_truncated = True
+                        break
+                    successors.extend(candidate_moves)
+                for move in successors:
+                    next_indices = list(indices)
+                    next_indices[client_index] += 1
+                    next_order = order + (client,)
+                    next_moves = moves_so_far + (move,)
+                    if move.outcome.terminal and not all(
+                        next_indices[i] >= len(actions[name]) for i, name in enumerate(clients)
+                    ):
+                        if len(runs) < max_schedules:
+                            runs.append(InterleavingRun(
+                                next_order, next_moves, move.after, False,
+                                run_reasons + (f"terminal outcome at {action.entry}",),
+                            ))
+                        else:
+                            truncated = True
+                            reasons.append("interleaving schedule cap reached")
+                        continue
+                    visit(move.after, tuple(next_indices), next_order, next_moves, run_reasons)
+                    if truncated:
+                        return
+                if action_truncated:
+                    truncated = True
+                    reasons.append(f"branch cap reached for {client}:{action.entry}")
+                    return
+                if not successors and not truncated:
+                    if len(runs) < max_schedules:
+                        runs.append(InterleavingRun(
+                            order + (client,), moves_so_far, current, False,
+                            run_reasons + (f"no modeled successor for {client}:{action.entry}",),
+                        ))
+                    else:
+                        truncated = True
+                        reasons.append("interleaving schedule cap reached")
+
+        visit(initial, indices0, (), ())
+        return InterleavingExploration(
+            tuple(runs), not truncated, explored, tuple(dict.fromkeys(reasons)),
+        )
+
     def _transitions(self, operation: Operation) -> tuple[Any, ...]:
         if self.graph is None:
             return ()
@@ -467,6 +811,11 @@ class Workspace:
 
     @staticmethod
     def _local(frame: Frame, operation: Operation) -> State:
+        if operation.client_id:
+            values = frame.clients.get(operation.client_id, State()).as_dict()
+            values.update({f"shared.{key}": value for key, value in frame.target.as_dict().items()})
+            values.update({f"env.{key}": value for key, value in frame.environment.as_dict().items()})
+            return State(values)
         return frame.regions.get(operation.component, frame.target)
 
     def _outcomes(
@@ -700,7 +1049,7 @@ class Workspace:
 
     def _connection_complete(self, edge: Any) -> bool:
         if edge.transform_id is None:
-            return True
+            return edge.status is Fit.VERIFIED and edge.input_representation == edge.output_representation
         transform = next(
             (item for item in self.graph.transforms if item.transform_id == edge.transform_id),
             None,
@@ -740,8 +1089,12 @@ class Workspace:
         lineage: tuple[str, ...] | None,
         origins: Mapping[str, tuple[str, ...]] | None,
     ) -> tuple[tuple[Any, tuple[str, ...] | None, str | None, Mapping[str, tuple[str, ...]] | None], ...] | None:
+        if edge.status is Fit.UNVERIFIED:
+            return None
         if edge.transform_id is None:
-            return ((value, lineage, None, origins),)
+            if edge.status is Fit.VERIFIED and edge.input_representation == edge.output_representation:
+                return ((value, lineage, None, origins),)
+            return None
         evaluator = self.transforms.get(edge.transform_id)
         if evaluator is None:
             return None
@@ -843,7 +1196,18 @@ class Workspace:
         moves: list[Move] = []
         owned = item.component in frame.regions
         local_before = self._local(frame, item)
-        target = frame.target if owned else outcome.after
+        clients = dict(frame.clients)
+        if item.client_id:
+            values = outcome.after.as_dict()
+            shared = {
+                key.removeprefix("shared."): value
+                for key, value in values.items()
+                if key.startswith("shared.")
+            }
+            target = frame.target.update(**shared)
+            clients[item.client_id] = State({key: value for key, value in values.items() if not key.startswith("shared.") and not key.startswith("env.")})
+        else:
+            target = frame.target if owned else outcome.after
         environment = _merge(frame.environment, outcome.environment)
         uncertain = frame.uncertain or outcome.decision is Decision.UNKNOWN
         reasons = list(frame.reasons) + list(outcome.uncertainty)
@@ -874,12 +1238,21 @@ class Workspace:
                 transition = item.name
             elif entry in self.world.transitions:
                 transition = entry
-        reactions = (
-            self.world.options(transition, Context(target, environment), request)
-            if transition is not None and self.world is not None
-            else (None,)
-        )
-        for reaction in reactions:
+        if self.world is not None:
+            context = Context(target, environment, logical_step=frame.logical_step, pending=frame.pending_events)
+            reactions = (
+                self.world.options(transition, context, request)
+                if transition is not None
+                else (Step("operation", context, context),)
+            )
+            reaction_ticks = tuple(
+                (reaction, tick)
+                for reaction in reactions
+                for tick in self.world.tick(reaction.after)
+            )
+        else:
+            reaction_ticks = ((None, None),)
+        for reaction, tick in reaction_ticks:
             branch = replace(outcome, lineage=lineage, origins=origins)
             if item.provenance_inputs:
                 observation = dict(branch.observation)
@@ -890,6 +1263,9 @@ class Workspace:
                 branch = replace(branch, observation=observation)
             successor = target
             current = environment
+            logical_step = frame.logical_step
+            pending_events = frame.pending_events
+            reaction_outputs: dict[str, Any] = {}
             branch_uncertain = uncertain
             branch_reasons = list(reasons)
             if reaction is not None:
@@ -899,7 +1275,20 @@ class Workspace:
                     branch_uncertain = True
                     branch_reasons.extend(reaction.reasons)
                     branch = replace(branch, decision=Decision.UNKNOWN, uncertainty=tuple(branch_reasons))
-                branch = replace(branch, environment=dict(reaction.outputs))
+                reaction_outputs.update(reaction.outputs)
+            if tick is not None:
+                successor = tick.after.target
+                current = tick.after.environment
+                logical_step = tick.after.logical_step
+                pending_events = tick.after.pending
+                if tick.outputs:
+                    reaction_outputs.update(tick.outputs)
+                if tick.status is Signal.UNKNOWN:
+                    branch_uncertain = True
+                    branch_reasons.extend(tick.reasons)
+                    branch = replace(branch, decision=Decision.UNKNOWN, uncertainty=tuple(branch_reasons))
+            if reaction is not None or tick is not None:
+                branch = replace(branch, environment=reaction_outputs)
             resource_reason = self._resource_reason(item, branch)
             if resource_reason is not None:
                 branch_uncertain = True
@@ -921,6 +1310,9 @@ class Workspace:
                 frame.aliases,
                 lineage,
                 origins,
+                logical_step,
+                pending_events,
+                clients,
             )
             after = self._sync(after, item, branch)
             event = branch.event(
@@ -933,12 +1325,13 @@ class Workspace:
             event = replace(
                 event,
                 source=dict(request if source is None else source),
+                client_id=item.client_id,
                 correlation_uncertain=any(
                     "uncorrelated connection:" in reason
                     for reason in branch.uncertainty
                 ),
             )
-            if reaction is not None:
+            if reaction is not None or tick is not None:
                 event = replace(event, after=outcome.after if owned else successor, reaction=dict(branch.environment), uncertainty=after.reasons)
             moves.append(Move(item, branch, frame, after, event))
         return tuple(moves)
@@ -989,7 +1382,10 @@ class Workspace:
                 continue
             for alias in group:
                 target, environment, regions = self._write(target, environment, regions, alias, value)
-        return Frame(target, environment, frame.uncertain, frame.reasons, regions, frame.aliases, frame.lineage, frame.origins)
+        return Frame(
+            target, environment, frame.uncertain, frame.reasons, regions, frame.aliases,
+            frame.lineage, frame.origins, frame.logical_step, frame.pending_events, frame.clients,
+        )
 
     @staticmethod
     def _read(frame: Frame, key: str) -> Any:

@@ -27,7 +27,7 @@ class Causal(unittest.TestCase):
         return Authorization("test", frozenset({"lab"}), frozenset({"target"}))
 
     def testreject(self):
-        op = Operation("check", Entry("check"), guard=lambda _state, _request: False)
+        op = Operation("check", Entry("check"), guard=lambda _state, _request: False, stop=True)
         out = op.execute(State({"value": 0}), {"value": 1})
         self.assertEqual(out.decision, Decision.REJECT)
         self.assertFalse(out.guard)
@@ -35,6 +35,51 @@ class Causal(unittest.TestCase):
         event = out.event("check", "check", {"value": 1}, State({"value": 0}))
         self.assertFalse(event.guard_result)
         self.assertEqual(event.decision, Decision.REJECT)
+
+    def test_error_handler_preserves_downstream_routes_after_failure(self):
+        broken = Operation(
+            "decode",
+            Entry("decode"),
+            apply=lambda _state, _request: (_ for _ in ()).throw(ValueError("malformed")),
+            error_handler=lambda state, _request, _error: state.update(error_seen=True, retries=1),
+            error_effects=("decode.error",),
+            error_writes=frozenset({"error_seen", "retries"}),
+        )
+        recover = Operation(
+            "recover",
+            Entry("recover"),
+            guard=lambda state, _request: state.get("error_seen") is True,
+            apply=lambda state, _request: state.update(done=True),
+            reads=frozenset({"error_seen"}),
+            writes=frozenset({"done"}),
+        )
+        model = Model(
+            "target", State({"error_seen": False, "retries": 0, "done": False}), ({},), (broken, recover),
+        )
+        goal = Goal("goal", "lab", lambda state, _trace: state.get("done") is True)
+        report = Engine().analyze(model, goal, self.auth(), Budget(max_depth=2))
+
+        self.assertEqual(report.status, Status.MODEL_SAT)
+        self.assertEqual([event.decision for event in report.witness.events], [Decision.ERROR, Decision.ACCEPT])
+        self.assertTrue(report.witness.events[0].effects == ("decode.error",))
+        self.assertTrue(report.witness.events[0].after["error_seen"])
+
+    def test_unhandled_operation_error_is_nonterminal_and_marks_unmodeled_aftermath(self):
+        broken = Operation(
+            "broken", Entry("broken"), apply=lambda _state, _request: (_ for _ in ()).throw(ValueError())
+        )
+        outcome = broken.execute(State(), {})
+
+        self.assertEqual(outcome.decision, Decision.ERROR)
+        self.assertFalse(outcome.terminal)
+        self.assertIn("error-aftermath", outcome.unknown)
+
+        broken_handler = Operation(
+            "broken-handler", Entry("broken-handler"),
+            apply=lambda _state, _request: (_ for _ in ()).throw(ValueError()),
+            error_handler=lambda _state, _request, _error: (_ for _ in ()).throw(RuntimeError()),
+        ).execute(State(), {})
+        self.assertIn("error-aftermath", broken_handler.unknown)
 
     def testpartial(self):
         deny = Operation(
@@ -66,6 +111,23 @@ class Causal(unittest.TestCase):
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual([event.decision for event in report.witness.events], [Decision.REJECT, Decision.ACCEPT])
         self.assertEqual(Index.build(model).predecessors(("ready",))[0].decision, Decision.REJECT)
+
+    def test_rejection_is_nonterminal_by_default(self):
+        reject = Operation(
+            "reject", Entry("reject"), guard=lambda _state, _request: False,
+            deny=lambda state, _request: state.update(flagged=True),
+            deny_writes=frozenset({"flagged"}),
+        )
+        follow = Operation(
+            "follow", Entry("follow"), guard=lambda state, _request: state.get("flagged") is True,
+            apply=lambda state, _request: state.update(done=True),
+        )
+        model = Model("target", State({"flagged": False, "done": False}), ({},), (reject, follow))
+        goal = Goal("goal", "lab", lambda state, _trace: state.get("done") is True)
+        report = Engine().analyze(model, goal, self.auth(), Budget(max_depth=2))
+
+        self.assertEqual(report.status, Status.MODEL_SAT)
+        self.assertEqual([event.decision for event in report.witness.events], [Decision.REJECT, Decision.ACCEPT])
 
     def testdeny(self):
         op = Operation(

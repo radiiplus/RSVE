@@ -155,9 +155,10 @@ class Analyzer:
         promoted: tuple[str, ...] = ()
         if divergence.kind == Kind.MODEL_TOO_LOOSE.value and event is not None:
             request = dict(event.request)
-            description = f"exclude {event.entry_point} request {json.dumps(request, sort_keys=True, default=str)} after runtime rejection"
-            next_model = model.exclude(event.entry_point, request, assumption=description)
-            added = (description,)
+            description = (
+                f"record runtime behavior for {event.entry_point} request "
+                f"{json.dumps(request, sort_keys=True, default=str)} at the observed pre-state"
+            )
             if probe is not None:
                 learned = self._learn_numeric_exclusion(
                     event.entry_point,
@@ -169,7 +170,7 @@ class Analyzer:
                 if learned is not None:
                     next_model = next_model.learn(learned)
                     added = added + (learned.describe(),)
-                    description += f"; promoted only the probed rejection region {learned.describe()}"
+                    description += f"; learned only the probed rejection region {learned.describe()}"
         elif divergence.kind == Kind.INSTRUMENTATION_GAP.value and event is not None:
             promoted = (f"observed:{event.operation}:{event.entry_point}",)
             description = "promote observed event only for the evidenced target/build region"
@@ -178,6 +179,23 @@ class Analyzer:
             if demoted:
                 next_model = model.demote(demoted)
             description = f"demote affected assumptions and retain divergence {divergence.kind} as an explicit unresolved model gap"
+        gap_payload = json.dumps({
+            "kind": divergence.kind,
+            "index": divergence.index,
+            "expected": divergence.expected,
+            "observed": divergence.observed,
+        }, sort_keys=True, default=str)
+        gap_id = hashlib.sha256(gap_payload.encode()).hexdigest()[:16]
+        next_model = next_model.record_refinement_gap(f"{divergence.kind}:{gap_id}")
+        prior_observations = len(next_model.observed_transitions)
+        next_model = next_model.record_observations(observed_events)
+        recorded = len(next_model.observed_transitions) - prior_observations
+        if recorded:
+            promoted += tuple(
+                f"observed:{item.operation}:{item.entry_point}:{item.event_id or item.ordering}"
+                for item in next_model.observed_transitions[prior_observations:]
+            )
+            description += f"; recorded {recorded} exact-context runtime transition(s)"
         revision = next_model.model_version
         delta_id = "delta-" + hashlib.sha256((revision + description).encode()).hexdigest()[:16]
         delta = Delta(
@@ -189,8 +207,11 @@ class Analyzer:
             added_constraints=added,
             demoted_assumptions=demoted,
             promoted_evidence=promoted,
+            observed_entries=tuple(dict.fromkeys(item.entry_point for item in observed_events)),
             invalidated_queries=tuple(invalidated_queries),
-            evidence_refs=tuple(event.evidence_refs if event else ()),
+            evidence_refs=tuple(dict.fromkeys(
+                reference for item in observed_events for reference in item.evidence_refs
+            )),
         )
         return Refinement(next_model, delta, tuple(divergences))
 

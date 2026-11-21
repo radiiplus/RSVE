@@ -7,12 +7,13 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass, fields, is_dataclass, replace
-from itertools import product
+from itertools import islice, product
 from typing import Any, Callable, Mapping, Sequence
 
 from .adapter import Target
 from .logic import Axiom, Either, Every, Constraint, Equal, Literal, Negate, Sort, Variable
 from .diff import Analyzer
+from .graph import Fit
 from .index import Index
 from .model import Authorization, Decision, Operation, State, Event, Model
 from .objective import All, Changes, Flow, Guard, Not, Order, Some, Test, Objective, Same, _contains
@@ -63,10 +64,17 @@ class Distance:
     writers: int
     uncertainty: int
     cost: int
+    feedforward: int = 0
 
     @property
     def score(self) -> int:
-        return self.unmet * 100 + self.uncertainty * 50 + self.cost + max(0, 10 - self.writers)
+        return (
+            self.unmet * 100
+            + self.uncertainty * 50
+            + self.cost
+            + max(0, 10 - self.writers)
+            - min(self.feedforward, 10) * 12
+        )
 
 
 def _sort_for(value: Any) -> Sort | None:
@@ -1131,6 +1139,8 @@ class Regressor:
         missing: list[str] = []
         stage = 0
         for index, transition in enumerate(transitions):
+            for issue in workspace.graph.transition_composition_issues(transition.transition_id):
+                missing.append(f"transition:{transition.transition_id} ({issue})")
             for transform_id in transition.transform_ids:
                 symbolic = workspace.symbolics.get(transform_id)
                 if symbolic is None:
@@ -1163,7 +1173,10 @@ class Regressor:
                 else:
                     steps.append(symbolic.scoped(f"route.{stage}.", f"route.{stage}."))
             if index < len(connections):
-                transform_id = connections[index].transform_id
+                connection = connections[index]
+                if connection.status is Fit.UNVERIFIED:
+                    missing.append(f"unknown seam connection:{connection.connection_id} has no verified representation bridge")
+                transform_id = connection.transform_id
                 if transform_id is not None:
                     symbolic = workspace.symbolics.get(transform_id)
                     if symbolic is None:
@@ -1291,6 +1304,9 @@ class Regressor:
                         workspace.start().environment,
                         regions=workspace.start().regions,
                         aliases=workspace.start().aliases,
+                        logical_step=workspace.start().logical_step,
+                        pending_events=workspace.start().pending_events,
+                        clients=workspace.start().clients,
                     ),
                     operation.entry_point.name,
                     request,
@@ -1348,11 +1364,6 @@ class Planner:
         validation = workspace.validate()
         if validation is not None and not validation.structural:
             raise ValueError(f"workspace topology is structurally invalid: {validation.errors}")
-        if validation is not None and not validation.ready:
-            raise ValueError(
-                "workspace composition is not executable: "
-                f"unverified={validation.unverified_connections}; missing={dict(validation.missing_capabilities)}"
-            )
         adapter_environment = self._environment(adapter)
         execution_profile = self._analysis_profile(adapter)
         objective.validate(
@@ -1401,7 +1412,30 @@ class Planner:
         explored_events = 0
         attempts: list[Attempt] = []
         budget_hit = False
-        unknown_seen = any(item.startswith("probe expansion ") for item in backward.uncertainty)
+        unresolved_scope = list(workspace.scope_unknowns)
+        if validation is not None:
+            unresolved_scope.extend(
+                f"unknown seam connection:{connection} is not verified"
+                for connection in validation.unverified_connections
+            )
+            unresolved_scope.extend(
+                f"capabilities for {path} are missing: {', '.join(capabilities)}"
+                for path, capabilities in validation.missing_capabilities.items()
+            )
+        unresolved_scope = list(dict.fromkeys(unresolved_scope))
+        unknown_seen = bool(unresolved_scope) or any(
+            item.startswith("probe expansion ") for item in backward.uncertainty
+        )
+        candidate_uncertainty: list[str] = list(unresolved_scope)
+        if unresolved_scope:
+            backward = replace(
+                backward,
+                complete=False,
+                uncertainty=tuple(dict.fromkeys(backward.uncertainty + tuple(unresolved_scope))),
+            )
+        capability_index = Index.build(model)
+        replanning_count = 0
+        replanning_limit = min(budget.max_states, 64)
 
         while queue:
             if (time.monotonic() - started) * 1000 > budget.max_time_ms:
@@ -1439,6 +1473,50 @@ class Planner:
                 continue
             visited.add(key)
             explored_states += 1
+            frontier_preferred = set(preferred)
+            frontier_actions: list[tuple[str, Mapping[str, Any]]] = []
+            if trace:
+                if replanning_count < replanning_limit:
+                    replanning_count += 1
+                    local_model = replace(
+                        model,
+                        initial_state=frame.target,
+                        model_version=f"{model.model_version}.frontier{replanning_count}",
+                    )
+                    local_workspace = replace(
+                        workspace,
+                        model=local_model,
+                        initial=frame,
+                    )
+                    remaining_ms = max(
+                        1,
+                        budget.max_time_ms - int((time.monotonic() - started) * 1000),
+                    )
+                    try:
+                        frontier_plan = Regressor().regress(
+                            local_model,
+                            objective,
+                            solver_timeout_ms=min(
+                                objective.budget.solver_timeout_ms,
+                                remaining_ms,
+                            ),
+                            workspace=local_workspace,
+                        )
+                        frontier_actions.extend(frontier_plan.required_actions)
+                        frontier_preferred.update(
+                            (entry, self._request_key(request))
+                            for entry, request in frontier_plan.required_actions
+                        )
+                    except Exception as exc:
+                        unknown_seen = True
+                        reason = f"backward replanning at depth {depth} failed: {type(exc).__name__}"
+                        if reason not in candidate_uncertainty:
+                            candidate_uncertainty.append(reason)
+                else:
+                    unknown_seen = True
+                    reason = f"online backward replanning bound reached ({replanning_limit})"
+                    if reason not in candidate_uncertainty:
+                        candidate_uncertainty.append(reason)
 
             if not uncertain and objective.evaluate(state, trace) and objective.satisfy(model.initial_state, trace):
                 attempt = self._replay_candidate(
@@ -1497,7 +1575,44 @@ class Planner:
             if depth >= budget.max_trace_length:
                 continue
             for operation in workspace.operations():
-                for request in input_candidates:
+                operation_candidates: dict[str, Mapping[str, Any]] = {
+                    self._request_key(item): dict(item) for item in input_candidates
+                }
+                for entry, request in frontier_actions:
+                    if entry == operation.entry_point.name:
+                        operation_candidates.setdefault(self._request_key(request), dict(request))
+                generator = operation.request_candidates
+                if generator is not None:
+                    remaining = max(0, budget.max_events - explored_events)
+                    candidate_limit = min(budget.max_states, remaining)
+                    try:
+                        generated = islice(
+                            iter(generator(state, objective)), candidate_limit + 1
+                        )
+                        for index, candidate in enumerate(generated):
+                            if index >= candidate_limit:
+                                unknown_seen = True
+                                reason = (
+                                    f"request candidates for {operation.entry_point.name} "
+                                    f"exceeded the per-state bound {candidate_limit}"
+                                )
+                                if reason not in candidate_uncertainty:
+                                    candidate_uncertainty.append(reason)
+                                break
+                            key = self._request_key(candidate)
+                            operation_candidates.setdefault(key, dict(candidate))
+                    except Exception as exc:
+                        # A failed candidate source must not silently narrow the
+                        # operation's behavior to the static request set.
+                        unknown_seen = True
+                        reason = (
+                            f"request candidates for {operation.entry_point.name} "
+                            f"failed: {type(exc).__name__}"
+                        )
+                        if reason not in candidate_uncertainty:
+                            candidate_uncertainty.append(reason)
+                for candidate_key in sorted(operation_candidates):
+                    request = operation_candidates[candidate_key]
                     if explored_events >= budget.max_events:
                         budget_hit = True
                         break
@@ -1514,9 +1629,15 @@ class Planner:
                             continue
                         event = replace(move.event, ordering=len(trace))
                         next_trace = trace + (event,)
-                        distance = self.distance(model, objective, move.after, next_trace)
+                        distance = self.distance(
+                            model,
+                            objective,
+                            move.after,
+                            next_trace,
+                            capability_index=capability_index,
+                        )
                         preference = distance.score
-                        if (operation.entry_point.name, self._request_key(request)) in preferred:
+                        if (operation.entry_point.name, self._request_key(request)) in frontier_preferred:
                             preference -= 25
                         serial += 1
                         heapq.heappush(queue, (preference, serial, depth + 1, move.after, next_trace, branch_unknown))
@@ -1526,6 +1647,11 @@ class Planner:
                 break
 
         status = Status.BUDGET_EXHAUSTED if budget_hit else (Status.UNKNOWN if (attempts or unknown_seen) else Status.UNSAT_BOUNDED)
+        if candidate_uncertainty:
+            backward = replace(
+                backward,
+                uncertainty=backward.uncertainty + tuple(candidate_uncertainty),
+            )
         gaps = [Gap(
             Grade.EVENT_BUDGET if budget_hit else (Grade.UNKNOWN if (attempts or unknown_seen) else Grade.BOUND),
             "bounded hybrid search exhausted its event/time/state budget" if budget_hit else ("candidate replay did not satisfy the objective or stability policy" if attempts else "an unresolved transition outcome may affect bounded reachability" if unknown_seen else "no witness exists in the encoded bounded model/surface"),
@@ -1545,11 +1671,47 @@ class Planner:
         )
 
     @staticmethod
-    def distance(model: Model, objective: Objective, frame: Frame, trace: Sequence[Event]) -> Distance:
+    def distance(
+        model: Model,
+        objective: Objective,
+        frame: Frame,
+        trace: Sequence[Event],
+        *,
+        capability_index: Index | None = None,
+    ) -> Distance:
         unmet = sum(not predicate.evaluate(frame.view(), trace) for predicate in objective.postconditions)
         keys = Regressor._keys(objective.postconditions)
-        writers = len(Index.build(model).chain(keys)) if keys else 0
-        return Distance(unmet, writers, int(frame.uncertain), len(trace))
+        index = capability_index or Index.build(model)
+        relevant_writers = index.chain(keys) if keys else ()
+        relevant = {
+            (item.entry, item.operation.name)
+            for item in relevant_writers
+        }
+        feedforward = 0
+        if trace:
+            latest = trace[-1]
+            before = latest.before.as_dict()
+            after = latest.after.as_dict()
+            changed = {
+                key
+                for key in before.keys() | after.keys()
+                if before.get(key) != after.get(key)
+            } | set(latest.writes)
+            direct = changed & keys
+            feedforward += len(direct) * 3
+            if changed:
+                newly_enabled = index.readers(changed)
+                feedforward += sum(
+                    (item.entry, item.operation.name) in relevant
+                    for item in newly_enabled
+                )
+        return Distance(
+            unmet,
+            len(relevant_writers),
+            int(frame.uncertain),
+            len(trace),
+            feedforward,
+        )
 
     def analyze(self, *args: Any, **kwargs: Any) -> Report:
         """Compatibility spelling for callers that use the engine's analyze API."""

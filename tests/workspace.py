@@ -12,6 +12,7 @@ from rsve import (
     Objective,
     Operation,
     Outcome,
+    Event,
     Persona,
     Planner,
     Same,
@@ -19,6 +20,8 @@ from rsve import (
     Zone,
     World,
     Workspace,
+    Schedule,
+    ReactionResult,
     Guard,
     Model,
     Reach,
@@ -45,12 +48,188 @@ from rsve import (
     Variable,
     Semantic,
     Shape,
+    ObservedTransformModel,
 )
 from rsve.result import Status
 from rsve.planner import Regressor
 
 
 class Suite(unittest.TestCase):
+    def test_observed_transform_inputs_seed_probes_without_proving_execution(self):
+        operation = Operation("observed-route", Entry("observed-route"))
+        model = Model("observed-transform-fixture", State({}), (), (operation,))
+        graph = Graph("observed-transform-workspace").persona(
+            Persona("observed-profile", "fixture", "target", "synthetic", "1")
+        ).zone(Zone("observed-region", "observed-profile", "entry"))
+        graph = graph.value(Representation("observed-raw", "mapping"))
+        graph = graph.value(Representation("observed-out", "mapping"))
+        graph = graph.transform(Transform(
+            "observed-opaque", "observed-raw", "observed-out", "fixture.opaque", "1",
+            Partiality.UNKNOWN, Relation.UNKNOWN, Invertibility.UNKNOWN, Loss.UNKNOWN,
+        ))
+        graph = graph.transition(Transition(
+            "observed-route", "observed-route", "observed-raw", "observed-out", ("observed-opaque",),
+        ))
+        observations = ObservedTransformModel("observed-opaque").observe(
+            {"raw": 3}, State(), {"amount": 6},
+            Evidence("observed-route-1", Fidelity.OBSERVED, "local-adapter"),
+        )
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            transforms={"observed-opaque": observations},
+        )
+
+        self.assertEqual(workspace.probes_for("observed-route"), ({"raw": 3},))
+        moves = workspace.moves(workspace.start(), "observed-route", {"raw": 3}, operation=operation)
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(moves[0].outcome.decision, Decision.UNKNOWN)
+        self.assertTrue(any("observed outputs are incomplete" in item for item in moves[0].outcome.uncertainty))
+
+    def test_client_interleaving_reaches_shared_state(self):
+        prepare = Operation(
+            "prepare",
+            Entry("prepare"),
+            guard=lambda state, _request: state.get("shared.counter") == 0,
+            apply=lambda state, _request: state.update(**{
+                "prepared": True,
+                "shared.counter": int(state.get("shared.counter", 0)) + 1,
+            }),
+            client_id="alice",
+            writes=frozenset({"prepared", "shared.counter"}),
+        )
+        finish = Operation(
+            "finish",
+            Entry("finish"),
+            guard=lambda state, _request: state.get("shared.counter") == 1 and state.get("prepared") is None,
+            apply=lambda state, _request: state.update(**{
+                "completed": True,
+                "shared.complete": True,
+            }),
+            client_id="bob",
+            writes=frozenset({"completed", "shared.complete"}),
+        )
+        model = Model(
+            "multi-client",
+            State({"counter": 0, "complete": False}),
+            ({"action": "prepare"}, {"action": "finish"}),
+            (prepare, finish),
+        )
+        workspace = Workspace.flat(model)
+        start = workspace.start()
+
+        blocked = workspace.moves(start, "finish", {"action": "finish"}, operation=finish)[0]
+        self.assertEqual(blocked.outcome.decision, Decision.REJECT)
+        self.assertEqual(blocked.event.client_id, "bob")
+
+        prepared = workspace.moves(start, "prepare", {"action": "prepare"}, operation=prepare)[0]
+        self.assertEqual(prepared.outcome.decision, Decision.ACCEPT)
+        self.assertEqual(prepared.after.target.get("counter"), 1)
+        self.assertEqual(prepared.after.clients["alice"].get("prepared"), True)
+        self.assertIsNone(prepared.after.clients.get("bob"))
+
+        completed = workspace.moves(prepared.after, "finish", {"action": "finish"}, operation=finish)[0]
+        self.assertEqual(completed.outcome.decision, Decision.ACCEPT)
+        self.assertTrue(completed.after.target.get("complete"))
+        self.assertTrue(completed.after.clients["alice"].get("prepared"))
+        self.assertTrue(completed.after.clients["bob"].get("completed"))
+        self.assertEqual(completed.event.client_id, "bob")
+        self.assertTrue(completed.after.view().get("client.alice.prepared"))
+        self.assertTrue(completed.after.view().get("client.bob.completed"))
+
+        objective = Objective("complete", "multi-client", "lab", (Same("complete", True),), budget=Limits(max_trace_length=2))
+        report = Planner().plan(
+            model,
+            objective,
+            Authorization("fixture", frozenset({"lab"}), frozenset({"multi-client"})),
+            workspace=workspace,
+        )
+        self.assertEqual(report.status, Status.SAT_CANDIDATE)
+        self.assertEqual([event.client_id for event in report.witness.events], ["alice", "bob"])
+
+    def test_bounded_two_client_schedules_explore_alternate_orderings(self):
+        def read_seen(state, _request):
+            return state.update(seen=state.get("shared.counter"))
+
+        def write_seen(state, _request):
+            return state.update(**{"shared.counter": int(state.get("seen")) + 1})
+
+        operations = tuple(
+            Operation(name, Entry(entry), apply=apply, client_id=client)
+            for client in ("alice", "bob")
+            for name, entry, apply in (
+                (f"read-{client}", "read", read_seen),
+                (f"write-{client}", "write", write_seen),
+            )
+        )
+        model = Model("schedule-fixture", State({"counter": 0}), (), operations)
+        workspace = Workspace.flat(model, clients={"alice": State(), "bob": State()})
+        actions = {
+            "alice": (("read", {}), ("write", {})),
+            "bob": (("read", {}), ("write", {})),
+        }
+
+        exploration = workspace.explore_interleavings(actions, max_schedules=10)
+        self.assertTrue(exploration.complete)
+        self.assertEqual(len(exploration.runs), 6)
+        self.assertTrue(all(run.completed and len(run.moves) == 4 for run in exploration.runs))
+        counters = {run.final.target.get("counter") for run in exploration.runs}
+        self.assertEqual(counters, {1, 2})
+        self.assertIn(("alice", "alice", "bob", "bob"), {run.order for run in exploration.runs})
+        self.assertIn(("bob", "alice", "alice", "bob"), {run.order for run in exploration.runs})
+
+    def test_interleaving_schedule_cap_marks_exploration_incomplete(self):
+        operations = tuple(
+            Operation(f"{client}-{entry}", Entry(entry), client_id=client)
+            for client in ("alice", "bob")
+            for entry in ("first", "second")
+        )
+        workspace = Workspace.flat(Model("bounded", State(), (), operations))
+        actions = {
+            "alice": (("first", {}), ("second", {})),
+            "bob": (("first", {}), ("second", {})),
+        }
+
+        exploration = workspace.explore_interleavings(actions, max_schedules=1)
+        self.assertFalse(exploration.complete)
+        self.assertEqual(len(exploration.runs), 1)
+        self.assertIn("schedule cap", " ".join(exploration.reasons))
+
+    def test_delayed_environment_event_changes_later_reachability(self):
+        initial = Context(State({"settled": False}), State({"clock": 0}))
+        world = World(
+            initial,
+            {
+                "launch": lambda context, _request: ReactionResult(
+                    context.target,
+                    context.environment,
+                    {"accepted": True},
+                    (Schedule("settle", 2, {"cause": "launch"}, "settle-1"),),
+                ),
+                "settle": lambda context, request: (
+                    context.target.update(settled=request["cause"] == "launch"),
+                    context.environment.update(clock=1),
+                    {"settled": True},
+                ),
+            },
+        )
+        model = Model("delayed-environment", initial.target, ({},), (
+            Operation("launch", Entry("launch")),
+            Operation("wait", Entry("wait")),
+        ))
+        workspace = Workspace.flat(model, world=world)
+
+        launched = workspace.moves(workspace.start(), "launch", {}, operation=model.ops()[0])[0]
+        self.assertEqual(launched.after.logical_step, 1)
+        self.assertEqual(launched.after.pending_events[0].due_step, 2)
+        self.assertFalse(launched.after.target.get("settled"))
+
+        waited = workspace.moves(launched.after, "wait", {}, operation=model.ops()[1])[0]
+        self.assertEqual(waited.after.logical_step, 2)
+        self.assertTrue(waited.after.target.get("settled"))
+        self.assertEqual(waited.event.reaction["environment_events"][0]["event_id"], "settle-1")
+        self.assertEqual(waited.after.view().get("env.pending_count"), 0)
+
     def test_environment_reaction_changes_composed_reachability(self):
         gate = Operation(
             "gate",
@@ -309,6 +488,104 @@ class Suite(unittest.TestCase):
         self.assertEqual(len(moves), 1)
         self.assertEqual(moves[0].event.operation, "shape-start")
         self.assertFalse(moves[0].after.regions["b"].as_dict())
+
+    def test_component_view_isolates_local_analysis_and_records_unknown_seams(self):
+        left = Operation("left-op", Entry("left"), component="left")
+        right = Operation("right-op", Entry("right"), component="right")
+        model = Model("component-view", State({"shared": 0}), (), (left, right))
+        graph = Graph("component-view-graph").persona(
+            Persona("component-profile", "test", "target", "fixture", "1")
+        )
+        graph = graph.zone(Zone("left", "component-profile", "left"))
+        graph = graph.zone(Zone("right", "component-profile", "right"))
+        graph = graph.value(Representation("component-map", "mapping"))
+        graph = graph.port(Port("left-out", "left", "out", Direction.OUTPUT, "component-map", "mapping"))
+        graph = graph.port(Port("right-in", "right", "in", Direction.INPUT, "component-map", "mapping"))
+        graph = graph.connect("left-out", "right-in", connection_id="left-to-right")
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            regions={"left": State({"value": 1}), "right": State({"value": 2})},
+        )
+
+        isolated = workspace.component_view("left")
+        self.assertEqual(tuple(item.name for item in isolated.operations()), ("left-op",))
+        self.assertEqual(tuple(item.region_id for item in isolated.graph.regions), ("left",))
+        self.assertEqual(isolated.graph.connections, ())
+        self.assertEqual(isolated.start().regions, {"left": State({"value": 1})})
+        self.assertEqual(isolated.scope_id, "component:left")
+        self.assertTrue(any("unknown seam left-to-right" in item for item in isolated.scope_unknowns))
+        report = Planner().plan(
+            isolated.model,
+            Objective("component-goal", "component-view", "lab", (Same("goal", True),), budget=Limits(max_trace_length=1)),
+            Authorization("component-test", frozenset({"lab"}), frozenset({"component-view"})),
+            workspace=isolated,
+        )
+        self.assertEqual(report.status, Status.UNKNOWN)
+        self.assertTrue(any("unknown seam left-to-right" in item for item in report.unresolved_uncertainty))
+
+    def test_unverified_connection_without_bridge_is_unknown_not_identity(self):
+        operation = Operation("route", Entry("route"))
+        model = Model("unknown-seam", State({}), ({"value": "source"},), (operation,))
+        graph = Graph("unknown-seam-graph").persona(
+            Persona("unknown-profile", "test", "target", "fixture", "1")
+        ).zone(Zone("a", "unknown-profile", "a")).zone(Zone("b", "unknown-profile", "b"))
+        graph = graph.value(Representation("seam-value", "mapping"))
+        graph = graph.value(Representation("seam-other", "text"))
+        graph = graph.transition(Transition("from-a", "route", "seam-value", "seam-value", region_id="a"))
+        graph = graph.transition(Transition("to-b", "internal", "seam-other", "seam-other", region_id="b"))
+        graph = graph.port(Port("seam-out", "a", "out", Direction.OUTPUT, "seam-value", "mapping"))
+        graph = graph.port(Port("seam-in", "b", "in", Direction.INPUT, "seam-other", "text"))
+        graph = graph.connect("seam-out", "seam-in", connection_id="unverified-seam")
+        workspace = Workspace.flat(
+            model,
+            graph=graph,
+            entries={"route"},
+            regions={"a": State({}), "b": State({})},
+        )
+
+        moves = workspace.moves(workspace.start(), "route", {"value": "source"})
+        self.assertTrue(any(move.outcome.decision is Decision.UNKNOWN for move in moves))
+        self.assertTrue(any("opaque connection: unverified-seam" in reason for move in moves for reason in move.outcome.uncertainty))
+
+    def test_observed_transition_refines_only_its_exact_request_and_pre_state(self):
+        operation = Operation(
+            "step",
+            Entry("step"),
+            apply=lambda state, _request: state.update(value=state.get("value", 0) + 1),
+            component="region",
+        )
+        model = Model("observed-refinement", State({"value": 0}), (), (operation,))
+        observed = Event(
+            "step",
+            "step",
+            {"amount": 1},
+            State({"value": 0}),
+            State({"value": 7}),
+            fidelity=Fidelity.OBSERVED,
+            component="region",
+            guard_result=True,
+            writes=frozenset({"value"}),
+            evidence_refs=("replay-1",),
+        )
+        refined = model.record_observations((observed,))
+        workspace = Workspace.flat(refined, regions={"region": State({"value": 0})})
+
+        replayed = workspace.moves(workspace.start(), "step", {"amount": 1}, operation=operation)[0]
+        other_request = workspace.moves(workspace.start(), "step", {"amount": 2}, operation=operation)[0]
+        other_state = replace(
+            workspace.start(),
+            regions={"region": State({"value": 1})},
+        )
+        other_context = workspace.moves(other_state, "step", {"amount": 1}, operation=operation)[0]
+        self.assertEqual(replayed.after.regions["region"].get("value"), 7)
+        self.assertEqual(replayed.event.fidelity, Fidelity.OBSERVED)
+        self.assertTrue(replayed.after.uncertain)
+        self.assertEqual(replayed.event.evidence_refs, ("replay-1",))
+        self.assertEqual(other_request.after.regions["region"].get("value"), 1)
+        self.assertFalse(other_request.after.uncertain)
+        self.assertEqual(other_context.after.regions["region"].get("value"), 2)
+        self.assertFalse(other_context.after.uncertain)
 
     def test_contract_mismatch_blocks_symbolic_graph_synthesis(self):
         model = Model("contract-mismatch-fixture", State({"done": False}), (), ())

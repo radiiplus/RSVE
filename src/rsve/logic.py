@@ -66,7 +66,10 @@ class Literal(Constraint):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Literal":
-        return cls(data["value"], Sort(data["sort"]))
+        value = data["value"]
+        if isinstance(value, dict) and "__bytes__" in value:
+            value = bytes.fromhex(value["__bytes__"])
+        return cls(value, Sort(data["sort"]))
 
 
 @dataclass(frozen=True)
@@ -75,19 +78,22 @@ class Variable(Constraint):
     name: str
     sort: Sort
     width: int | None = None
+    signed: bool | None = None
 
     def __post_init__(self) -> None:
         if not self.name:
             raise ValueError("constraint variable name is required")
         if self.sort is Sort.BITVECTOR and (self.width is None or self.width <= 0):
             raise ValueError("bitvector variables require a positive width")
+        if self.sort is not Sort.BITVECTOR and self.signed is not None:
+            raise ValueError("signedness is only valid for bitvector variables")
 
     def to_dict(self) -> dict[str, Any]:
-        return {"name": self.name, "sort": self.sort.value, "width": self.width}
+        return {"name": self.name, "sort": self.sort.value, "width": self.width, "signed": self.signed}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Variable":
-        return cls(data["name"], Sort(data["sort"]), data.get("width"))
+        return cls(data["name"], Sort(data["sort"]), data.get("width"), data.get("signed"))
 
 
 @dataclass(frozen=True)
@@ -114,8 +120,11 @@ class Arithmetic(Constraint):
     right: Constraint
 
     def __post_init__(self) -> None:
-        if self.operator not in {"+", "-", "*"}:
-            raise ValueError("arithmetic operator must be '+', '-', or '*'")
+        if self.operator not in {
+            "+", "-", "*", "/", "%", "&", "|", "^", "&^", "<<", "s>>", "u>>",
+            "s/", "u/", "s%", "u%",
+        }:
+            raise ValueError("unsupported arithmetic operator")
 
     def to_dict(self) -> dict[str, Any]:
         return {"operator": self.operator, "left": _node(self.left), "right": _node(self.right)}

@@ -535,6 +535,27 @@ A single accepted or rejected input does not justify a global domain rule.
 Generalize only after probing additional points or obtaining a semantic
 contract. Preserve the original trace and revision history.
 
+For an opaque graph transform, `ObservedTransformModel` can retain adapter
+observations and act as its concrete evaluator:
+
+```python
+observed = ObservedTransformModel("opaque.parse").observe(
+    raw_input,
+    state_before,
+    output,
+    Evidence("trace-17", Fidelity.OBSERVED, "local-adapter"),
+)
+workspace = Workspace.flat(model, graph=graph, transforms={"opaque.parse": observed})
+```
+
+Each observation is keyed by the exact input and state. Matching outputs are
+available to bounded exploration, and observed first-stage mapping inputs seed
+the route's probe set. Both matching outputs and unseen contexts remain
+`UNKNOWN`, because samples do not establish the complete relation. Add later
+observations by assigning the result of `observed.observe(...)`; this preserves
+the previous model value. A semantic formula or controlled replay is still
+needed to establish general behavior.
+
 ## 9. Search strategy for AI models
 
 Use a staged search policy that spends expensive work where it can answer the
@@ -618,6 +639,15 @@ because its input bytes differ. A new state, effect, or causal path can be
 novel independently. Call `seen(signature, Level.EXACT)` when a coarse match
 needs exact refinement.
 
+Signatures also retain compact links between intermediate coarse/exact state
+digests and the behavior of their later continuations. If one coarse state is
+followed by different modeled continuations, `Archive.offer` records that
+divergence and replaces the coarse state key with exact-state keys for that
+partition. Repeated observations of the same refined state stop receiving
+state novelty. Refinement uses observed event sequences; it does not assert
+that two states are equivalent when no distinguishing continuation has been
+observed.
+
 Use the archive as a ranking signal only:
 
 1. Execute or model a candidate using the normal workspace/planner path.
@@ -627,9 +657,9 @@ Use the archive as a ranking signal only:
 5. Keep the exact trace and evidence separately.
 
 Do not use a novel signature as proof of a vulnerability, reachability, or
-semantic difference. If two candidates share a coarse signature but later
-diverge, retain the counterexample and refine the selected keys or archive
-resolution.
+semantic difference. If two candidates share a coarse state but later diverge,
+retain the trace; the archive uses the continuation as evidence to refine that
+state's key while preserving the original transition and path observations.
 
 RSVE provides five bounded novelty-driven strategies. All require an
 assessment callback that returns a `Trial`; the callback is responsible for
@@ -701,11 +731,30 @@ result = guide.search("frontier", archive=archive)
 
 `Guide` obtains seeds from `Regressor.required_actions` and
 `required_traces`, expands entries using the workspace's operations and
-bounded probes, executes every candidate through `Workspace.moves`, and
-builds signatures from the resulting events and frames. Without an adapter,
-successful results are `MODEL_SAT`. Passing an authorized target adapter adds
-controlled replay; only accepted, stable replay results can be
-`VALIDATED_WITNESS`. The guide closes the adapter after the search.
+bounded probes, state-conditioned semantic candidate sources, and model
+arguments, executes every candidate through `Workspace.moves`, and builds
+signatures from the resulting events and frames. `guide.search("portfolio")`
+runs MCTS, evolutionary, beam, frontier, and annealing search over that same
+automatically derived domain. They share the behavior archive and split one
+candidate/time budget; a strategy's ranking never changes the modeled
+transition semantics. Without an adapter, successful results are
+`MODEL_SAT`. Passing an authorized target adapter adds controlled replay; only
+accepted, stable replay results can be `VALIDATED_WITNESS`. The guide closes
+the adapter after the search. The standalone strategy classes remain
+available when an application needs custom expansion or assessment callbacks.
+
+For targets with a `SourceIndex`, pass an explicit `SourceProfile` to `Guide`.
+The profile maps normalized source symbols to typed request/state fields,
+assignment targets to state keys, and guard lines to branch senses. The
+lowerer will add only exact supported operations to the workspace. Source
+facts containing calls, returns, or unsupported control flow remain incomplete;
+they do not become executable merely because the call graph contains them.
+
+`RelaxationAnalyzer` can investigate named assumptions in a solver UNSAT core.
+SAT after dropping a core constraint is counterfactual until an explicit model
+binding maps every solver value to a request and a certain authorized workspace
+route reaches the objective. That result is model-confirmed only; target replay
+is still needed for runtime confirmation.
 
 The complementary strategies are:
 

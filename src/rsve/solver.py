@@ -112,6 +112,7 @@ class Unknown(ValueError):
 class Map:
     def __init__(self) -> None:
         self.variables: dict[str, z3.ExprRef] = {}
+        self.byte_sequence_sort = z3.SeqSort(z3.BitVecSort(8))
 
     def variable(self, variable: Variable) -> z3.ExprRef:
         if variable.sort is Sort.BOOL:
@@ -120,6 +121,8 @@ class Map:
             expr = z3.Int(variable.name)
         elif variable.sort is Sort.BITVECTOR:
             expr = z3.BitVec(variable.name, variable.width or 0)
+        elif variable.sort is Sort.BYTES:
+            expr = z3.Const(variable.name, self.byte_sequence_sort)
         elif variable.sort is Sort.STRING:
             expr = z3.String(variable.name)
         else:
@@ -128,6 +131,8 @@ class Map:
         return expr
 
     def literal(self, literal: Literal, expected: z3.ExprRef | None = None) -> z3.ExprRef:
+        if expected is not None and z3.is_bv(expected) and literal.sort in {Sort.INT, Sort.BITVECTOR}:
+            return z3.BitVecVal(int(literal.value), expected.size())
         if literal.sort is Sort.BOOL:
             return z3.BoolVal(bool(literal.value))
         if literal.sort is Sort.INT:
@@ -138,6 +143,13 @@ class Map:
             return z3.BitVecVal(int(literal.value), expected.size())
         if literal.sort is Sort.STRING:
             return z3.StringVal(str(literal.value))
+        if literal.sort is Sort.BYTES:
+            if not isinstance(literal.value, (bytes, bytearray)):
+                raise Unknown("byte literals require a bytes value")
+            result = z3.Empty(self.byte_sequence_sort)
+            for item in literal.value:
+                result = z3.Concat(result, z3.Unit(z3.BitVecVal(item, 8)))
+            return result
         raise Unknown(f"sort {literal.sort.value} is not supported by the Z3 adapter")
 
     def expr(self, node: Constraint) -> z3.ExprRef:
@@ -157,18 +169,50 @@ class Map:
                 right = self.expr(node.right)
             return left == right
         if isinstance(node, Arithmetic):
-            left = self.expr(node.left)
-            right = self.expr(node.right)
+            if isinstance(node.left, Literal) and not isinstance(node.right, Literal):
+                right = self.expr(node.right)
+                left = self.literal(node.left, right)
+            else:
+                left = self.expr(node.left)
+                right = self.literal(node.right, left) if isinstance(node.right, Literal) else self.expr(node.right)
             if node.operator == "+":
                 return left + right
             if node.operator == "-":
                 return left - right
             if node.operator == "*":
                 return left * right
+            if node.operator in {"/", "s/"}:
+                return left / right
+            if node.operator == "u/":
+                return z3.UDiv(left, right)
+            if node.operator in {"%", "s%"}:
+                return z3.SRem(left, right) if z3.is_bv(left) else left % right
+            if node.operator == "u%":
+                return z3.URem(left, right)
+            if node.operator == "&":
+                return left & right
+            if node.operator == "|":
+                return left | right
+            if node.operator == "^":
+                return left ^ right
+            if node.operator == "&^":
+                return left & ~right
+            if node.operator == "<<":
+                return left << right
+            if node.operator == "s>>":
+                return left >> right
+            if node.operator == "u>>":
+                return z3.LShR(left, right)
             raise Unknown(f"arithmetic operator {node.operator!r} is unsupported")
         if isinstance(node, Range):
             value = self.expr(node.value)
             if z3.is_bv(value):
+                signed = _bitvector_signed(node.value)
+                if signed is True:
+                    return z3.And(
+                        value >= z3.BitVecVal(node.minimum, value.size()),
+                        value <= z3.BitVecVal(node.maximum, value.size()),
+                    )
                 return z3.And(z3.UGE(value, z3.BitVecVal(node.minimum, value.size())), z3.ULE(value, z3.BitVecVal(node.maximum, value.size())))
             return z3.And(value >= node.minimum, value <= node.maximum)
         if isinstance(node, Set):
@@ -194,8 +238,12 @@ class Map:
         if isinstance(node, Negate):
             return z3.Not(self.expr(node.term))
         if isinstance(node, Rel):
-            left = self.expr(node.left)
-            right = self.expr(node.right)
+            if isinstance(node.left, Literal) and not isinstance(node.right, Literal):
+                right = self.expr(node.right)
+                left = self.literal(node.left, right)
+            else:
+                left = self.expr(node.left)
+                right = self.literal(node.right, left) if isinstance(node.right, Literal) else self.expr(node.right)
             if node.relation in {"=", "=="}:
                 return left == right
             if node.relation == "!=":
@@ -208,6 +256,25 @@ class Map:
                 return left > right
             if node.relation == ">=":
                 return left >= right
+            if node.relation.startswith("s") and z3.is_bv(left):
+                signed = node.relation[1:]
+                if signed == "<":
+                    return left < right
+                if signed == "<=":
+                    return left <= right
+                if signed == ">":
+                    return left > right
+                if signed == ">=":
+                    return left >= right
+            if node.relation.startswith("u") and z3.is_bv(left):
+                unsigned = {
+                    "<": z3.ULT,
+                    "<=": z3.ULE,
+                    ">": z3.UGT,
+                    ">=": z3.UGE,
+                }.get(node.relation[1:])
+                if unsigned is not None:
+                    return unsigned(left, right)
             raise Unknown(f"relation {node.relation!r} is unsupported")
         if isinstance(node, Axiom):
             return self.expr(node.term)
@@ -238,10 +305,24 @@ def _smt2(node: Constraint) -> str:
     if isinstance(node, Negate):
         return f"(not {_smt2(node.term)})"
     if isinstance(node, Rel):
-        return f"({node.relation} {_smt2(node.left)} {_smt2(node.right)})"
+        relation = {
+            "s<": "bvslt", "s<=": "bvsle", "s>": "bvsgt", "s>=": "bvsge",
+            "u<": "bvult", "u<=": "bvule", "u>": "bvugt", "u>=": "bvuge",
+        }.get(node.relation, node.relation)
+        return f"({relation} {_smt2(node.left)} {_smt2(node.right)})"
     if isinstance(node, Axiom):
         return f"(! {_smt2(node.term)} :named {node.name})"
     raise Unknown(type(node).__name__)
+
+
+def _bitvector_signed(node: Constraint) -> bool | None:
+    if isinstance(node, Variable) and node.sort is Sort.BITVECTOR:
+        return node.signed
+    if isinstance(node, Arithmetic):
+        left = _bitvector_signed(node.left)
+        right = _bitvector_signed(node.right)
+        return left if left == right or right is None else right if left is None else None
+    return None
 
 
 def _top_level_named_assertions(formula: Constraint) -> tuple[tuple[str, Constraint], ...]:
@@ -500,6 +581,7 @@ def _normalize_solver_result(
 
 
 def _model_value(value: z3.ExprRef) -> Any:
+    value = z3.simplify(value)
     if z3.is_bool(value):
         return z3.is_true(value)
     if z3.is_int_value(value):
@@ -508,4 +590,23 @@ def _model_value(value: z3.ExprRef) -> Any:
         return value.as_long()
     if z3.is_string_value(value):
         return value.as_string()
+    if z3.is_seq(value) and not value.sort().is_string():
+        try:
+            return _byte_sequence_value(value)
+        except (ValueError, z3.Z3Exception):
+            pass
     return str(value)
+
+
+def _byte_sequence_value(value: z3.ExprRef) -> bytes:
+    kind = value.decl().kind()
+    if kind == z3.Z3_OP_SEQ_EMPTY:
+        return b""
+    if kind == z3.Z3_OP_SEQ_UNIT:
+        item = z3.simplify(value.arg(0))
+        if not z3.is_bv_value(item) or item.size() != 8:
+            raise ValueError("sequence element is not an 8-bit byte")
+        return bytes((item.as_long(),))
+    if kind == z3.Z3_OP_SEQ_CONCAT:
+        return b"".join(_byte_sequence_value(value.arg(index)) for index in range(value.num_args()))
+    raise ValueError("byte sequence model is not a concrete concatenation")

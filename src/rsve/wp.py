@@ -244,7 +244,7 @@ def rename(node: Constraint, mapper: Any) -> Constraint:
 
 def _rename(node: Constraint, rename: Any) -> Constraint:
     if isinstance(node, Variable):
-        return Variable(rename(node.name), node.sort, node.width)
+        return Variable(rename(node.name), node.sort, node.width, node.signed)
     if isinstance(node, Literal):
         return node
     if isinstance(node, Equal):

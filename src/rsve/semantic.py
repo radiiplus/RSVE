@@ -8,6 +8,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 from .graph import Graph
 from .model import Decision, Fidelity, Mode, Outcome, State
+from .transforms import ObservedTransformResult
 
 
 class Meaning(str, Enum):
@@ -46,6 +47,12 @@ class Interpreter:
     ) -> None:
         self.graph = graph
         self.transforms = dict(transforms or {})
+        for transform_id, evaluator in self.transforms.items():
+            observed_id = getattr(evaluator, "transform_id", transform_id)
+            if observed_id != transform_id:
+                raise ValueError(
+                    f"observed transform identity {observed_id!r} does not match binding {transform_id!r}"
+                )
         self.recognizers = dict(recognizers or {})
         self.effects = dict(effects or {})
 
@@ -61,7 +68,22 @@ class Interpreter:
         transition = next((item for item in self.graph.transitions if item.transition_id == transition_id), None)
         if transition is None:
             return (Branch(value, Meaning.UNKNOWN, reasons=(f"unknown transition: {transition_id}",)),)
-        branches = (Branch(value, Meaning.ACCEPTED, state=state or State(), lineage=lineage, origins=origins),)
+        composition_issues = self.graph.transition_composition_issues(transition_id)
+        if composition_issues:
+            return (Branch(
+                value,
+                Meaning.UNKNOWN,
+                representations=(transition.input_representation,),
+                reasons=tuple(f"incompatible transform composition: {issue}" for issue in composition_issues),
+            ),)
+        branches = (Branch(
+            value,
+            Meaning.ACCEPTED,
+            representations=(transition.input_representation,),
+            state=state or State(),
+            lineage=lineage,
+            origins=origins,
+        ),)
         for transform_id in transition.transform_ids:
             transform = next((item for item in self.graph.transforms if item.transform_id == transform_id), None)
             if transform is None:
@@ -81,6 +103,45 @@ class Interpreter:
             for branch in branches:
                 try:
                     outputs = evaluator(branch.value, branch.state)
+                    if isinstance(outputs, ObservedTransformResult):
+                        evidence = (
+                            f"observed evidence: {', '.join(outputs.evidence_ids)}"
+                            if outputs.evidence_ids else "no matching observed evidence"
+                        )
+                        reason = f"{outputs.limitation} ({evidence})"
+                        if not outputs.values:
+                            expanded.append(Branch(
+                                branch.value,
+                                Meaning.UNKNOWN,
+                                branch.representations + (transform.output_representation,),
+                                branch.recognizer_results,
+                                branch.state,
+                                branch.reasons + (reason,),
+                                None,
+                                None,
+                            ))
+                            continue
+                        for output in outputs.values:
+                            lineage, lineage_reason = _transfer(transform.provenance, branch.lineage)
+                            origins, origin_reason = _origins(
+                                transform.provenance,
+                                transform.provenance_paths,
+                                branch.origins,
+                            )
+                            reasons = branch.reasons + (reason,)
+                            reasons += ((lineage_reason,) if lineage_reason else ())
+                            reasons += ((origin_reason,) if origin_reason else ())
+                            expanded.append(Branch(
+                                output,
+                                Meaning.UNKNOWN,
+                                branch.representations + (transform.output_representation,),
+                                branch.recognizer_results,
+                                branch.state,
+                                reasons,
+                                lineage,
+                                origins,
+                            ))
+                        continue
                     values = _relation_values(outputs)
                     if not values:
                         if transform.complete:

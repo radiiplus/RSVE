@@ -139,6 +139,7 @@ class Signature:
     path: Mapping[str, str]
     levels: Mapping[str, str]
     scope: Mapping[str, Any] = field(default_factory=dict)
+    state_continuations: tuple[tuple[str, str, str], ...] = ()
 
     @classmethod
     def make(
@@ -180,6 +181,32 @@ class Signature:
             "orders": tuple(event.ordering for event in events),
             "parents": tuple(event.parent_event_id for event in events),
         }
+        state_continuations = tuple(
+            (
+                _digest({
+                    "target": _project(event.after.as_dict(), selected),
+                    "environment": {},
+                    "regions": {},
+                    "uncertain": False,
+                    "reasons": (),
+                    "aliases": _shape(()),
+                    "lineage": _shape(None),
+                    "origins": _shape(None),
+                }),
+                _digest({
+                    "target": event.after.as_dict(),
+                    "environment": {},
+                    "regions": {},
+                    "uncertain": False,
+                    "reasons": (),
+                    "aliases": (),
+                    "lineage": None,
+                    "origins": None,
+                }),
+                _digest(tuple(_event(item, selected, Level.COARSE) for item in events[index + 1 :])),
+            )
+            for index, event in enumerate(events[:-1])
+        )
         return cls(
             target,
             profile,
@@ -189,6 +216,7 @@ class Signature:
             {"coarse": _digest({"state": state_coarse, "transition": transition_coarse, "path": path_coarse}),
              "exact": _digest({"state": state_exact, "transition": transition_exact, "path": path_exact})},
             dict(scope or {}),
+            state_continuations,
         )
 
     def partition(self) -> tuple[str, str, str]:
@@ -207,6 +235,7 @@ class Signature:
             "path": dict(self.path),
             "levels": dict(self.levels),
             "scope": _canonical(self.scope),
+            "state_continuations": self.state_continuations,
         }
 
 
@@ -234,6 +263,23 @@ class Archive:
     states_exact: frozenset[tuple[str, str, str, str]] = frozenset()
     transitions_exact: frozenset[tuple[str, str, str, str]] = frozenset()
     paths_exact: frozenset[tuple[str, str, str, str]] = frozenset()
+    state_records: frozenset[tuple[tuple[str, str, str], str, str]] = frozenset()
+    refinements: frozenset[tuple[tuple[str, str, str], str, str, str]] = frozenset()
+
+    @staticmethod
+    def _refined_key(
+        partition: tuple[str, str, str],
+        coarse_state: str,
+        exact_state: str,
+    ) -> tuple[str, str, str, str]:
+        refined = _digest({"coarse": coarse_state, "exact": exact_state})
+        return (*partition, refined)
+
+    def _divergent_states(self) -> frozenset[tuple[tuple[str, str, str], str]]:
+        continuations: dict[tuple[tuple[str, str, str], str], set[str]] = {}
+        for partition, coarse_state, _exact_state, continuation in self.refinements:
+            continuations.setdefault((partition, coarse_state), set()).add(continuation)
+        return frozenset(key for key, values in continuations.items() if len(values) > 1)
 
     def offer(self, signature: Signature) -> tuple["Archive", Novelty]:
         partition = signature.partition()
@@ -243,20 +289,57 @@ class Archive:
         state_exact = (*partition, signature.state[Level.EXACT.value])
         transition_exact = (*partition, signature.transition[Level.EXACT.value])
         path_exact = (*partition, signature.path[Level.EXACT.value])
+        records = set(self.state_records)
+        records.add((partition, signature.state[Level.COARSE.value], signature.state[Level.EXACT.value]))
+        records.update(
+            (partition, coarse_state, exact_state)
+            for coarse_state, exact_state, _continuation in signature.state_continuations
+        )
+        continuations = set(self.refinements)
+        continuations.update(
+            (partition, coarse_state, exact_state, continuation)
+            for coarse_state, exact_state, continuation in signature.state_continuations
+        )
+        divergent = self._divergent_states() | Archive(
+            refinements=frozenset(continuations),
+        )._divergent_states()
+        current_state_keys = {
+            self._refined_key(record_partition, coarse_state, exact_state)
+            if (record_partition, coarse_state) in divergent
+            else (*record_partition, coarse_state)
+            for record_partition, coarse_state, exact_state in records
+        }
+        states = set(self.states)
+        for record_partition, coarse_state in divergent:
+            states.discard((*record_partition, coarse_state))
+        states.update(current_state_keys)
+        current_keys = {
+            self._refined_key(partition, coarse_state, exact_state)
+            if (partition, coarse_state) in divergent
+            else (*partition, coarse_state)
+            for coarse_state, exact_state, _continuation in signature.state_continuations
+        }
+        current_keys.add(
+            self._refined_key(partition, signature.state[Level.COARSE.value], signature.state[Level.EXACT.value])
+            if (partition, signature.state[Level.COARSE.value]) in divergent
+            else state_key
+        )
         novelty = Novelty(
-            state_key not in self.states,
+            bool(current_keys - self.states),
             transition_key not in self.transitions,
             path_key not in self.paths,
             signature.profile,
         )
         return (
             Archive(
-                self.states | {state_key},
-                self.transitions | {transition_key},
-                self.paths | {path_key},
-                self.states_exact | {state_exact},
-                self.transitions_exact | {transition_exact},
-                self.paths_exact | {path_exact},
+                states=frozenset(states),
+                transitions=self.transitions | {transition_key},
+                paths=self.paths | {path_key},
+                states_exact=self.states_exact | {state_exact},
+                transitions_exact=self.transitions_exact | {transition_exact},
+                paths_exact=self.paths_exact | {path_exact},
+                state_records=frozenset(records),
+                refinements=frozenset(continuations),
             ),
             novelty,
         )
@@ -269,8 +352,14 @@ class Archive:
                 and (*partition, signature.transition[level.value]) in self.transitions_exact
                 and (*partition, signature.path[level.value]) in self.paths_exact
             )
+        state_coarse = signature.state[Level.COARSE.value]
+        state_key = (
+            self._refined_key(partition, state_coarse, signature.state[Level.EXACT.value])
+            if (partition, state_coarse) in self._divergent_states()
+            else (*partition, state_coarse)
+        )
         return (
-            (*partition, signature.state[level.value]) in self.states
+            state_key in self.states
             and (*partition, signature.transition[level.value]) in self.transitions
             and (*partition, signature.path[level.value]) in self.paths
         )
