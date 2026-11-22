@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any
 
-from .bor_callwithstate import bor_callwithstate_profile
+from .bor_callwithstate import bor_callwithstate_profile, bor_state_override_profile
 from .bor_environment import EnvironmentObservation
 from .bor_entrypoints import bor_entrypoint_regions
 from .bor_profile import BorStorageRootRegressionProfile, bor_storage_root_regression_profile
@@ -146,6 +146,8 @@ def autonomous_summary(profile: BorStorageRootRegressionProfile | None = None) -
     route_report = route.analyze()
     call_profile = bor_callwithstate_profile()
     call_report = call_profile.analyze()
+    override_profile = bor_state_override_profile()
+    override_report = override_profile.analyze()
     return {
         "status": report.status.value,
         "target": report.target_id,
@@ -166,6 +168,13 @@ def autonomous_summary(profile: BorStorageRootRegressionProfile | None = None) -
             "regions": call_profile.attached_regions,
             "unknown_regions": call_profile.unknown_regions,
             "unresolved_uncertainty": call_report.unresolved_uncertainty,
+        },
+        "state_override": {
+            "status": override_report.status.value,
+            "witness": tuple(event.entry_point for event in override_report.witness.events) if override_report.witness else (),
+            "regions": override_profile.attached_regions,
+            "unknown_regions": override_profile.unknown_regions,
+            "unresolved_uncertainty": override_report.unresolved_uncertainty,
         },
     }
 

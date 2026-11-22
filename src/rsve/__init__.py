@@ -153,8 +153,11 @@ from .bor_evidence import (
 )
 from .bor_callwithstate import (
     BOR_CALLWITHSTATE_SCOPE,
+    BOR_STATE_OVERRIDE_SCOPE,
     BorCallWithStateProfile,
+    BorStateOverrideProfile,
     bor_callwithstate_profile,
+    bor_state_override_profile,
 )
 from .bor_autonomous import (
     BorRegionSpec,
@@ -422,8 +425,11 @@ __all__ = [
     "BorCallWithStateIngest",
     "BorCallWithStateObservation",
     "BOR_CALLWITHSTATE_SCOPE",
+    "BOR_STATE_OVERRIDE_SCOPE",
     "BorCallWithStateProfile",
+    "BorStateOverrideProfile",
     "bor_callwithstate_profile",
+    "bor_state_override_profile",
     "BorRegionSpec",
     "attach_environment_observation",
     "autonomous_summary",

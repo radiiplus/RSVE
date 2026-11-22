@@ -7,7 +7,7 @@ import argparse
 import json
 
 from rsve.bor_autonomous import attach_environment_observation, bor_autonomous_profile
-from rsve.bor_callwithstate import bor_callwithstate_profile
+from rsve.bor_callwithstate import bor_callwithstate_profile, bor_state_override_profile
 from rsve.bor_environment import EnvironmentObservation
 from rsve.bor_entrypoints import bor_entrypoint_regions
 from rsve.bor_evidence import BorCallWithStateIngest, BorStorageRootIngest
@@ -26,6 +26,8 @@ def main() -> None:
     call_report = call_profile.analyze()
     if args.call_artifact:
         call_report = BorCallWithStateIngest.load(args.call_artifact).attach_observation(call_report)
+    override_profile = bor_state_override_profile()
+    override_report = override_profile.analyze()
     route = bor_entrypoint_regions()
     route_report = route.analyze()
     if args.environment_artifact:
@@ -55,6 +57,14 @@ def main() -> None:
             "unknown_regions": call_profile.unknown_regions,
             "unresolved_uncertainty": call_report.unresolved_uncertainty,
             "evidence": [item.canonical() for item in call_report.evidence],
+        },
+        "state_override": {
+            "status": override_report.status.value,
+            "witness": [event.entry_point for event in override_report.witness.events] if override_report.witness else [],
+            "regions": override_profile.attached_regions,
+            "unknown_regions": override_profile.unknown_regions,
+            "unresolved_uncertainty": override_report.unresolved_uncertainty,
+            "evidence": [item.canonical() for item in override_report.evidence],
         },
     }, sort_keys=True))
 

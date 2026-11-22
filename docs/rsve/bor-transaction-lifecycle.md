@@ -234,6 +234,19 @@ PYTHONPATH=src python scripts/bor_autonomous_analysis.py \
   --call-artifact /home/codespace/bor/bor-source/artifacts/bor-callwithstate-probe.json
 ```
 
+The same route contains a stronger modeled balance candidate when an internal
+caller supplies state overrides with a live `StateDB`:
+
+`rpc.eth_call -> internal.CallWithState -> override.StateOverride.Apply -> evm.Call.snapshot -> core.StateDB.Commit`
+
+The source ordering places `StateOverride.Apply` at `internal/ethapi/api.go:911`
+before the EVM snapshot at `core/vm/evm.go:368`. The bounded model applies a
+synthetic balance override `100 -> 1` and storage override `0 -> 99`, then
+reverts the contract call and commits the caller-owned state. This is retained
+as `SAT_CANDIDATE` rather than `OBSERVED`: the current Bor checkout has the
+override implementation staged as deleted, so a clean production-package
+replay is still required before treating the balance change as confirmed.
+
 Run the attached RSVE investigation with:
 
 ```text
