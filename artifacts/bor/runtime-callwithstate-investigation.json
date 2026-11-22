@@ -1,0 +1,133 @@
+{
+  "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+  "classification": "REPRODUCED_RUNTIME_OBSERVATION",
+  "conclusion": "runtime_hypothesis_reproduced",
+  "economic_analysis": {
+    "classification": "RUNTIME_OBSERVATION",
+    "conclusion": "no_economic_advantage_observed",
+    "findings": [],
+    "hypotheses": [],
+    "investigation": "bor-economic-advantage",
+    "unknown_regions": []
+  },
+  "execution": {
+    "classification": "RUNTIME_OBSERVATION",
+    "command": {
+      "argv": [
+        "go",
+        "run",
+        "./cmd/bor-callwithstate-probe"
+      ],
+      "cwd": "/home/codespace/bor/bor-source",
+      "display": "go run ./cmd/bor-callwithstate-probe",
+      "timeout_seconds": 120
+    },
+    "duration_ms": 260,
+    "parse_error": null,
+    "payload": {
+      "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+      "canonical_transaction": false,
+      "nonce_after": 8,
+      "nonce_before": 7,
+      "out_of_band": true,
+      "receipt_created": false,
+      "recipient": "0x3333333333333333333333333333333333333333",
+      "scope": "bor-callwithstate-readonly-mutation",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "sequence": [
+        "rpc.eth_call",
+        "internal.CallWithState",
+        "core.ApplyMessage",
+        "state.SetNonce"
+      ],
+      "source_refs": [
+        "internal/ethapi/api.go:911",
+        "internal/ethapi/api.go:1043",
+        "internal/ethapi/transaction_args.go:509",
+        "core/state_transition.go:571",
+        "core/vm/evm.go:368"
+      ],
+      "state_mutated": true,
+      "target": "polygon-bor"
+    },
+    "returncode": 0,
+    "source_revision": "c72e248587a19b1c93eda95871c46b53071e58fd",
+    "stderr": "",
+    "stdout": "{\n  \"target\": \"polygon-bor\",\n  \"build_hash\": \"c72e248587a19b1c93eda95871c46b53071e58fd\",\n  \"scope\": \"bor-callwithstate-readonly-mutation\",\n  \"sequence\": [\n    \"rpc.eth_call\",\n    \"internal.CallWithState\",\n    \"core.ApplyMessage\",\n    \"state.SetNonce\"\n  ],\n  \"sender\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n  \"recipient\": \"0x3333333333333333333333333333333333333333\",\n  \"nonce_before\": 7,\n  \"nonce_after\": 8,\n  \"state_mutated\": true,\n  \"canonical_transaction\": false,\n  \"receipt_created\": false,\n  \"out_of_band\": true,\n  \"source_refs\": [\n    \"internal/ethapi/api.go:911\",\n    \"internal/ethapi/api.go:1043\",\n    \"internal/ethapi/transaction_args.go:509\",\n    \"core/state_transition.go:571\",\n    \"core/vm/evm.go:368\"\n  ]\n}\n",
+    "target_revision_available": true,
+    "toolchain": "go version go1.27.1 linux/amd64"
+  },
+  "hypotheses": [
+    {
+      "case": "observation-0",
+      "classification": "REPRODUCED_RUNTIME_OBSERVATION",
+      "difference": {
+        "canonical_transaction": false,
+        "nonce_after": 8,
+        "nonce_before": 7,
+        "receipt_created": false
+      },
+      "hypothesis_id": "hypothesis:6a5b7eda0655cf0ec23c",
+      "kind": "out_of_band_state_mutation",
+      "source_fields": [
+        "state_mutated",
+        "nonce_before",
+        "nonce_after",
+        "canonical_transaction",
+        "receipt_created"
+      ]
+    }
+  ],
+  "independent_verification": {
+    "classification": "NOT_RUN"
+  },
+  "investigation": "bor-execution-driven",
+  "reproduction": {
+    "classification": "RUNTIME_OBSERVATION",
+    "command": {
+      "argv": [
+        "go",
+        "run",
+        "./cmd/bor-callwithstate-probe"
+      ],
+      "cwd": "/home/codespace/bor/bor-source",
+      "display": "go run ./cmd/bor-callwithstate-probe",
+      "timeout_seconds": 120
+    },
+    "duration_ms": 226,
+    "parse_error": null,
+    "payload": {
+      "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+      "canonical_transaction": false,
+      "nonce_after": 8,
+      "nonce_before": 7,
+      "out_of_band": true,
+      "receipt_created": false,
+      "recipient": "0x3333333333333333333333333333333333333333",
+      "scope": "bor-callwithstate-readonly-mutation",
+      "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+      "sequence": [
+        "rpc.eth_call",
+        "internal.CallWithState",
+        "core.ApplyMessage",
+        "state.SetNonce"
+      ],
+      "source_refs": [
+        "internal/ethapi/api.go:911",
+        "internal/ethapi/api.go:1043",
+        "internal/ethapi/transaction_args.go:509",
+        "core/state_transition.go:571",
+        "core/vm/evm.go:368"
+      ],
+      "state_mutated": true,
+      "target": "polygon-bor"
+    },
+    "returncode": 0,
+    "source_revision": "c72e248587a19b1c93eda95871c46b53071e58fd",
+    "stderr": "",
+    "stdout": "{\n  \"target\": \"polygon-bor\",\n  \"build_hash\": \"c72e248587a19b1c93eda95871c46b53071e58fd\",\n  \"scope\": \"bor-callwithstate-readonly-mutation\",\n  \"sequence\": [\n    \"rpc.eth_call\",\n    \"internal.CallWithState\",\n    \"core.ApplyMessage\",\n    \"state.SetNonce\"\n  ],\n  \"sender\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n  \"recipient\": \"0x3333333333333333333333333333333333333333\",\n  \"nonce_before\": 7,\n  \"nonce_after\": 8,\n  \"state_mutated\": true,\n  \"canonical_transaction\": false,\n  \"receipt_created\": false,\n  \"out_of_band\": true,\n  \"source_refs\": [\n    \"internal/ethapi/api.go:911\",\n    \"internal/ethapi/api.go:1043\",\n    \"internal/ethapi/transaction_args.go:509\",\n    \"core/state_transition.go:571\",\n    \"core/vm/evm.go:368\"\n  ]\n}\n",
+    "target_revision_available": true,
+    "toolchain": "go version go1.27.1 linux/amd64"
+  },
+  "target": "polygon-bor"
+}

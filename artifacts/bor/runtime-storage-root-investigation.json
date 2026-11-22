@@ -1,0 +1,123 @@
+{
+  "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+  "classification": "REPRODUCED_RUNTIME_OBSERVATION",
+  "conclusion": "runtime_hypothesis_reproduced",
+  "economic_analysis": {
+    "classification": "RUNTIME_OBSERVATION",
+    "conclusion": "no_economic_advantage_observed",
+    "findings": [],
+    "hypotheses": [],
+    "investigation": "bor-economic-advantage",
+    "unknown_regions": []
+  },
+  "execution": {
+    "classification": "RUNTIME_OBSERVATION",
+    "command": {
+      "argv": [
+        "go",
+        "run",
+        "./cmd/bor-storage-root-probe"
+      ],
+      "cwd": "/home/codespace/bor/bor-source",
+      "display": "go run ./cmd/bor-storage-root-probe",
+      "timeout_seconds": 120
+    },
+    "duration_ms": 522,
+    "parse_error": null,
+    "payload": {
+      "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+      "divergence": true,
+      "parallel_create2_admitted": true,
+      "parallel_nonempty": false,
+      "parallel_storage_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "scope": "bor-parallel-storage-root-recreation",
+      "sequence": [
+        "selfdestruct",
+        "recreate-with-storage",
+        "create2-collision-check"
+      ],
+      "serial_create2_admitted": false,
+      "serial_nonempty": true,
+      "serial_storage_root": "0x9d7bbe35dc5044f7e5a75c01412f8939d00ceae1f6187655dc8d80237724a66b",
+      "source_refs": [
+        "core/state/parallel_statedb.go:1076",
+        "core/vm/evm.go:640"
+      ],
+      "target": "polygon-bor"
+    },
+    "returncode": 0,
+    "source_revision": "c72e248587a19b1c93eda95871c46b53071e58fd",
+    "stderr": "",
+    "stdout": "{\"build_hash\":\"c72e248587a19b1c93eda95871c46b53071e58fd\",\"divergence\":true,\"parallel_create2_admitted\":true,\"parallel_nonempty\":false,\"parallel_storage_root\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"scope\":\"bor-parallel-storage-root-recreation\",\"sequence\":[\"selfdestruct\",\"recreate-with-storage\",\"create2-collision-check\"],\"serial_create2_admitted\":false,\"serial_nonempty\":true,\"serial_storage_root\":\"0x9d7bbe35dc5044f7e5a75c01412f8939d00ceae1f6187655dc8d80237724a66b\",\"source_refs\":[\"core/state/parallel_statedb.go:1076\",\"core/vm/evm.go:640\"],\"target\":\"polygon-bor\"}\n",
+    "target_revision_available": true,
+    "toolchain": "go version go1.27.1 linux/amd64"
+  },
+  "hypotheses": [
+    {
+      "case": "observation-0",
+      "classification": "REPRODUCED_RUNTIME_OBSERVATION",
+      "difference": {
+        "parallel_create2_admitted": true,
+        "parallel_storage_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "serial_create2_admitted": false,
+        "serial_storage_root": "0x9d7bbe35dc5044f7e5a75c01412f8939d00ceae1f6187655dc8d80237724a66b"
+      },
+      "hypothesis_id": "hypothesis:1b72a0d7481ea053f58e",
+      "kind": "serial_parallel_state_divergence",
+      "source_fields": [
+        "divergence",
+        "serial_storage_root",
+        "parallel_storage_root",
+        "serial_create2_admitted",
+        "parallel_create2_admitted"
+      ]
+    }
+  ],
+  "independent_verification": {
+    "classification": "NOT_RUN"
+  },
+  "investigation": "bor-execution-driven",
+  "reproduction": {
+    "classification": "RUNTIME_OBSERVATION",
+    "command": {
+      "argv": [
+        "go",
+        "run",
+        "./cmd/bor-storage-root-probe"
+      ],
+      "cwd": "/home/codespace/bor/bor-source",
+      "display": "go run ./cmd/bor-storage-root-probe",
+      "timeout_seconds": 120
+    },
+    "duration_ms": 574,
+    "parse_error": null,
+    "payload": {
+      "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+      "divergence": true,
+      "parallel_create2_admitted": true,
+      "parallel_nonempty": false,
+      "parallel_storage_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "scope": "bor-parallel-storage-root-recreation",
+      "sequence": [
+        "selfdestruct",
+        "recreate-with-storage",
+        "create2-collision-check"
+      ],
+      "serial_create2_admitted": false,
+      "serial_nonempty": true,
+      "serial_storage_root": "0x9d7bbe35dc5044f7e5a75c01412f8939d00ceae1f6187655dc8d80237724a66b",
+      "source_refs": [
+        "core/state/parallel_statedb.go:1076",
+        "core/vm/evm.go:640"
+      ],
+      "target": "polygon-bor"
+    },
+    "returncode": 0,
+    "source_revision": "c72e248587a19b1c93eda95871c46b53071e58fd",
+    "stderr": "",
+    "stdout": "{\"build_hash\":\"c72e248587a19b1c93eda95871c46b53071e58fd\",\"divergence\":true,\"parallel_create2_admitted\":true,\"parallel_nonempty\":false,\"parallel_storage_root\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"scope\":\"bor-parallel-storage-root-recreation\",\"sequence\":[\"selfdestruct\",\"recreate-with-storage\",\"create2-collision-check\"],\"serial_create2_admitted\":false,\"serial_nonempty\":true,\"serial_storage_root\":\"0x9d7bbe35dc5044f7e5a75c01412f8939d00ceae1f6187655dc8d80237724a66b\",\"source_refs\":[\"core/state/parallel_statedb.go:1076\",\"core/vm/evm.go:640\"],\"target\":\"polygon-bor\"}\n",
+    "target_revision_available": true,
+    "toolchain": "go version go1.27.1 linux/amd64"
+  },
+  "target": "polygon-bor"
+}

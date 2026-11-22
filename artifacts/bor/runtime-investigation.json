@@ -1,0 +1,1126 @@
+{
+  "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+  "classification": "RUNTIME_OBSERVATION",
+  "conclusion": "consistent_observation_set",
+  "economic_analysis": {
+    "classification": "RUNTIME_OBSERVATION",
+    "conclusion": "no_economic_advantage_observed",
+    "findings": [],
+    "hypotheses": [],
+    "investigation": "bor-economic-advantage",
+    "unknown_regions": []
+  },
+  "execution": {
+    "classification": "RUNTIME_OBSERVATION",
+    "command": {
+      "argv": [
+        "go",
+        "run",
+        "./cmd/bor-balance-analysis"
+      ],
+      "cwd": "/home/codespace/bor/bor-source",
+      "display": "go run ./cmd/bor-balance-analysis",
+      "timeout_seconds": 120
+    },
+    "duration_ms": 2589,
+    "parse_error": null,
+    "payload": {
+      "accepted": 4,
+      "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+      "chain_id": "137",
+      "finding_count": 0,
+      "observations": [
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "999999999957999",
+              "balance_before": "1000000000000000",
+              "nonce_after": 1,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "1",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "21000",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "21000",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "accepted",
+          "burn_delta": "21000",
+          "case": "transfer",
+          "coinbase_delta": "21000",
+          "committed_state_root": "0xa15a6ff1380a8475086740a090a69dacfb60396a8ca59caff957b719a8e2b640",
+          "cumulative_gas_used": 21000,
+          "database_writes": [
+            {
+              "key": "dd6d590d1e1f62937573cc2667874424186284d656c90be0ba50f4aec84b8c58",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 107
+            },
+            {
+              "key": "8dd42b83070c3a3d91539d8ab11a5f2095f4ca7245542cda046d26eca2ab1b73",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 114
+            },
+            {
+              "key": "43b3ce17515558d60288225d7d7c3a0a3ed3e4c572d4b3781553f91986b8fad1",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "16c4ec80c661b60099b8ee26391e312c164fa3c8d7b4aba44374ff235b3b8e27",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "a15a6ff1380a8475086740a090a69dacfb60396a8ca59caff957b719a8e2b640",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 147
+            },
+            {
+              "key": "6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 330
+            },
+            {
+              "key": "48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 8
+            },
+            {
+              "key": "680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 509
+            },
+            {
+              "key": "720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 333
+            }
+          ],
+          "execution": "completed",
+          "fees": {
+            "base_fee_per_gas": "1",
+            "burn_fee": "21000",
+            "effective_gas_price": "2",
+            "fee_cap": "2",
+            "gas_fee": "42000",
+            "gas_price": "2",
+            "priority_fee": "21000",
+            "tip_cap": "2"
+          },
+          "gas": {
+            "cumulative": 21000,
+            "limit": 50000,
+            "remaining_pool": 29979000,
+            "used": 21000
+          },
+          "gas_used": 21000,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda",
+            "persisted_status": 1,
+            "post_state": "",
+            "status": 1,
+            "transaction_hash": "0xc5779c8c672eeb61780ad3a7ad3dc57c7d02e556dd9fa8856ff132d094bafb3c"
+          },
+          "receipt_metadata_ready": true,
+          "receipt_persisted": true,
+          "receipt_status": "success",
+          "recipient_delta": "1",
+          "reopened": true,
+          "sender_delta": "-42001",
+          "state_root_after": "0xa15a6ff1380a8475086740a090a69dacfb60396a8ca59caff957b719a8e2b640",
+          "state_root_before": "0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": "0"
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "999999999912107",
+              "balance_before": "1000000000000000",
+              "nonce_after": 1,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "1",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x821e2556a290c86405f8160a2d662042a431ba456b9db265c79bb837c04be5f0",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000001",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "43946",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "43946",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "accepted",
+          "burn_delta": "43946",
+          "case": "contract-storage-write",
+          "coinbase_delta": "43946",
+          "committed_state_root": "0xa03b7b66b752755d7ecfc87e8bf3c457f3ead7b609de2e610bf5527c02524560",
+          "cumulative_gas_used": 43946,
+          "database_writes": [
+            {
+              "key": "630dd9fc23b9e0972b48f0c93ebb805660239a90ba27a337a9f24333a8703975cd",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 6
+            },
+            {
+              "key": "821e2556a290c86405f8160a2d662042a431ba456b9db265c79bb837c04be5f0",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 36
+            },
+            {
+              "key": "1a0eb19362316f3943591985e625820fa74e2b59a9233af15b10c2c9b41c7187",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 107
+            },
+            {
+              "key": "0c898548fac5b5f2e3b9581f46326ee060e8a5b0cb0feb7b351903d0b5fc40ad",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 114
+            },
+            {
+              "key": "bde2f26d745f81c8a19be355bba319b300be1bb394b90fac12cd0b6dbc4df72f",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "76814b96bdc67b7941e3201db168fd1259f98949fe53865ce8ab0a0484a9409d",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "a03b7b66b752755d7ecfc87e8bf3c457f3ead7b609de2e610bf5527c02524560",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 147
+            },
+            {
+              "key": "6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 330
+            },
+            {
+              "key": "48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 8
+            },
+            {
+              "key": "680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 509
+            },
+            {
+              "key": "720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 333
+            }
+          ],
+          "execution": "completed",
+          "fees": {
+            "base_fee_per_gas": "1",
+            "burn_fee": "43946",
+            "effective_gas_price": "2",
+            "fee_cap": "2",
+            "gas_fee": "87892",
+            "gas_price": "2",
+            "priority_fee": "43946",
+            "tip_cap": "2"
+          },
+          "gas": {
+            "cumulative": 43946,
+            "limit": 100000,
+            "remaining_pool": 29956054,
+            "used": 43946
+          },
+          "gas_used": 43946,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda",
+            "persisted_status": 1,
+            "post_state": "",
+            "status": 1,
+            "transaction_hash": "0xd2519ef6e0d0f1e4b4dd6323623cf802876fb733fbcd5fa6fa773a67f2c8e8c0"
+          },
+          "receipt_metadata_ready": true,
+          "receipt_persisted": true,
+          "receipt_status": "success",
+          "recipient_delta": "1",
+          "reopened": true,
+          "sender_delta": "-87893",
+          "state_root_after": "0xa03b7b66b752755d7ecfc87e8bf3c457f3ead7b609de2e610bf5527c02524560",
+          "state_root_before": "0x978b34cb3cfa8ef697a30f85e0c24d8f2f78b39f27f04f31d8f2232a3830ba65",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "total_tracked_delta": "0"
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "999999999955907",
+              "balance_before": "1000000000000000",
+              "nonce_after": 1,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "1",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x821e2556a290c86405f8160a2d662042a431ba456b9db265c79bb837c04be5f0",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000001"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "22046",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "22046",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "accepted",
+          "burn_delta": "22046",
+          "case": "contract-storage-clear-refund",
+          "coinbase_delta": "22046",
+          "committed_state_root": "0xc07f1d636fb835647df1b763a701ccd8fd15f6fbf9097338098be2aa3dfb1c50",
+          "cumulative_gas_used": 22046,
+          "database_writes": [
+            {
+              "key": "638c4b19126ec61a89d742281f8ed6b09910f88795ac2909bd02d9478d8128c9b3",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 6
+            },
+            {
+              "key": "35548b7f748bccf448cf4d2aded58fff4739072f05502ce43efef8fb09bf4ec5",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 107
+            },
+            {
+              "key": "d92e4ddf90370c047a78e638dc6ad01f285710f4adff6f58f2351317ad27cbed",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 114
+            },
+            {
+              "key": "47d7695225859d099e1a20765b98d0f4df111c2b7ba9e958aa68487542702674",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "20e09318e99b3cc344f438ca1e1ed718731b740ef1704473de7f88a0d2b837e3",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "c07f1d636fb835647df1b763a701ccd8fd15f6fbf9097338098be2aa3dfb1c50",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 147
+            },
+            {
+              "key": "6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 330
+            },
+            {
+              "key": "48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 8
+            },
+            {
+              "key": "680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 509
+            },
+            {
+              "key": "720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 333
+            }
+          ],
+          "execution": "completed",
+          "fees": {
+            "base_fee_per_gas": "1",
+            "burn_fee": "22046",
+            "effective_gas_price": "2",
+            "fee_cap": "2",
+            "gas_fee": "44092",
+            "gas_price": "2",
+            "priority_fee": "22046",
+            "tip_cap": "2"
+          },
+          "gas": {
+            "cumulative": 22046,
+            "limit": 100000,
+            "remaining_pool": 29977954,
+            "used": 22046
+          },
+          "gas_used": 22046,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda",
+            "persisted_status": 1,
+            "post_state": "",
+            "status": 1,
+            "transaction_hash": "0xd2519ef6e0d0f1e4b4dd6323623cf802876fb733fbcd5fa6fa773a67f2c8e8c0"
+          },
+          "receipt_metadata_ready": true,
+          "receipt_persisted": true,
+          "receipt_status": "success",
+          "recipient_delta": "1",
+          "reopened": true,
+          "sender_delta": "-44093",
+          "state_root_after": "0xc07f1d636fb835647df1b763a701ccd8fd15f6fbf9097338098be2aa3dfb1c50",
+          "state_root_before": "0xd8710be24d777f9f2b49eeeb584d0371e42c229229a52b72d736c850e3593714",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": "0"
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "999999999912096",
+              "balance_before": "1000000000000000",
+              "nonce_after": 1,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "43952",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "43952",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "accepted",
+          "burn_delta": "43952",
+          "case": "contract-revert",
+          "coinbase_delta": "43952",
+          "committed_state_root": "0x13d925d4f3085a548775c8520215ff107ac05358b0c5b0ace6fa2774316274e8",
+          "cumulative_gas_used": 43952,
+          "database_writes": [
+            {
+              "key": "632d131ad16f1b225292fd6d7b38d449ee8071b46c3dc4400551041562f41f0fd7",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 10
+            },
+            {
+              "key": "207fc10abea597345e53f03dda296763e0fb43ad23729571a90f4e7ac198f2d3",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 107
+            },
+            {
+              "key": "c2ba0b7011016e4482f3e4e1d7f4cbbdc3486030fda18284ca00f6b20974ee6e",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 114
+            },
+            {
+              "key": "1c3dae0b8297a76a89f7dae25afcd1451b9b384243f4d326aeac320a95ceeeaf",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "7ce229713d7d659975bdf767f2f99c26386f7746fd73a8fe7759410a98eb78d0",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 109
+            },
+            {
+              "key": "13d925d4f3085a548775c8520215ff107ac05358b0c5b0ace6fa2774316274e8",
+              "operation": "put",
+              "phase": "commit",
+              "value_size": 147
+            },
+            {
+              "key": "6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 330
+            },
+            {
+              "key": "48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 8
+            },
+            {
+              "key": "680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 509
+            },
+            {
+              "key": "720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852",
+              "operation": "put",
+              "phase": "receipt_persist",
+              "value_size": 333
+            }
+          ],
+          "execution": "completed",
+          "fees": {
+            "base_fee_per_gas": "1",
+            "burn_fee": "43952",
+            "effective_gas_price": "2",
+            "fee_cap": "2",
+            "gas_fee": "87904",
+            "gas_price": "2",
+            "priority_fee": "43952",
+            "tip_cap": "2"
+          },
+          "gas": {
+            "cumulative": 43952,
+            "limit": 100000,
+            "remaining_pool": 29956048,
+            "used": 43952
+          },
+          "gas_used": 43952,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda",
+            "persisted_status": 0,
+            "post_state": "",
+            "status": 0,
+            "transaction_hash": "0xd2519ef6e0d0f1e4b4dd6323623cf802876fb733fbcd5fa6fa773a67f2c8e8c0"
+          },
+          "receipt_metadata_ready": true,
+          "receipt_persisted": true,
+          "receipt_status": "failed",
+          "recipient_delta": "0",
+          "reopened": true,
+          "sender_delta": "-87904",
+          "state_root_after": "0x13d925d4f3085a548775c8520215ff107ac05358b0c5b0ace6fa2774316274e8",
+          "state_root_before": "0x2fcf3e2beb201630ac7bda8289ae50209973453e8cb1c1b4c2279d64a3c594bd",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": "0"
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "rejected",
+          "admission_errors": [
+            "stateful: insufficient funds for gas * price + value: balance 0, tx cost 100001, overshot 100001"
+          ],
+          "burn_delta": "",
+          "case": "insufficient-funds",
+          "coinbase_delta": "",
+          "cumulative_gas_used": 0,
+          "execution": "not-run",
+          "fees": {
+            "base_fee_per_gas": "",
+            "burn_fee": "",
+            "effective_gas_price": "",
+            "fee_cap": "",
+            "gas_fee": "",
+            "gas_price": "",
+            "priority_fee": "",
+            "tip_cap": ""
+          },
+          "gas": {
+            "cumulative": 0,
+            "limit": 0,
+            "remaining_pool": 0,
+            "used": 0
+          },
+          "gas_used": 0,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "",
+            "persisted_status": 0,
+            "post_state": "",
+            "status": 0,
+            "transaction_hash": ""
+          },
+          "receipt_metadata_ready": false,
+          "receipt_persisted": false,
+          "receipt_status": "none",
+          "recipient_delta": "",
+          "reopened": false,
+          "sender_delta": "",
+          "state_root_after": "",
+          "state_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": ""
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "1000000000000000",
+              "balance_before": "1000000000000000",
+              "nonce_after": 1,
+              "nonce_before": 1,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "rejected",
+          "admission_errors": [
+            "stateful: nonce too low: next nonce 1, tx nonce 0"
+          ],
+          "burn_delta": "",
+          "case": "nonce-too-low",
+          "coinbase_delta": "",
+          "cumulative_gas_used": 0,
+          "execution": "not-run",
+          "fees": {
+            "base_fee_per_gas": "",
+            "burn_fee": "",
+            "effective_gas_price": "",
+            "fee_cap": "",
+            "gas_fee": "",
+            "gas_price": "",
+            "priority_fee": "",
+            "tip_cap": ""
+          },
+          "gas": {
+            "cumulative": 0,
+            "limit": 0,
+            "remaining_pool": 0,
+            "used": 0
+          },
+          "gas_used": 0,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "",
+            "persisted_status": 0,
+            "post_state": "",
+            "status": 0,
+            "transaction_hash": ""
+          },
+          "receipt_metadata_ready": false,
+          "receipt_persisted": false,
+          "receipt_status": "none",
+          "recipient_delta": "",
+          "reopened": false,
+          "sender_delta": "",
+          "state_root_after": "",
+          "state_root_before": "0x58e3b31f51718e4c6b9ff53f92fc8789d683baf0d83cf2359a264cb0db3bd8ef",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": ""
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "1000000000000000",
+              "balance_before": "1000000000000000",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "rejected",
+          "admission_errors": [
+            "stateful: nonce too high: tx nonce 2, gapped nonce 0"
+          ],
+          "burn_delta": "",
+          "case": "nonce-gap",
+          "coinbase_delta": "",
+          "cumulative_gas_used": 0,
+          "execution": "not-run",
+          "fees": {
+            "base_fee_per_gas": "",
+            "burn_fee": "",
+            "effective_gas_price": "",
+            "fee_cap": "",
+            "gas_fee": "",
+            "gas_price": "",
+            "priority_fee": "",
+            "tip_cap": ""
+          },
+          "gas": {
+            "cumulative": 0,
+            "limit": 0,
+            "remaining_pool": 0,
+            "used": 0
+          },
+          "gas_used": 0,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "",
+            "persisted_status": 0,
+            "post_state": "",
+            "status": 0,
+            "transaction_hash": ""
+          },
+          "receipt_metadata_ready": false,
+          "receipt_persisted": false,
+          "receipt_status": "none",
+          "recipient_delta": "",
+          "reopened": false,
+          "sender_delta": "",
+          "state_root_after": "",
+          "state_root_before": "0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": ""
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "1000000000000000",
+              "balance_before": "1000000000000000",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "rejected",
+          "admission_errors": [
+            "stateless: max priority fee per gas higher than max fee per gas"
+          ],
+          "burn_delta": "",
+          "case": "fee-cap-ordering",
+          "coinbase_delta": "",
+          "cumulative_gas_used": 0,
+          "execution": "not-run",
+          "fees": {
+            "base_fee_per_gas": "",
+            "burn_fee": "",
+            "effective_gas_price": "",
+            "fee_cap": "",
+            "gas_fee": "",
+            "gas_price": "",
+            "priority_fee": "",
+            "tip_cap": ""
+          },
+          "gas": {
+            "cumulative": 0,
+            "limit": 0,
+            "remaining_pool": 0,
+            "used": 0
+          },
+          "gas_used": 0,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "",
+            "persisted_status": 0,
+            "post_state": "",
+            "status": 0,
+            "transaction_hash": ""
+          },
+          "receipt_metadata_ready": false,
+          "receipt_persisted": false,
+          "receipt_status": "none",
+          "recipient_delta": "",
+          "reopened": false,
+          "sender_delta": "",
+          "state_root_after": "",
+          "state_root_before": "0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": ""
+        },
+        {
+          "accounts": [
+            {
+              "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+              "balance_after": "1000000000000000",
+              "balance_before": "1000000000000000",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_root_before": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3333333333333333333333333333333333333333",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            {
+              "address": "0x3EF57dEf668054dD750BD260526105C4EEEf104F",
+              "balance_after": "0",
+              "balance_before": "0",
+              "nonce_after": 0,
+              "nonce_before": 0,
+              "storage_root_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_root_before": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_after": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "storage_slot_zero_before": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ],
+          "admission": "rejected",
+          "admission_errors": [
+            "stateless: invalid sender: invalid transaction v, r, s values"
+          ],
+          "burn_delta": "",
+          "case": "invalid-signature",
+          "coinbase_delta": "",
+          "cumulative_gas_used": 0,
+          "execution": "not-run",
+          "fees": {
+            "base_fee_per_gas": "",
+            "burn_fee": "",
+            "effective_gas_price": "",
+            "fee_cap": "",
+            "gas_fee": "",
+            "gas_price": "",
+            "priority_fee": "",
+            "tip_cap": ""
+          },
+          "gas": {
+            "cumulative": 0,
+            "limit": 0,
+            "remaining_pool": 0,
+            "used": 0
+          },
+          "gas_used": 0,
+          "receipt": {
+            "effective_gas_price": "",
+            "metadata_tx_hash": "",
+            "persisted_status": 0,
+            "post_state": "",
+            "status": 0,
+            "transaction_hash": ""
+          },
+          "receipt_metadata_ready": false,
+          "receipt_persisted": false,
+          "receipt_status": "none",
+          "recipient_delta": "",
+          "reopened": false,
+          "sender_delta": "",
+          "state_root_after": "",
+          "state_root_before": "0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523",
+          "storage_slot_zero": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "total_tracked_delta": ""
+        }
+      ],
+      "probe_count": 9,
+      "rejected": 5,
+      "target": "polygon-bor",
+      "unknowns": [
+        "RPC server transport is represented by direct transaction construction",
+        "network, consensus, and Heimdall are outside the focused balance path"
+      ]
+    },
+    "returncode": 0,
+    "source_revision": "c72e248587a19b1c93eda95871c46b53071e58fd",
+    "stderr": "",
+    "stdout": "{\n  \"target\": \"polygon-bor\",\n  \"build_hash\": \"c72e248587a19b1c93eda95871c46b53071e58fd\",\n  \"chain_id\": \"137\",\n  \"probe_count\": 9,\n  \"accepted\": 4,\n  \"rejected\": 5,\n  \"finding_count\": 0,\n  \"unknowns\": [\n    \"RPC server transport is represented by direct transaction construction\",\n    \"network, consensus, and Heimdall are outside the focused balance path\"\n  ],\n  \"observations\": [\n    {\n      \"case\": \"transfer\",\n      \"admission\": \"accepted\",\n      \"execution\": \"completed\",\n      \"receipt_status\": \"success\",\n      \"gas_used\": 21000,\n      \"cumulative_gas_used\": 21000,\n      \"sender_delta\": \"-42001\",\n      \"recipient_delta\": \"1\",\n      \"coinbase_delta\": \"21000\",\n      \"burn_delta\": \"21000\",\n      \"total_tracked_delta\": \"0\",\n      \"state_root_before\": \"0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523\",\n      \"state_root_after\": \"0xa15a6ff1380a8475086740a090a69dacfb60396a8ca59caff957b719a8e2b640\",\n      \"committed_state_root\": \"0xa15a6ff1380a8475086740a090a69dacfb60396a8ca59caff957b719a8e2b640\",\n      \"reopened\": true,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": true,\n      \"receipt_metadata_ready\": true,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"999999999957999\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 1,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"1\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"21000\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"21000\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 50000,\n        \"used\": 21000,\n        \"cumulative\": 21000,\n        \"remaining_pool\": 29979000\n      },\n      \"fees\": {\n        \"gas_price\": \"2\",\n        \"fee_cap\": \"2\",\n        \"tip_cap\": \"2\",\n        \"base_fee_per_gas\": \"1\",\n        \"effective_gas_price\": \"2\",\n        \"gas_fee\": \"42000\",\n        \"priority_fee\": \"21000\",\n        \"burn_fee\": \"21000\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"0xc5779c8c672eeb61780ad3a7ad3dc57c7d02e556dd9fa8856ff132d094bafb3c\",\n        \"status\": 1,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 1,\n        \"metadata_tx_hash\": \"0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda\"\n      },\n      \"database_writes\": [\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"dd6d590d1e1f62937573cc2667874424186284d656c90be0ba50f4aec84b8c58\",\n          \"value_size\": 107\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"8dd42b83070c3a3d91539d8ab11a5f2095f4ca7245542cda046d26eca2ab1b73\",\n          \"value_size\": 114\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"43b3ce17515558d60288225d7d7c3a0a3ed3e4c572d4b3781553f91986b8fad1\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"16c4ec80c661b60099b8ee26391e312c164fa3c8d7b4aba44374ff235b3b8e27\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"a15a6ff1380a8475086740a090a69dacfb60396a8ca59caff957b719a8e2b640\",\n          \"value_size\": 147\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 330\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 8\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 509\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 333\n        }\n      ]\n    },\n    {\n      \"case\": \"contract-storage-write\",\n      \"admission\": \"accepted\",\n      \"execution\": \"completed\",\n      \"receipt_status\": \"success\",\n      \"gas_used\": 43946,\n      \"cumulative_gas_used\": 43946,\n      \"sender_delta\": \"-87893\",\n      \"recipient_delta\": \"1\",\n      \"coinbase_delta\": \"43946\",\n      \"burn_delta\": \"43946\",\n      \"total_tracked_delta\": \"0\",\n      \"state_root_before\": \"0x978b34cb3cfa8ef697a30f85e0c24d8f2f78b39f27f04f31d8f2232a3830ba65\",\n      \"state_root_after\": \"0xa03b7b66b752755d7ecfc87e8bf3c457f3ead7b609de2e610bf5527c02524560\",\n      \"committed_state_root\": \"0xa03b7b66b752755d7ecfc87e8bf3c457f3ead7b609de2e610bf5527c02524560\",\n      \"reopened\": true,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000001\",\n      \"receipt_persisted\": true,\n      \"receipt_metadata_ready\": true,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"999999999912107\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 1,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"1\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x821e2556a290c86405f8160a2d662042a431ba456b9db265c79bb837c04be5f0\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000001\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"43946\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"43946\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 100000,\n        \"used\": 43946,\n        \"cumulative\": 43946,\n        \"remaining_pool\": 29956054\n      },\n      \"fees\": {\n        \"gas_price\": \"2\",\n        \"fee_cap\": \"2\",\n        \"tip_cap\": \"2\",\n        \"base_fee_per_gas\": \"1\",\n        \"effective_gas_price\": \"2\",\n        \"gas_fee\": \"87892\",\n        \"priority_fee\": \"43946\",\n        \"burn_fee\": \"43946\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"0xd2519ef6e0d0f1e4b4dd6323623cf802876fb733fbcd5fa6fa773a67f2c8e8c0\",\n        \"status\": 1,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 1,\n        \"metadata_tx_hash\": \"0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda\"\n      },\n      \"database_writes\": [\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"630dd9fc23b9e0972b48f0c93ebb805660239a90ba27a337a9f24333a8703975cd\",\n          \"value_size\": 6\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"821e2556a290c86405f8160a2d662042a431ba456b9db265c79bb837c04be5f0\",\n          \"value_size\": 36\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"1a0eb19362316f3943591985e625820fa74e2b59a9233af15b10c2c9b41c7187\",\n          \"value_size\": 107\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"0c898548fac5b5f2e3b9581f46326ee060e8a5b0cb0feb7b351903d0b5fc40ad\",\n          \"value_size\": 114\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"bde2f26d745f81c8a19be355bba319b300be1bb394b90fac12cd0b6dbc4df72f\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"76814b96bdc67b7941e3201db168fd1259f98949fe53865ce8ab0a0484a9409d\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"a03b7b66b752755d7ecfc87e8bf3c457f3ead7b609de2e610bf5527c02524560\",\n          \"value_size\": 147\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 330\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 8\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 509\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 333\n        }\n      ]\n    },\n    {\n      \"case\": \"contract-storage-clear-refund\",\n      \"admission\": \"accepted\",\n      \"execution\": \"completed\",\n      \"receipt_status\": \"success\",\n      \"gas_used\": 22046,\n      \"cumulative_gas_used\": 22046,\n      \"sender_delta\": \"-44093\",\n      \"recipient_delta\": \"1\",\n      \"coinbase_delta\": \"22046\",\n      \"burn_delta\": \"22046\",\n      \"total_tracked_delta\": \"0\",\n      \"state_root_before\": \"0xd8710be24d777f9f2b49eeeb584d0371e42c229229a52b72d736c850e3593714\",\n      \"state_root_after\": \"0xc07f1d636fb835647df1b763a701ccd8fd15f6fbf9097338098be2aa3dfb1c50\",\n      \"committed_state_root\": \"0xc07f1d636fb835647df1b763a701ccd8fd15f6fbf9097338098be2aa3dfb1c50\",\n      \"reopened\": true,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": true,\n      \"receipt_metadata_ready\": true,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"999999999955907\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 1,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"1\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x821e2556a290c86405f8160a2d662042a431ba456b9db265c79bb837c04be5f0\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000001\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"22046\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"22046\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 100000,\n        \"used\": 22046,\n        \"cumulative\": 22046,\n        \"remaining_pool\": 29977954\n      },\n      \"fees\": {\n        \"gas_price\": \"2\",\n        \"fee_cap\": \"2\",\n        \"tip_cap\": \"2\",\n        \"base_fee_per_gas\": \"1\",\n        \"effective_gas_price\": \"2\",\n        \"gas_fee\": \"44092\",\n        \"priority_fee\": \"22046\",\n        \"burn_fee\": \"22046\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"0xd2519ef6e0d0f1e4b4dd6323623cf802876fb733fbcd5fa6fa773a67f2c8e8c0\",\n        \"status\": 1,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 1,\n        \"metadata_tx_hash\": \"0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda\"\n      },\n      \"database_writes\": [\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"638c4b19126ec61a89d742281f8ed6b09910f88795ac2909bd02d9478d8128c9b3\",\n          \"value_size\": 6\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"35548b7f748bccf448cf4d2aded58fff4739072f05502ce43efef8fb09bf4ec5\",\n          \"value_size\": 107\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"d92e4ddf90370c047a78e638dc6ad01f285710f4adff6f58f2351317ad27cbed\",\n          \"value_size\": 114\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"47d7695225859d099e1a20765b98d0f4df111c2b7ba9e958aa68487542702674\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"20e09318e99b3cc344f438ca1e1ed718731b740ef1704473de7f88a0d2b837e3\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"c07f1d636fb835647df1b763a701ccd8fd15f6fbf9097338098be2aa3dfb1c50\",\n          \"value_size\": 147\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 330\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 8\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 509\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 333\n        }\n      ]\n    },\n    {\n      \"case\": \"contract-revert\",\n      \"admission\": \"accepted\",\n      \"execution\": \"completed\",\n      \"receipt_status\": \"failed\",\n      \"gas_used\": 43952,\n      \"cumulative_gas_used\": 43952,\n      \"sender_delta\": \"-87904\",\n      \"recipient_delta\": \"0\",\n      \"coinbase_delta\": \"43952\",\n      \"burn_delta\": \"43952\",\n      \"total_tracked_delta\": \"0\",\n      \"state_root_before\": \"0x2fcf3e2beb201630ac7bda8289ae50209973453e8cb1c1b4c2279d64a3c594bd\",\n      \"state_root_after\": \"0x13d925d4f3085a548775c8520215ff107ac05358b0c5b0ace6fa2774316274e8\",\n      \"committed_state_root\": \"0x13d925d4f3085a548775c8520215ff107ac05358b0c5b0ace6fa2774316274e8\",\n      \"reopened\": true,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": true,\n      \"receipt_metadata_ready\": true,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"999999999912096\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 1,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"43952\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"43952\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 100000,\n        \"used\": 43952,\n        \"cumulative\": 43952,\n        \"remaining_pool\": 29956048\n      },\n      \"fees\": {\n        \"gas_price\": \"2\",\n        \"fee_cap\": \"2\",\n        \"tip_cap\": \"2\",\n        \"base_fee_per_gas\": \"1\",\n        \"effective_gas_price\": \"2\",\n        \"gas_fee\": \"87904\",\n        \"priority_fee\": \"43952\",\n        \"burn_fee\": \"43952\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"0xd2519ef6e0d0f1e4b4dd6323623cf802876fb733fbcd5fa6fa773a67f2c8e8c0\",\n        \"status\": 0,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 0,\n        \"metadata_tx_hash\": \"0x992f3315b7542f7fdb72ffccd0e7b61e553a652e16524d229a3293e73f5eeeda\"\n      },\n      \"database_writes\": [\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"632d131ad16f1b225292fd6d7b38d449ee8071b46c3dc4400551041562f41f0fd7\",\n          \"value_size\": 10\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"207fc10abea597345e53f03dda296763e0fb43ad23729571a90f4e7ac198f2d3\",\n          \"value_size\": 107\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"c2ba0b7011016e4482f3e4e1d7f4cbbdc3486030fda18284ca00f6b20974ee6e\",\n          \"value_size\": 114\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"1c3dae0b8297a76a89f7dae25afcd1451b9b384243f4d326aeac320a95ceeeaf\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"7ce229713d7d659975bdf767f2f99c26386f7746fd73a8fe7759410a98eb78d0\",\n          \"value_size\": 109\n        },\n        {\n          \"phase\": \"commit\",\n          \"operation\": \"put\",\n          \"key\": \"13d925d4f3085a548775c8520215ff107ac05358b0c5b0ace6fa2774316274e8\",\n          \"value_size\": 147\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"6d617469632d626f722d726563656970742d0000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 330\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"48ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 8\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"680000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 509\n        },\n        {\n          \"phase\": \"receipt_persist\",\n          \"operation\": \"put\",\n          \"key\": \"720000000005f5e100ccfd8037c1340b703c0236cc757a34138d31a14fd8a1884e672d3966dde22852\",\n          \"value_size\": 333\n        }\n      ]\n    },\n    {\n      \"case\": \"insufficient-funds\",\n      \"admission\": \"rejected\",\n      \"admission_errors\": [\n        \"stateful: insufficient funds for gas * price + value: balance 0, tx cost 100001, overshot 100001\"\n      ],\n      \"execution\": \"not-run\",\n      \"receipt_status\": \"none\",\n      \"gas_used\": 0,\n      \"cumulative_gas_used\": 0,\n      \"sender_delta\": \"\",\n      \"recipient_delta\": \"\",\n      \"coinbase_delta\": \"\",\n      \"burn_delta\": \"\",\n      \"total_tracked_delta\": \"\",\n      \"state_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n      \"state_root_after\": \"\",\n      \"reopened\": false,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": false,\n      \"receipt_metadata_ready\": false,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 0,\n        \"used\": 0,\n        \"cumulative\": 0,\n        \"remaining_pool\": 0\n      },\n      \"fees\": {\n        \"gas_price\": \"\",\n        \"fee_cap\": \"\",\n        \"tip_cap\": \"\",\n        \"base_fee_per_gas\": \"\",\n        \"effective_gas_price\": \"\",\n        \"gas_fee\": \"\",\n        \"priority_fee\": \"\",\n        \"burn_fee\": \"\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"\",\n        \"status\": 0,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 0,\n        \"metadata_tx_hash\": \"\"\n      }\n    },\n    {\n      \"case\": \"nonce-too-low\",\n      \"admission\": \"rejected\",\n      \"admission_errors\": [\n        \"stateful: nonce too low: next nonce 1, tx nonce 0\"\n      ],\n      \"execution\": \"not-run\",\n      \"receipt_status\": \"none\",\n      \"gas_used\": 0,\n      \"cumulative_gas_used\": 0,\n      \"sender_delta\": \"\",\n      \"recipient_delta\": \"\",\n      \"coinbase_delta\": \"\",\n      \"burn_delta\": \"\",\n      \"total_tracked_delta\": \"\",\n      \"state_root_before\": \"0x58e3b31f51718e4c6b9ff53f92fc8789d683baf0d83cf2359a264cb0db3bd8ef\",\n      \"state_root_after\": \"\",\n      \"reopened\": false,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": false,\n      \"receipt_metadata_ready\": false,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"1000000000000000\",\n          \"nonce_before\": 1,\n          \"nonce_after\": 1,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 0,\n        \"used\": 0,\n        \"cumulative\": 0,\n        \"remaining_pool\": 0\n      },\n      \"fees\": {\n        \"gas_price\": \"\",\n        \"fee_cap\": \"\",\n        \"tip_cap\": \"\",\n        \"base_fee_per_gas\": \"\",\n        \"effective_gas_price\": \"\",\n        \"gas_fee\": \"\",\n        \"priority_fee\": \"\",\n        \"burn_fee\": \"\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"\",\n        \"status\": 0,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 0,\n        \"metadata_tx_hash\": \"\"\n      }\n    },\n    {\n      \"case\": \"nonce-gap\",\n      \"admission\": \"rejected\",\n      \"admission_errors\": [\n        \"stateful: nonce too high: tx nonce 2, gapped nonce 0\"\n      ],\n      \"execution\": \"not-run\",\n      \"receipt_status\": \"none\",\n      \"gas_used\": 0,\n      \"cumulative_gas_used\": 0,\n      \"sender_delta\": \"\",\n      \"recipient_delta\": \"\",\n      \"coinbase_delta\": \"\",\n      \"burn_delta\": \"\",\n      \"total_tracked_delta\": \"\",\n      \"state_root_before\": \"0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523\",\n      \"state_root_after\": \"\",\n      \"reopened\": false,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": false,\n      \"receipt_metadata_ready\": false,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"1000000000000000\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 0,\n        \"used\": 0,\n        \"cumulative\": 0,\n        \"remaining_pool\": 0\n      },\n      \"fees\": {\n        \"gas_price\": \"\",\n        \"fee_cap\": \"\",\n        \"tip_cap\": \"\",\n        \"base_fee_per_gas\": \"\",\n        \"effective_gas_price\": \"\",\n        \"gas_fee\": \"\",\n        \"priority_fee\": \"\",\n        \"burn_fee\": \"\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"\",\n        \"status\": 0,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 0,\n        \"metadata_tx_hash\": \"\"\n      }\n    },\n    {\n      \"case\": \"fee-cap-ordering\",\n      \"admission\": \"rejected\",\n      \"admission_errors\": [\n        \"stateless: max priority fee per gas higher than max fee per gas\"\n      ],\n      \"execution\": \"not-run\",\n      \"receipt_status\": \"none\",\n      \"gas_used\": 0,\n      \"cumulative_gas_used\": 0,\n      \"sender_delta\": \"\",\n      \"recipient_delta\": \"\",\n      \"coinbase_delta\": \"\",\n      \"burn_delta\": \"\",\n      \"total_tracked_delta\": \"\",\n      \"state_root_before\": \"0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523\",\n      \"state_root_after\": \"\",\n      \"reopened\": false,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": false,\n      \"receipt_metadata_ready\": false,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"1000000000000000\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 0,\n        \"used\": 0,\n        \"cumulative\": 0,\n        \"remaining_pool\": 0\n      },\n      \"fees\": {\n        \"gas_price\": \"\",\n        \"fee_cap\": \"\",\n        \"tip_cap\": \"\",\n        \"base_fee_per_gas\": \"\",\n        \"effective_gas_price\": \"\",\n        \"gas_fee\": \"\",\n        \"priority_fee\": \"\",\n        \"burn_fee\": \"\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"\",\n        \"status\": 0,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 0,\n        \"metadata_tx_hash\": \"\"\n      }\n    },\n    {\n      \"case\": \"invalid-signature\",\n      \"admission\": \"rejected\",\n      \"admission_errors\": [\n        \"stateless: invalid sender: invalid transaction v, r, s values\"\n      ],\n      \"execution\": \"not-run\",\n      \"receipt_status\": \"none\",\n      \"gas_used\": 0,\n      \"cumulative_gas_used\": 0,\n      \"sender_delta\": \"\",\n      \"recipient_delta\": \"\",\n      \"coinbase_delta\": \"\",\n      \"burn_delta\": \"\",\n      \"total_tracked_delta\": \"\",\n      \"state_root_before\": \"0x0bccb306c0ea398f2beef4fdef9b92ad6896bbd99a5f2143e34f9742d112a523\",\n      \"state_root_after\": \"\",\n      \"reopened\": false,\n      \"storage_slot_zero\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n      \"receipt_persisted\": false,\n      \"receipt_metadata_ready\": false,\n      \"accounts\": [\n        {\n          \"address\": \"0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\",\n          \"balance_before\": \"1000000000000000\",\n          \"balance_after\": \"1000000000000000\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_root_after\": \"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3333333333333333333333333333333333333333\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        },\n        {\n          \"address\": \"0x3EF57dEf668054dD750BD260526105C4EEEf104F\",\n          \"balance_before\": \"0\",\n          \"balance_after\": \"0\",\n          \"nonce_before\": 0,\n          \"nonce_after\": 0,\n          \"storage_root_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_root_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_before\": \"0x0000000000000000000000000000000000000000000000000000000000000000\",\n          \"storage_slot_zero_after\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"\n        }\n      ],\n      \"gas\": {\n        \"limit\": 0,\n        \"used\": 0,\n        \"cumulative\": 0,\n        \"remaining_pool\": 0\n      },\n      \"fees\": {\n        \"gas_price\": \"\",\n        \"fee_cap\": \"\",\n        \"tip_cap\": \"\",\n        \"base_fee_per_gas\": \"\",\n        \"effective_gas_price\": \"\",\n        \"gas_fee\": \"\",\n        \"priority_fee\": \"\",\n        \"burn_fee\": \"\"\n      },\n      \"receipt\": {\n        \"transaction_hash\": \"\",\n        \"status\": 0,\n        \"post_state\": \"\",\n        \"effective_gas_price\": \"\",\n        \"persisted_status\": 0,\n        \"metadata_tx_hash\": \"\"\n      }\n    }\n  ]\n}\n",
+    "target_revision_available": true,
+    "toolchain": "go version go1.27.1 linux/amd64"
+  },
+  "hypotheses": [],
+  "independent_verification": {
+    "classification": "NOT_RUN"
+  },
+  "investigation": "bor-execution-driven",
+  "reproduction": {
+    "classification": "NOT_REQUIRED"
+  },
+  "target": "polygon-bor"
+}
