@@ -61,6 +61,26 @@ class BorRuntimeInvestigationTests(unittest.TestCase):
         self.assertEqual(hypotheses[0]["kind"], "rejected_execution_or_receipt")
         self.assertEqual(hypotheses[0]["source_fields"], ["admission", "execution", "receipt_status"])
 
+    def test_top_level_out_of_band_mutation_is_derived_from_observation(self):
+        hypotheses = derive_hypotheses({
+            "state_mutated": True,
+            "canonical_transaction": False,
+            "receipt_created": False,
+            "nonce_before": 7,
+            "nonce_after": 8,
+        })
+        self.assertEqual(hypotheses[0]["kind"], "out_of_band_state_mutation")
+
+    def test_top_level_serial_parallel_divergence_is_derived_from_observation(self):
+        hypotheses = derive_hypotheses({
+            "divergence": True,
+            "serial_storage_root": "0xserial",
+            "parallel_storage_root": "0xparallel",
+            "serial_create2_admitted": False,
+            "parallel_create2_admitted": True,
+        })
+        self.assertEqual(hypotheses[0]["kind"], "serial_parallel_state_divergence")
+
 
 if __name__ == "__main__":
     unittest.main()

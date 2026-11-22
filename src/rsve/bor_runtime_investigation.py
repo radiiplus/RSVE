@@ -185,6 +185,32 @@ def _observation_hypotheses(observation: Mapping[str, Any], index: int) -> list[
                 "source_fields": ["sender_delta", "recipient_delta", "coinbase_delta", "burn_delta", "total_tracked_delta"],
             })
 
+    if observation.get("state_mutated") is True and observation.get("canonical_transaction") is False and observation.get("receipt_created") is False:
+        hypotheses.append({
+            "kind": "out_of_band_state_mutation",
+            "case": case,
+            "difference": {
+                "nonce_before": observation.get("nonce_before"),
+                "nonce_after": observation.get("nonce_after"),
+                "canonical_transaction": observation.get("canonical_transaction"),
+                "receipt_created": observation.get("receipt_created"),
+            },
+            "source_fields": ["state_mutated", "nonce_before", "nonce_after", "canonical_transaction", "receipt_created"],
+        })
+
+    if observation.get("divergence") is True and observation.get("serial_storage_root") != observation.get("parallel_storage_root"):
+        hypotheses.append({
+            "kind": "serial_parallel_state_divergence",
+            "case": case,
+            "difference": {
+                "serial_storage_root": observation.get("serial_storage_root"),
+                "parallel_storage_root": observation.get("parallel_storage_root"),
+                "serial_create2_admitted": observation.get("serial_create2_admitted"),
+                "parallel_create2_admitted": observation.get("parallel_create2_admitted"),
+            },
+            "source_fields": ["divergence", "serial_storage_root", "parallel_storage_root", "serial_create2_admitted", "parallel_create2_admitted"],
+        })
+
     admission = observation.get("admission")
     execution = observation.get("execution")
     receipt = observation.get("receipt_status")
@@ -245,7 +271,14 @@ def _observation_hypotheses(observation: Mapping[str, Any], index: int) -> list[
 
 
 def derive_hypotheses(payload: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
-    observations = payload.get("observations", ())
+    observations = payload.get("observations")
+    if observations is None:
+        # Probe commands may expose one observation at the document root. It
+        # is still runtime data; wrapping it here keeps the hypothesis logic
+        # independent of the probe's report envelope.
+        observations = [payload] if any(
+            key in payload for key in ("state_mutated", "divergence", "admission", "state_root_after")
+        ) else []
     if not isinstance(observations, list):
         return ({
             "hypothesis_id": "hypothesis:invalid-observations",
@@ -268,7 +301,8 @@ def derive_hypotheses(payload: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
 
 
 def _hypothesis_key(hypothesis: Mapping[str, Any]) -> tuple[Any, ...]:
-    return (hypothesis.get("kind"), hypothesis.get("case"), _canonical(hypothesis.get("difference")))
+    difference = json.dumps(_canonical(hypothesis.get("difference")), sort_keys=True, separators=(",", ":"))
+    return (hypothesis.get("kind"), hypothesis.get("case"), difference)
 
 
 def investigate(
@@ -322,8 +356,16 @@ def investigate(
         "reproduction": second.record() if second is not None else {"classification": "NOT_REQUIRED"},
         "independent_verification": independent,
     }
+    if hypotheses:
+        classes = {item["classification"] for item in hypotheses}
+        if classes == {"REPRODUCED_RUNTIME_OBSERVATION"}:
+            result["classification"] = "REPRODUCED_RUNTIME_OBSERVATION"
+        elif "UNRESOLVED" in classes:
+            result["classification"] = "UNRESOLVED"
     if not hypotheses and result["classification"] == "RUNTIME_OBSERVATION":
         result["conclusion"] = "consistent_observation_set"
+    elif result["classification"] == "REPRODUCED_RUNTIME_OBSERVATION":
+        result["conclusion"] = "runtime_hypothesis_reproduced"
     elif not hypotheses:
         result["conclusion"] = "runtime_execution_unavailable"
     else:

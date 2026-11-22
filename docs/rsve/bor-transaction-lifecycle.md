@@ -152,7 +152,7 @@ trace bound, and a 60-second wall-clock guard. The present bounded run reaches
 separately. `rsve.bor_evidence.BorEvidenceIngest` validates its JSON schema,
 reconciles the sender/recipient/coinbase/burn ledger legs with the stored
 total, checks state-root reopen and receipt persistence fields, and attaches
-the result as `OBSERVED` evidence. It leaves the planner result at
+the result as `IMPORTED_ARTIFACT` evidence. It leaves the planner result at
 `SAT_CANDIDATE`: the artifact is a compiled harness observation, not a replay
 of the planner's exact interaction trace.
 
@@ -186,8 +186,9 @@ storage root `0x9d7bbe35dc5044f7e5a75c01412f8939d00ceae1f6187655dc8d80237724a66b
 and rejects CREATE2. Parallel state returns the zero root and admits it. The
 artifact is stored at
 `/home/codespace/bor/bor-source/artifacts/bor-storage-root-probe.json` and is
-attached by `BorStorageRootIngest` as `OBSERVED` evidence. The RSVE result
-remains `SAT_CANDIDATE` because no target-adapter replay has been claimed.
+attached by `BorStorageRootIngest` as `IMPORTED_ARTIFACT` evidence. Fresh
+execution through `scripts/bor_autonomous_analysis.py` now reruns this probe
+and records the resulting hypothesis separately.
 
 The profile also attaches passive environment-monitoring regions:
 `bor.engine.state-write`, `bor.runtime.process`, `bor.os.kernel`,
@@ -219,19 +220,21 @@ probe at
 nonce `7 -> 8` with zero value, zero gas price, no canonical transaction, and
 no receipt.
 
-This is an internal live-state boundary candidate, not a claim that the ordinary
-public `eth_call` wrapper necessarily leaks into canonical chain state: the
-public wrapper obtains isolated state before calling the same execution path.
+This is a reproduced internal caller-owned-state mutation, not a claim that the
+ordinary public `eth_call` wrapper leaks into canonical chain state: the public
+wrapper obtains isolated state before calling the same execution path, and the
+live RPC observer recorded unchanged canonical balance, nonce, and proof.
 The RSVE profile preserves that distinction and attaches process, kernel,
 memory/CPU, and external persistence regions as unresolved until runtime
-instrumentation binds them. The combined autonomous runner can attach the
-compiled observation with:
+instrumentation binds them. The execution-driven runner reproduces the probe
+with:
 
 ```text
 cd /home/codespace/bor/RSVE
 PYTHONPATH=src python scripts/bor_autonomous_analysis.py \
-  /home/codespace/bor/bor-source/artifacts/bor-storage-root-probe.json \
-  --call-artifact /home/codespace/bor/bor-source/artifacts/bor-callwithstate-probe.json
+  --bor-workdir /home/codespace/bor/bor-source \
+  --bor-command go run ./cmd/bor-callwithstate-probe \
+  --output artifacts/bor/runtime-callwithstate-investigation.json
 ```
 
 The same route contains a stronger modeled balance candidate when an internal
