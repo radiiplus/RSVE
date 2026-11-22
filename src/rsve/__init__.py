@@ -170,6 +170,12 @@ from .bor_runtime_investigation import (
     imported_artifact,
     investigate,
 )
+from .economic_investigation import (
+    EconomicHypothesis,
+    derive_economic_hypotheses,
+    investigate_economic_advantage,
+    retain_unknown_regions,
+)
 from .bor_autonomous import (
     BorRegionSpec,
     attach_environment_observation,
@@ -450,6 +456,10 @@ __all__ = [
     "execute_target",
     "imported_artifact",
     "investigate",
+    "EconomicHypothesis",
+    "derive_economic_hypotheses",
+    "investigate_economic_advantage",
+    "retain_unknown_regions",
     "BorRegionSpec",
     "attach_environment_observation",
     "autonomous_summary",

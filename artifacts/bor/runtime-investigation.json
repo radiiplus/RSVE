@@ -2,6 +2,14 @@
   "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
   "classification": "RUNTIME_OBSERVATION",
   "conclusion": "consistent_observation_set",
+  "economic_analysis": {
+    "classification": "RUNTIME_OBSERVATION",
+    "conclusion": "no_economic_advantage_observed",
+    "findings": [],
+    "hypotheses": [],
+    "investigation": "bor-economic-advantage",
+    "unknown_regions": []
+  },
   "execution": {
     "classification": "RUNTIME_OBSERVATION",
     "command": {
@@ -14,7 +22,7 @@
       "display": "go run ./cmd/bor-balance-analysis",
       "timeout_seconds": 120
     },
-    "duration_ms": 405,
+    "duration_ms": 2589,
     "parse_error": null,
     "payload": {
       "accepted": 4,

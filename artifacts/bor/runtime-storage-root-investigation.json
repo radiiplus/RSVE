@@ -2,6 +2,14 @@
   "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
   "classification": "REPRODUCED_RUNTIME_OBSERVATION",
   "conclusion": "runtime_hypothesis_reproduced",
+  "economic_analysis": {
+    "classification": "RUNTIME_OBSERVATION",
+    "conclusion": "no_economic_advantage_observed",
+    "findings": [],
+    "hypotheses": [],
+    "investigation": "bor-economic-advantage",
+    "unknown_regions": []
+  },
   "execution": {
     "classification": "RUNTIME_OBSERVATION",
     "command": {
@@ -14,7 +22,7 @@
       "display": "go run ./cmd/bor-storage-root-probe",
       "timeout_seconds": 120
     },
-    "duration_ms": 358,
+    "duration_ms": 522,
     "parse_error": null,
     "payload": {
       "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
@@ -81,7 +89,7 @@
       "display": "go run ./cmd/bor-storage-root-probe",
       "timeout_seconds": 120
     },
-    "duration_ms": 344,
+    "duration_ms": 574,
     "parse_error": null,
     "payload": {
       "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",

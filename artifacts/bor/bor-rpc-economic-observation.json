@@ -1,0 +1,34 @@
+{
+  "chain_id": "0x539",
+  "block": "0x17",
+  "block_hash": "0xd8739efa9ab8652ef7db163c4addae81f7a319fe208906c235a6d90b2403d3eb",
+  "tx": "0xbdb6f19b18cab2b545a15567de25c364cb179a46088fc68b151c21a01ed023ec",
+  "status": 1,
+  "gas_used": 21000,
+  "effective_gas_price": 26000000000,
+  "base_fee_per_gas": 46364465,
+  "settled_fee": 546000000000000,
+  "burn_component": 973653765000,
+  "accounts": {
+    "sender": {
+      "before": "115792089237316195423570985008687907853269984665640564039457584007913129639927",
+      "after": "115792089237316195423570985008687907853269984665640564039457584006939475874926",
+      "delta": "-973653765001"
+    },
+    "recipient": {
+      "before": "0",
+      "after": "1",
+      "delta": "1"
+    },
+    "burn": {
+      "before": "0",
+      "after": "973653765000",
+      "delta": "973653765000"
+    }
+  },
+  "conservation_sum": 0,
+  "txpool": {
+    "pending": "0x0",
+    "queued": "0x0"
+  }
+}

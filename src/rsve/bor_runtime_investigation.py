@@ -17,6 +17,8 @@ import subprocess
 import time
 from typing import Any, Mapping, Sequence
 
+from .economic_investigation import investigate_economic_advantage
+
 
 DEFAULT_TARGET = "polygon-bor"
 DEFAULT_BUILD = "c72e248587a19b1c93eda95871c46b53071e58fd"
@@ -356,6 +358,12 @@ def investigate(
         "reproduction": second.record() if second is not None else {"classification": "NOT_REQUIRED"},
         "independent_verification": independent,
     }
+    independent_execution = independent.get("execution") if isinstance(independent, Mapping) else None
+    result["economic_analysis"] = investigate_economic_advantage(
+        first.record(),
+        reproduction=second.record() if second is not None else None,
+        independent=independent_execution if isinstance(independent_execution, Mapping) else None,
+    )
     if hypotheses:
         classes = {item["classification"] for item in hypotheses}
         if classes == {"REPRODUCED_RUNTIME_OBSERVATION"}:
