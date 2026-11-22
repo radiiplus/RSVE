@@ -34,7 +34,7 @@ class BorStorageRootTests(unittest.TestCase):
             [event.entry_point for event in report.witness.events],
             ["parallel.SELFDESTRUCT", "parallel.CreateAccount+SetState", "evm.CREATE2.collisionCheck"],
         )
-        self.assertTrue(any(item.level is EvidenceLevel.OBSERVED for item in report.evidence))
+        self.assertTrue(any(item.level is EvidenceLevel.IMPORTED_ARTIFACT for item in report.evidence))
         self.assertEqual(
             profile.attached_regions,
             (
@@ -86,4 +86,4 @@ class BorStorageRootTests(unittest.TestCase):
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertIn("balance", report.witness.replay_result["out_of_band_fields"])
         self.assertIn("causal attribution unavailable", report.unresolved_uncertainty)
-        self.assertTrue(any(item.level is EvidenceLevel.OBSERVED for item in report.evidence))
+        self.assertTrue(any(item.level is EvidenceLevel.IMPORTED_ARTIFACT for item in report.evidence))

@@ -74,7 +74,7 @@ class BorLayeredProfileTests(unittest.TestCase):
         report = ingest.attach_observation(self.profile.analyze())
         self.assertEqual(report.status, Status.SAT_CANDIDATE)
         self.assertEqual(report.replay_runs, 0)
-        self.assertTrue(any(item.level is EvidenceLevel.OBSERVED for item in report.evidence))
+        self.assertTrue(any(item.level is EvidenceLevel.IMPORTED_ARTIFACT for item in report.evidence))
         self.assertIn(ingest.artifact.artifact_ref, report.evidence_refs)
 
     def test_compiled_artifact_rejects_unreconciled_balance(self):

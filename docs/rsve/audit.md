@@ -1,6 +1,15 @@
 # RSVE Repository Audit
 
-Audit date: 2026-11-19. Repository root: `/home/codespace/smt`.
+Audit date: 2026-11-22. Repository root: `/home/codespace/bor/RSVE`.
+
+## Bor execution investigation
+
+The Bor investigation is execution-backed only when its command record says
+`RUNTIME_OBSERVATION` and includes fresh structured output from the pinned Bor
+checkout. JSON supplied through an ingestor is `IMPORTED_ARTIFACT`; it is not a
+runtime finding. The execution ledger at
+`docs/rsve/bor-investigation-ledger.md` records the pinned revision, commands,
+results, hypotheses, and remaining uncertainty.
 
 ## Scope and evidence
 

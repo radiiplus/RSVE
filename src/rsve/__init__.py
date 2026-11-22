@@ -159,6 +159,17 @@ from .bor_callwithstate import (
     bor_callwithstate_profile,
     bor_state_override_profile,
 )
+from .bor_runtime_investigation import (
+    DEFAULT_BUILD,
+    DEFAULT_COMMAND,
+    DEFAULT_TARGET,
+    RuntimeCommand,
+    RuntimeExecution,
+    derive_hypotheses,
+    execute_target,
+    imported_artifact,
+    investigate,
+)
 from .bor_autonomous import (
     BorRegionSpec,
     attach_environment_observation,
@@ -430,6 +441,15 @@ __all__ = [
     "BorStateOverrideProfile",
     "bor_callwithstate_profile",
     "bor_state_override_profile",
+    "DEFAULT_BUILD",
+    "DEFAULT_COMMAND",
+    "DEFAULT_TARGET",
+    "RuntimeCommand",
+    "RuntimeExecution",
+    "derive_hypotheses",
+    "execute_target",
+    "imported_artifact",
+    "investigate",
     "BorRegionSpec",
     "attach_environment_observation",
     "autonomous_summary",

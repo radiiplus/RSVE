@@ -193,7 +193,7 @@ class BorBalanceArtifact:
         if case:
             claim += f" for {case}"
         return discovery_evidence(
-            EvidenceLevel.OBSERVED,
+            EvidenceLevel.IMPORTED_ARTIFACT,
             claim,
             "bor-compiled-harness",
             artifact_refs=(self.artifact_ref,),
@@ -339,7 +339,7 @@ class BorStorageRootArtifact:
 
     def evidence(self) -> DiscoveryEvidence:
         return discovery_evidence(
-            EvidenceLevel.OBSERVED,
+            EvidenceLevel.IMPORTED_ARTIFACT,
             "Bor serial and parallel state disagree on a recreated account's storage root and CREATE2 collision admission",
             "bor-storage-root-probe",
             artifact_refs=(self.artifact_ref,),
@@ -508,7 +508,7 @@ class BorRuntimeArtifact:
         else:
             claim = "runtime observation reconciled account fields with declared engine writes"
         return discovery_evidence(
-            EvidenceLevel.OBSERVED,
+            EvidenceLevel.IMPORTED_ARTIFACT,
             claim,
             "bor-runtime-environment-adapter",
             artifact_refs=(self.artifact_ref,),
@@ -625,7 +625,7 @@ class BorCallWithStateArtifact:
 
     def evidence(self) -> DiscoveryEvidence:
         return discovery_evidence(
-            EvidenceLevel.OBSERVED,
+            EvidenceLevel.IMPORTED_ARTIFACT,
             "read-only CallWithState advanced the supplied account nonce outside a canonical transaction",
             "bor-callwithstate-probe",
             artifact_refs=(self.artifact_ref,),

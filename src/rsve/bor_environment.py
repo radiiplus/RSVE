@@ -447,7 +447,7 @@ class EnvironmentObservation:
             claim = "runtime/environment observation reconciled changed account fields with declared engine writes"
             divergence_refs = ()
         return discovery_evidence(
-            EvidenceLevel.OBSERVED,
+            EvidenceLevel.IMPORTED_ARTIFACT,
             claim,
             "bor-runtime-environment-observation",
             artifact_refs=(reference,),
