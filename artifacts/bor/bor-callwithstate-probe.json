@@ -1,0 +1,26 @@
+{
+  "target": "polygon-bor",
+  "build_hash": "c72e248587a19b1c93eda95871c46b53071e58fd",
+  "scope": "bor-callwithstate-readonly-mutation",
+  "sequence": [
+    "rpc.eth_call",
+    "internal.CallWithState",
+    "core.ApplyMessage",
+    "state.SetNonce"
+  ],
+  "sender": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+  "recipient": "0x3333333333333333333333333333333333333333",
+  "nonce_before": 7,
+  "nonce_after": 8,
+  "state_mutated": true,
+  "canonical_transaction": false,
+  "receipt_created": false,
+  "out_of_band": true,
+  "source_refs": [
+    "internal/ethapi/api.go:911",
+    "internal/ethapi/api.go:1043",
+    "internal/ethapi/transaction_args.go:509",
+    "core/state_transition.go:571",
+    "core/vm/evm.go:368"
+  ]
+}
