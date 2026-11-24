@@ -3,7 +3,7 @@
   "status": "not-entered",
   "candidate_credible_false_pairing_acceptance": false,
   "failed_chain_link": "Bor production pairing Run accepts a mathematically false off-subgroup proof",
-  "evidence_scope": "The original deterministic corpus, 256 deterministic full-curve off-subgroup samples, 114 curve-aware generator mutations, and the Batch 5 pairing vectors",
+  "evidence_scope": "The original deterministic corpus, 256 deterministic full-curve off-subgroup samples, 114 curve-aware generator mutations, Batch 5 pairing vectors, and Batch 5A scalar-product differential cases",
   "batch4": {
     "report": "reports/differential/report.json",
     "findings": 0,
@@ -72,11 +72,33 @@
     "valid_case_disagreements": 0,
     "bor_accepted_off_subgroup_cases": 0
   },
+  "batch5a": {
+    "reports_directory": "reports/batch5a",
+    "corpus": "testdata/batch5a/pairing-products.json",
+    "seed": "bor-crypto-audit/bls12-381/batch5a-pairing-products/v1",
+    "cases": 91,
+    "tuple_executions": 5032,
+    "largest_tuple_batch": 256,
+    "bor_run_errors": 0,
+    "backend_disagreements": 0,
+    "mathematical_false_output_one_acceptances": 0,
+    "all_cases_match_scalar_oracle": true,
+    "metamorphic_report": "reports/batch5a/metamorphic-results.json",
+    "metamorphic_cases": 8,
+    "backend_metamorphic_relations": 24,
+    "metamorphic_relations_preserved": 24,
+    "assembly_determinism_report": "reports/batch5a/assembly-determinism.md",
+    "assembly_variant_matrix": "reports/batch5a/assembly-variant-results.json",
+    "amd64_build_variants": 5,
+    "differential_outputs_byte_identical_across_variants": true,
+    "metamorphic_outputs_byte_identical_across_variants": true,
+    "independent_hardware_hosts_tested": 1
+  },
   "economic_witness": {
     "local_evm_execution": "not run",
     "escrow_and_token_deployment": "not run",
     "transaction_and_state_root": "not produced",
     "reason": "The prerequisite false pairing acceptance was not established. The expanded search preserved the same rejection at production subgroup validation, so an escrow execution would not exercise a false pairing acceptance."
   },
-  "conclusion": "No credible false pairing acceptance was demonstrated. Across the original corpus and 370 additional on-curve off-subgroup inputs, the chain stops at production subgroup validation. Batch 6 remains gated; this is evidence about the tested inputs, not a proof over every possible encoding. No economic vulnerability conclusion is made."
+  "conclusion": "No credible false pairing acceptance was demonstrated. Across the original corpus, 370 additional on-curve off-subgroup inputs, 91 valid-subgroup pairing-product cases totaling 5,032 tuples, 24 metamorphic backend relations, and five amd64 build variants on one host, no false acceptance, output difference, backend disagreement, or violated algebraic relation was found. Batch 6 remains gated; this is evidence about the tested inputs and host, not a proof over every possible input or architecture. No economic vulnerability conclusion is made."
 }

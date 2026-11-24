@@ -1,0 +1,119 @@
+
+/tmp/bor-batch5a-default:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+Disassembly of section .plt:
+
+Disassembly of section .text:
+
+0000000000554c20 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.mulGenericE2>:
+  554c20:	4c 8d 64 24 c0       	lea    -0x40(%rsp),%r12
+  554c25:	4d 3b 66 10          	cmp    0x10(%r14),%r12
+  554c29:	0f 86 88 01 00 00    	jbe    554db7 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.mulGenericE2+0x197>
+  554c2f:	55                   	push   %rbp
+  554c30:	48 89 e5             	mov    %rsp,%rbp
+  554c33:	48 81 ec b8 00 00 00 	sub    $0xb8,%rsp
+  554c3a:	48 89 84 24 c8 00 00 	mov    %rax,0xc8(%rsp)
+  554c41:	00
+  554c42:	48 89 9c 24 d0 00 00 	mov    %rbx,0xd0(%rsp)
+  554c49:	00
+  554c4a:	48 89 8c 24 d8 00 00 	mov    %rcx,0xd8(%rsp)
+  554c51:	00
+  554c52:	48 8d 44 24 78       	lea    0x78(%rsp),%rax
+  554c57:	44 0f 11 38          	movups %xmm15,(%rax)
+  554c5b:	44 0f 11 78 10       	movups %xmm15,0x10(%rax)
+  554c60:	44 0f 11 78 20       	movups %xmm15,0x20(%rax)
+  554c65:	48 8d 54 24 48       	lea    0x48(%rsp),%rdx
+  554c6a:	44 0f 11 3a          	movups %xmm15,(%rdx)
+  554c6e:	44 0f 11 7a 10       	movups %xmm15,0x10(%rdx)
+  554c73:	44 0f 11 7a 20       	movups %xmm15,0x20(%rdx)
+  554c78:	48 8d 54 24 18       	lea    0x18(%rsp),%rdx
+  554c7d:	44 0f 11 3a          	movups %xmm15,(%rdx)
+  554c81:	44 0f 11 7a 10       	movups %xmm15,0x10(%rdx)
+  554c86:	44 0f 11 7a 20       	movups %xmm15,0x20(%rdx)
+  554c8b:	84 03                	test   %al,(%rbx)
+  554c8d:	48 8d 4b 30          	lea    0x30(%rbx),%rcx
+  554c91:	48 89 8c 24 a8 00 00 	mov    %rcx,0xa8(%rsp)
+  554c98:	00
+  554c99:	e8 c2 7f ff ff       	call   54cc60 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.(*Element).Add>
+  554c9e:	48 8b 8c 24 d8 00 00 	mov    0xd8(%rsp),%rcx
+  554ca5:	00
+  554ca6:	84 01                	test   %al,(%rcx)
+  554ca8:	48 8d 51 30          	lea    0x30(%rcx),%rdx
+  554cac:	48 89 94 24 b0 00 00 	mov    %rdx,0xb0(%rsp)
+  554cb3:	00
+  554cb4:	48 8d 44 24 48       	lea    0x48(%rsp),%rax
+  554cb9:	48 89 cb             	mov    %rcx,%rbx
+  554cbc:	48 89 d1             	mov    %rdx,%rcx
+  554cbf:	90                   	nop
+  554cc0:	e8 9b 7f ff ff       	call   54cc60 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.(*Element).Add>
+  554cc5:	90                   	nop
+  554cc6:	48 8d 54 24 78       	lea    0x78(%rsp),%rdx
+  554ccb:	48 89 14 24          	mov    %rdx,(%rsp)
+  554ccf:	48 89 54 24 08       	mov    %rdx,0x8(%rsp)
+  554cd4:	48 8d 54 24 48       	lea    0x48(%rsp),%rdx
+  554cd9:	48 89 54 24 10       	mov    %rdx,0x10(%rsp)
+  554cde:	66 90                	xchg   %ax,%ax
+  554ce0:	e8 db b5 ff ff       	call   5502c0 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0>
+  554ce5:	45 0f 57 ff          	xorps  %xmm15,%xmm15
+  554ce9:	64 4c 8b 34 25 f8 ff 	mov    %fs:0xfffffffffffffff8,%r14
+  554cf0:	ff ff
+  554cf2:	90                   	nop
+  554cf3:	48 8d 54 24 48       	lea    0x48(%rsp),%rdx
+  554cf8:	48 89 14 24          	mov    %rdx,(%rsp)
+  554cfc:	48 8b 94 24 d0 00 00 	mov    0xd0(%rsp),%rdx
+  554d03:	00
+  554d04:	48 89 54 24 08       	mov    %rdx,0x8(%rsp)
+  554d09:	48 8b 94 24 d8 00 00 	mov    0xd8(%rsp),%rdx
+  554d10:	00
+  554d11:	48 89 54 24 10       	mov    %rdx,0x10(%rsp)
+  554d16:	e8 a5 b5 ff ff       	call   5502c0 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0>
+  554d1b:	45 0f 57 ff          	xorps  %xmm15,%xmm15
+  554d1f:	64 4c 8b 34 25 f8 ff 	mov    %fs:0xfffffffffffffff8,%r14
+  554d26:	ff ff
+  554d28:	48 8d 54 24 18       	lea    0x18(%rsp),%rdx
+  554d2d:	48 89 14 24          	mov    %rdx,(%rsp)
+  554d31:	48 8b 94 24 a8 00 00 	mov    0xa8(%rsp),%rdx
+  554d38:	00
+  554d39:	48 89 54 24 08       	mov    %rdx,0x8(%rsp)
+  554d3e:	48 8b 94 24 b0 00 00 	mov    0xb0(%rsp),%rdx
+  554d45:	00
+  554d46:	48 89 54 24 10       	mov    %rdx,0x10(%rsp)
+  554d4b:	e8 70 b5 ff ff       	call   5502c0 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0>
+  554d50:	45 0f 57 ff          	xorps  %xmm15,%xmm15
+  554d54:	64 4c 8b 34 25 f8 ff 	mov    %fs:0xfffffffffffffff8,%r14
+  554d5b:	ff ff
+  554d5d:	48 8b 84 24 c8 00 00 	mov    0xc8(%rsp),%rax
+  554d64:	00
+  554d65:	84 00                	test   %al,(%rax)
+  554d67:	48 83 c0 30          	add    $0x30,%rax
+  554d6b:	48 89 84 24 b0 00 00 	mov    %rax,0xb0(%rsp)
+  554d72:	00
+  554d73:	48 8d 5c 24 78       	lea    0x78(%rsp),%rbx
+  554d78:	48 8d 4c 24 48       	lea    0x48(%rsp),%rcx
+  554d7d:	0f 1f 00             	nopl   (%rax)
+  554d80:	e8 7b 82 ff ff       	call   54d000 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.(*Element).Sub>
+  554d85:	48 8b 9c 24 b0 00 00 	mov    0xb0(%rsp),%rbx
+  554d8c:	00
+  554d8d:	48 8d 4c 24 18       	lea    0x18(%rsp),%rcx
+  554d92:	e8 69 82 ff ff       	call   54d000 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.(*Element).Sub>
+  554d97:	48 8b 84 24 c8 00 00 	mov    0xc8(%rsp),%rax
+  554d9e:	00
+  554d9f:	48 8d 5c 24 48       	lea    0x48(%rsp),%rbx
+  554da4:	48 8d 4c 24 18       	lea    0x18(%rsp),%rcx
+  554da9:	e8 52 82 ff ff       	call   54d000 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.(*Element).Sub>
+  554dae:	48 81 c4 b8 00 00 00 	add    $0xb8,%rsp
+  554db5:	5d                   	pop    %rbp
+  554db6:	c3                   	ret
+  554db7:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+  554dbc:	48 89 5c 24 10       	mov    %rbx,0x10(%rsp)
+  554dc1:	48 89 4c 24 18       	mov    %rcx,0x18(%rsp)
+  554dc6:	e8 d5 20 f3 ff       	call   486ea0 <runtime.morestack_noctxt.abi0>
+  554dcb:	48 8b 44 24 08       	mov    0x8(%rsp),%rax
+  554dd0:	48 8b 5c 24 10       	mov    0x10(%rsp),%rbx
+  554dd5:	48 8b 4c 24 18       	mov    0x18(%rsp),%rcx
+  554dda:	e9 41 fe ff ff       	jmp    554c20 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.mulGenericE2>
+
+Disassembly of section .fini:

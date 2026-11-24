@@ -1,0 +1,974 @@
+
+/tmp/bor-batch5a-default:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+Disassembly of section .plt:
+
+Disassembly of section .text:
+
+0000000000560fe0 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop>:
+  560fe0:	4c 8d a4 24 40 f6 ff 	lea    -0x9c0(%rsp),%r12
+  560fe7:	ff
+  560fe8:	4d 3b 66 10          	cmp    0x10(%r14),%r12
+  560fec:	0f 86 fe 0e 00 00    	jbe    561ef0 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xf10>
+  560ff2:	55                   	push   %rbp
+  560ff3:	48 89 e5             	mov    %rsp,%rbp
+  560ff6:	48 81 ec 38 0a 00 00 	sub    $0xa38,%rsp
+  560ffd:	48 89 84 24 88 0c 00 	mov    %rax,0xc88(%rsp)
+  561004:	00
+  561005:	48 89 bc 24 a0 0c 00 	mov    %rdi,0xca0(%rsp)
+  56100c:	00
+  56100d:	48 8d 94 24 48 0a 00 	lea    0xa48(%rsp),%rdx
+  561014:	00
+  561015:	41 b8 09 00 00 00    	mov    $0x9,%r8d
+  56101b:	44 0f 11 3a          	movups %xmm15,(%rdx)
+  56101f:	44 0f 11 7a 10       	movups %xmm15,0x10(%rdx)
+  561024:	44 0f 11 7a 20       	movups %xmm15,0x20(%rdx)
+  561029:	44 0f 11 7a 30       	movups %xmm15,0x30(%rdx)
+  56102e:	48 83 c2 40          	add    $0x40,%rdx
+  561032:	41 ff c8             	dec    %r8d
+  561035:	75 e4                	jne    56101b <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x3b>
+  561037:	66 0f 1f 84 00 00 00 	nopw   0x0(%rax,%rax,1)
+  56103e:	00 00
+  561040:	48 85 db             	test   %rbx,%rbx
+  561043:	0f 84 7c 00 00 00    	je     5610c5 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xe5>
+  561049:	48 39 de             	cmp    %rbx,%rsi
+  56104c:	75 77                	jne    5610c5 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xe5>
+  56104e:	48 89 9c 24 90 0c 00 	mov    %rbx,0xc90(%rsp)
+  561055:	00
+  561056:	48 89 84 24 88 0c 00 	mov    %rax,0xc88(%rsp)
+  56105d:	00
+  56105e:	48 89 bc 24 a0 0c 00 	mov    %rdi,0xca0(%rsp)
+  561065:	00
+  561066:	48 8d 05 db aa 1d 00 	lea    0x1daadb(%rip),%rax        # 73bb48 <type:*+0x2eeb0>
+  56106d:	48 89 d9             	mov    %rbx,%rcx
+  561070:	31 db                	xor    %ebx,%ebx
+  561072:	e8 c9 31 f2 ff       	call   484240 <runtime.makeslice>
+  561077:	48 89 84 24 30 0a 00 	mov    %rax,0xa30(%rsp)
+  56107e:	00
+  56107f:	48 8d 05 52 ab 1d 00 	lea    0x1dab52(%rip),%rax        # 73bbd8 <type:*+0x2ef40>
+  561086:	31 db                	xor    %ebx,%ebx
+  561088:	48 8b 8c 24 90 0c 00 	mov    0xc90(%rsp),%rcx
+  56108f:	00
+  561090:	e8 ab 31 f2 ff       	call   484240 <runtime.makeslice>
+  561095:	31 d2                	xor    %edx,%edx
+  561097:	48 8b b4 24 30 0a 00 	mov    0xa30(%rsp),%rsi
+  56109e:	00
+  56109f:	48 8b 8c 24 90 0c 00 	mov    0xc90(%rsp),%rcx
+  5610a6:	00
+  5610a7:	48 8b bc 24 88 0c 00 	mov    0xc88(%rsp),%rdi
+  5610ae:	00
+  5610af:	4c 8b 84 24 a0 0c 00 	mov    0xca0(%rsp),%r8
+  5610b6:	00
+  5610b7:	48 89 cb             	mov    %rcx,%rbx
+  5610ba:	45 31 c9             	xor    %r9d,%r9d
+  5610bd:	45 31 d2             	xor    %r10d,%r10d
+  5610c0:	49 89 db             	mov    %rbx,%r11
+  5610c3:	eb 74                	jmp    561139 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x159>
+  5610c5:	b8 10 00 00 00       	mov    $0x10,%eax
+  5610ca:	48 8d 1d 6f 4c 1d 00 	lea    0x1d4c6f(%rip),%rbx        # 735d40 <type:*+0x290a8>
+  5610d1:	b9 01 00 00 00       	mov    $0x1,%ecx
+  5610d6:	e8 25 0b ec ff       	call   421c00 <runtime.mallocgcSmallScanNoHeaderSC2>
+  5610db:	48 c7 40 08 14 00 00 	movq   $0x14,0x8(%rax)
+  5610e2:	00
+  5610e3:	48 8d 15 43 1e 05 00 	lea    0x51e43(%rip),%rdx        # 5b2f2d <go:string.*+0x3f0d>
+  5610ea:	48 89 10             	mov    %rdx,(%rax)
+  5610ed:	48 8d 94 24 48 0a 00 	lea    0xa48(%rsp),%rdx
+  5610f4:	00
+  5610f5:	be 09 00 00 00       	mov    $0x9,%esi
+  5610fa:	44 0f 11 3a          	movups %xmm15,(%rdx)
+  5610fe:	44 0f 11 7a 10       	movups %xmm15,0x10(%rdx)
+  561103:	44 0f 11 7a 20       	movups %xmm15,0x20(%rdx)
+  561108:	44 0f 11 7a 30       	movups %xmm15,0x30(%rdx)
+  56110d:	48 83 c2 40          	add    $0x40,%rdx
+  561111:	ff ce                	dec    %esi
+  561113:	75 e5                	jne    5610fa <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x11a>
+  561115:	48 89 c3             	mov    %rax,%rbx
+  561118:	48 8d 05 f9 c7 1e 00 	lea    0x1ec7f9(%rip),%rax        # 74d918 <type:*+0x40c80>
+  56111f:	48 81 c4 38 0a 00 00 	add    $0xa38,%rsp
+  561126:	5d                   	pop    %rbp
+  561127:	c3                   	ret
+  561128:	48 ff c2             	inc    %rdx
+  56112b:	4d 89 ca             	mov    %r9,%r10
+  56112e:	49 89 d9             	mov    %rbx,%r9
+  561131:	48 8b 9c 24 90 0c 00 	mov    0xc90(%rsp),%rbx
+  561138:	00
+  561139:	4c 89 8c 24 40 06 00 	mov    %r9,0x640(%rsp)
+  561140:	00
+  561141:	48 89 b4 24 00 0a 00 	mov    %rsi,0xa00(%rsp)
+  561148:	00
+  561149:	4c 89 94 24 50 04 00 	mov    %r10,0x450(%rsp)
+  561150:	00
+  561151:	48 89 84 24 f8 09 00 	mov    %rax,0x9f8(%rsp)
+  561158:	00
+  561159:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+  561160:	48 39 d3             	cmp    %rdx,%rbx
+  561163:	0f 8e 11 03 00 00    	jle    56147a <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x49a>
+  561169:	48 89 94 24 b0 08 00 	mov    %rdx,0x8b0(%rsp)
+  561170:	00
+  561171:	48 89 8c 24 48 06 00 	mov    %rcx,0x648(%rsp)
+  561178:	00
+  561179:	4c 89 9c 24 58 04 00 	mov    %r11,0x458(%rsp)
+  561180:	00
+  561181:	4c 8d 24 52          	lea    (%rdx,%rdx,2),%r12
+  561185:	4c 89 a4 24 d0 08 00 	mov    %r12,0x8d0(%rsp)
+  56118c:	00
+  56118d:	4d 89 e5             	mov    %r12,%r13
+  561190:	49 c1 e4 05          	shl    $0x5,%r12
+  561194:	4e 8b 7c 27 20       	mov    0x20(%rdi,%r12,1),%r15
+  561199:	4e 0b 7c 27 28       	or     0x28(%rdi,%r12,1),%r15
+  56119e:	4e 0b 7c 27 18       	or     0x18(%rdi,%r12,1),%r15
+  5611a3:	4e 0b 7c 27 10       	or     0x10(%rdi,%r12,1),%r15
+  5611a8:	4e 0b 7c 27 08       	or     0x8(%rdi,%r12,1),%r15
+  5611ad:	4e 0b 3c 27          	or     (%rdi,%r12,1),%r15
+  5611b1:	4a 8d 1c 27          	lea    (%rdi,%r12,1),%rbx
+  5611b5:	48 89 9c 24 08 0a 00 	mov    %rbx,0xa08(%rsp)
+  5611bc:	00
+  5611bd:	0f 1f 00             	nopl   (%rax)
+  5611c0:	4d 85 ff             	test   %r15,%r15
+  5611c3:	75 2b                	jne    5611f0 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x210>
+  5611c5:	4e 8b 7c 27 50       	mov    0x50(%rdi,%r12,1),%r15
+  5611ca:	4e 0b 7c 27 58       	or     0x58(%rdi,%r12,1),%r15
+  5611cf:	4e 0b 7c 27 48       	or     0x48(%rdi,%r12,1),%r15
+  5611d4:	4e 0b 7c 27 40       	or     0x40(%rdi,%r12,1),%r15
+  5611d9:	4e 0b 7c 27 38       	or     0x38(%rdi,%r12,1),%r15
+  5611de:	4e 0b 7c 27 30       	or     0x30(%rdi,%r12,1),%r15
+  5611e3:	4d 85 ff             	test   %r15,%r15
+  5611e6:	75 08                	jne    5611f0 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x210>
+  5611e8:	41 bc 01 00 00 00    	mov    $0x1,%r12d
+  5611ee:	eb 68                	jmp    561258 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x278>
+  5611f0:	49 c1 e5 06          	shl    $0x6,%r13
+  5611f4:	4b 8d 04 28          	lea    (%r8,%r13,1),%rax
+  5611f8:	e8 23 ce ff ff       	call   55e020 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*G2Affine).IsInfinity>
+  5611fd:	48 8b 8c 24 48 06 00 	mov    0x648(%rsp),%rcx
+  561204:	00
+  561205:	48 8b 94 24 b0 08 00 	mov    0x8b0(%rsp),%rdx
+  56120c:	00
+  56120d:	48 8b 9c 24 08 0a 00 	mov    0xa08(%rsp),%rbx
+  561214:	00
+  561215:	48 8b b4 24 00 0a 00 	mov    0xa00(%rsp),%rsi
+  56121c:	00
+  56121d:	48 8b bc 24 88 0c 00 	mov    0xc88(%rsp),%rdi
+  561224:	00
+  561225:	4c 8b 84 24 a0 0c 00 	mov    0xca0(%rsp),%r8
+  56122c:	00
+  56122d:	4c 8b 8c 24 40 06 00 	mov    0x640(%rsp),%r9
+  561234:	00
+  561235:	4c 8b 94 24 50 04 00 	mov    0x450(%rsp),%r10
+  56123c:	00
+  56123d:	4c 8b 9c 24 58 04 00 	mov    0x458(%rsp),%r11
+  561244:	00
+  561245:	4c 8b ac 24 d0 08 00 	mov    0x8d0(%rsp),%r13
+  56124c:	00
+  56124d:	41 89 c4             	mov    %eax,%r12d
+  561250:	48 8b 84 24 f8 09 00 	mov    0x9f8(%rsp),%rax
+  561257:	00
+  561258:	45 84 e4             	test   %r12b,%r12b
+  56125b:	74 0b                	je     561268 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x288>
+  56125d:	4c 89 cb             	mov    %r9,%rbx
+  561260:	4d 89 d1             	mov    %r10,%r9
+  561263:	e9 c0 fe ff ff       	jmp    561128 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x148>
+  561268:	4c 8d a4 24 98 09 00 	lea    0x998(%rsp),%r12
+  56126f:	00
+  561270:	44 0f 10 33          	movups (%rbx),%xmm14
+  561274:	45 0f 11 34 24       	movups %xmm14,(%r12)
+  561279:	44 0f 10 73 10       	movups 0x10(%rbx),%xmm14
+  56127e:	45 0f 11 74 24 10    	movups %xmm14,0x10(%r12)
+  561284:	44 0f 10 73 20       	movups 0x20(%rbx),%xmm14
+  561289:	45 0f 11 74 24 20    	movups %xmm14,0x20(%r12)
+  56128f:	44 0f 10 73 30       	movups 0x30(%rbx),%xmm14
+  561294:	45 0f 11 74 24 30    	movups %xmm14,0x30(%r12)
+  56129a:	44 0f 10 73 40       	movups 0x40(%rbx),%xmm14
+  56129f:	45 0f 11 74 24 40    	movups %xmm14,0x40(%r12)
+  5612a5:	44 0f 10 73 50       	movups 0x50(%rbx),%xmm14
+  5612aa:	45 0f 11 74 24 50    	movups %xmm14,0x50(%r12)
+  5612b0:	49 8d 59 01          	lea    0x1(%r9),%rbx
+  5612b4:	48 39 d9             	cmp    %rbx,%rcx
+  5612b7:	73 57                	jae    561310 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x330>
+  5612b9:	48 89 f0             	mov    %rsi,%rax
+  5612bc:	bf 01 00 00 00       	mov    $0x1,%edi
+  5612c1:	48 8d 35 80 a8 1d 00 	lea    0x1da880(%rip),%rsi        # 73bb48 <type:*+0x2eeb0>
+  5612c8:	e8 53 30 f2 ff       	call   484320 <runtime.growslice>
+  5612cd:	48 8b 94 24 b0 08 00 	mov    0x8b0(%rsp),%rdx
+  5612d4:	00
+  5612d5:	48 8b bc 24 88 0c 00 	mov    0xc88(%rsp),%rdi
+  5612dc:	00
+  5612dd:	4c 8b 84 24 a0 0c 00 	mov    0xca0(%rsp),%r8
+  5612e4:	00
+  5612e5:	4c 8b 94 24 50 04 00 	mov    0x450(%rsp),%r10
+  5612ec:	00
+  5612ed:	4c 8b 9c 24 58 04 00 	mov    0x458(%rsp),%r11
+  5612f4:	00
+  5612f5:	4c 8d a4 24 98 09 00 	lea    0x998(%rsp),%r12
+  5612fc:	00
+  5612fd:	4c 8b ac 24 d0 08 00 	mov    0x8d0(%rsp),%r13
+  561304:	00
+  561305:	48 89 c6             	mov    %rax,%rsi
+  561308:	48 8b 84 24 f8 09 00 	mov    0x9f8(%rsp),%rax
+  56130f:	00
+  561310:	4c 8d 0c 5b          	lea    (%rbx,%rbx,2),%r9
+  561314:	49 c1 e1 05          	shl    $0x5,%r9
+  561318:	4d 8d 0c 31          	lea    (%r9,%rsi,1),%r9
+  56131c:	4d 8d 49 a0          	lea    -0x60(%r9),%r9
+  561320:	45 0f 10 34 24       	movups (%r12),%xmm14
+  561325:	45 0f 11 31          	movups %xmm14,(%r9)
+  561329:	45 0f 10 74 24 10    	movups 0x10(%r12),%xmm14
+  56132f:	45 0f 11 71 10       	movups %xmm14,0x10(%r9)
+  561334:	45 0f 10 74 24 20    	movups 0x20(%r12),%xmm14
+  56133a:	45 0f 11 71 20       	movups %xmm14,0x20(%r9)
+  56133f:	45 0f 10 74 24 30    	movups 0x30(%r12),%xmm14
+  561345:	45 0f 11 71 30       	movups %xmm14,0x30(%r9)
+  56134a:	45 0f 10 74 24 40    	movups 0x40(%r12),%xmm14
+  561350:	45 0f 11 71 40       	movups %xmm14,0x40(%r9)
+  561355:	45 0f 10 74 24 50    	movups 0x50(%r12),%xmm14
+  56135b:	45 0f 11 71 50       	movups %xmm14,0x50(%r9)
+  561360:	4d 8d 4a 01          	lea    0x1(%r10),%r9
+  561364:	49 c1 e5 06          	shl    $0x6,%r13
+  561368:	4f 8d 14 28          	lea    (%r8,%r13,1),%r10
+  56136c:	4c 8d a4 24 d8 08 00 	lea    0x8d8(%rsp),%r12
+  561373:	00
+  561374:	41 bd 03 00 00 00    	mov    $0x3,%r13d
+  56137a:	45 0f 10 32          	movups (%r10),%xmm14
+  56137e:	45 0f 11 34 24       	movups %xmm14,(%r12)
+  561383:	45 0f 10 72 10       	movups 0x10(%r10),%xmm14
+  561388:	45 0f 11 74 24 10    	movups %xmm14,0x10(%r12)
+  56138e:	45 0f 10 72 20       	movups 0x20(%r10),%xmm14
+  561393:	45 0f 11 74 24 20    	movups %xmm14,0x20(%r12)
+  561399:	45 0f 10 72 30       	movups 0x30(%r10),%xmm14
+  56139e:	45 0f 11 74 24 30    	movups %xmm14,0x30(%r12)
+  5613a4:	49 83 c2 40          	add    $0x40,%r10
+  5613a8:	49 83 c4 40          	add    $0x40,%r12
+  5613ac:	41 ff cd             	dec    %r13d
+  5613af:	75 c9                	jne    56137a <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x39a>
+  5613b1:	4d 39 cb             	cmp    %r9,%r11
+  5613b4:	73 65                	jae    56141b <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x43b>
+  5613b6:	48 89 b4 24 28 0a 00 	mov    %rsi,0xa28(%rsp)
+  5613bd:	00
+  5613be:	48 89 9c 24 c8 08 00 	mov    %rbx,0x8c8(%rsp)
+  5613c5:	00
+  5613c6:	48 89 8c 24 c0 08 00 	mov    %rcx,0x8c0(%rsp)
+  5613cd:	00
+  5613ce:	4c 89 cb             	mov    %r9,%rbx
+  5613d1:	4c 89 d9             	mov    %r11,%rcx
+  5613d4:	bf 01 00 00 00       	mov    $0x1,%edi
+  5613d9:	48 8d 35 f8 a7 1d 00 	lea    0x1da7f8(%rip),%rsi        # 73bbd8 <type:*+0x2ef40>
+  5613e0:	e8 3b 2f f2 ff       	call   484320 <runtime.growslice>
+  5613e5:	48 8b 94 24 b0 08 00 	mov    0x8b0(%rsp),%rdx
+  5613ec:	00
+  5613ed:	48 8b b4 24 28 0a 00 	mov    0xa28(%rsp),%rsi
+  5613f4:	00
+  5613f5:	48 8b bc 24 88 0c 00 	mov    0xc88(%rsp),%rdi
+  5613fc:	00
+  5613fd:	4c 8b 84 24 a0 0c 00 	mov    0xca0(%rsp),%r8
+  561404:	00
+  561405:	49 89 d9             	mov    %rbx,%r9
+  561408:	49 89 cb             	mov    %rcx,%r11
+  56140b:	48 8b 8c 24 c0 08 00 	mov    0x8c0(%rsp),%rcx
+  561412:	00
+  561413:	48 8b 9c 24 c8 08 00 	mov    0x8c8(%rsp),%rbx
+  56141a:	00
+  56141b:	4f 8d 24 49          	lea    (%r9,%r9,2),%r12
+  56141f:	49 c1 e4 06          	shl    $0x6,%r12
+  561423:	4d 8d 24 04          	lea    (%r12,%rax,1),%r12
+  561427:	4d 8d a4 24 40 ff ff 	lea    -0xc0(%r12),%r12
+  56142e:	ff
+  56142f:	4c 8d ac 24 d8 08 00 	lea    0x8d8(%rsp),%r13
+  561436:	00
+  561437:	41 bf 03 00 00 00    	mov    $0x3,%r15d
+  56143d:	45 0f 10 75 00       	movups 0x0(%r13),%xmm14
+  561442:	45 0f 11 34 24       	movups %xmm14,(%r12)
+  561447:	45 0f 10 75 10       	movups 0x10(%r13),%xmm14
+  56144c:	45 0f 11 74 24 10    	movups %xmm14,0x10(%r12)
+  561452:	45 0f 10 75 20       	movups 0x20(%r13),%xmm14
+  561457:	45 0f 11 74 24 20    	movups %xmm14,0x20(%r12)
+  56145d:	45 0f 10 75 30       	movups 0x30(%r13),%xmm14
+  561462:	45 0f 11 74 24 30    	movups %xmm14,0x30(%r12)
+  561468:	49 83 c5 40          	add    $0x40,%r13
+  56146c:	49 83 c4 40          	add    $0x40,%r12
+  561470:	41 ff cf             	dec    %r15d
+  561473:	75 c8                	jne    56143d <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x45d>
+  561475:	e9 ae fc ff ff       	jmp    561128 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x148>
+  56147a:	48 8d 05 f7 db 1d 00 	lea    0x1ddbf7(%rip),%rax        # 73f078 <type:*+0x323e0>
+  561481:	4c 89 cb             	mov    %r9,%rbx
+  561484:	48 89 d9             	mov    %rbx,%rcx
+  561487:	e8 b4 2d f2 ff       	call   484240 <runtime.makeslice>
+  56148c:	48 89 84 24 30 0a 00 	mov    %rax,0xa30(%rsp)
+  561493:	00
+  561494:	31 c9                	xor    %ecx,%ecx
+  561496:	eb 37                	jmp    5614cf <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x4ef>
+  561498:	48 89 8c 24 a8 08 00 	mov    %rcx,0x8a8(%rsp)
+  56149f:	00
+  5614a0:	48 8d 0c 49          	lea    (%rcx,%rcx,2),%rcx
+  5614a4:	48 c1 e1 06          	shl    $0x6,%rcx
+  5614a8:	48 8b 94 24 f8 09 00 	mov    0x9f8(%rsp),%rdx
+  5614af:	00
+  5614b0:	48 8d 1c 11          	lea    (%rcx,%rdx,1),%rbx
+  5614b4:	48 89 f0             	mov    %rsi,%rax
+  5614b7:	e8 c4 ef ff ff       	call   560480 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).FromAffine>
+  5614bc:	48 8b 8c 24 a8 08 00 	mov    0x8a8(%rsp),%rcx
+  5614c3:	00
+  5614c4:	48 ff c1             	inc    %rcx
+  5614c7:	48 8b 84 24 30 0a 00 	mov    0xa30(%rsp),%rax
+  5614ce:	00
+  5614cf:	48 8b 94 24 40 06 00 	mov    0x640(%rsp),%rdx
+  5614d6:	00
+  5614d7:	48 39 d1             	cmp    %rdx,%rcx
+  5614da:	7d 1d                	jge    5614f9 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x519>
+  5614dc:	48 8d 34 c9          	lea    (%rcx,%rcx,8),%rsi
+  5614e0:	48 c1 e6 05          	shl    $0x5,%rsi
+  5614e4:	48 01 c6             	add    %rax,%rsi
+  5614e7:	48 8b bc 24 50 04 00 	mov    0x450(%rsp),%rdi
+  5614ee:	00
+  5614ef:	48 39 f9             	cmp    %rdi,%rcx
+  5614f2:	72 a4                	jb     561498 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x4b8>
+  5614f4:	e9 f1 09 00 00       	jmp    561eea <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xf0a>
+  5614f9:	48 8d 9c 24 10 02 00 	lea    0x210(%rsp),%rbx
+  561500:	00
+  561501:	b9 09 00 00 00       	mov    $0x9,%ecx
+  561506:	44 0f 11 3b          	movups %xmm15,(%rbx)
+  56150a:	44 0f 11 7b 10       	movups %xmm15,0x10(%rbx)
+  56150f:	44 0f 11 7b 20       	movups %xmm15,0x20(%rbx)
+  561514:	44 0f 11 7b 30       	movups %xmm15,0x30(%rbx)
+  561519:	48 83 c3 40          	add    $0x40,%rbx
+  56151d:	0f 1f 00             	nopl   (%rax)
+  561520:	ff c9                	dec    %ecx
+  561522:	75 e2                	jne    561506 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x526>
+  561524:	90                   	nop
+  561525:	90                   	nop
+  561526:	48 b9 fd ff 02 00 00 	movabs $0x760900000002fffd,%rcx
+  56152d:	00 09 76
+  561530:	48 89 8c 24 10 02 00 	mov    %rcx,0x210(%rsp)
+  561537:	00
+  561538:	48 b9 02 00 0c c4 0b 	movabs $0xebf4000bc40c0002,%rcx
+  56153f:	00 f4 eb
+  561542:	48 89 8c 24 18 02 00 	mov    %rcx,0x218(%rsp)
+  561549:	00
+  56154a:	48 b9 ba 58 c7 53 57 	movabs $0x5f48985753c758ba,%rcx
+  561551:	98 48 5f
+  561554:	48 89 8c 24 20 02 00 	mov    %rcx,0x220(%rsp)
+  56155b:	00
+  56155c:	48 b9 45 57 52 70 53 	movabs $0x77ce585370525745,%rcx
+  561563:	58 ce 77
+  561566:	48 89 8c 24 28 02 00 	mov    %rcx,0x228(%rsp)
+  56156d:	00
+  56156e:	48 b9 6d ec 56 a2 97 	movabs $0x5c071a97a256ec6d,%rcx
+  561575:	1a 07 5c
+  561578:	48 89 8c 24 30 02 00 	mov    %rcx,0x230(%rsp)
+  56157f:	00
+  561580:	48 b9 93 e4 80 fa c3 	movabs $0x15f65ec3fa80e493,%rcx
+  561587:	5e f6 15
+  56158a:	48 89 8c 24 38 02 00 	mov    %rcx,0x238(%rsp)
+  561591:	00
+  561592:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561599:	00
+  56159a:	b9 04 00 00 00       	mov    $0x4,%ecx
+  56159f:	44 0f 11 3b          	movups %xmm15,(%rbx)
+  5615a3:	44 0f 11 7b 10       	movups %xmm15,0x10(%rbx)
+  5615a8:	44 0f 11 7b 20       	movups %xmm15,0x20(%rbx)
+  5615ad:	44 0f 11 7b 30       	movups %xmm15,0x30(%rbx)
+  5615b2:	48 83 c3 40          	add    $0x40,%rbx
+  5615b6:	ff c9                	dec    %ecx
+  5615b8:	75 e5                	jne    56159f <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x5bf>
+  5615ba:	44 0f 11 3b          	movups %xmm15,(%rbx)
+  5615be:	44 0f 11 7b 10       	movups %xmm15,0x10(%rbx)
+  5615c3:	48 8d 8c 24 50 06 00 	lea    0x650(%rsp),%rcx
+  5615ca:	00
+  5615cb:	be 04 00 00 00       	mov    $0x4,%esi
+  5615d0:	44 0f 11 39          	movups %xmm15,(%rcx)
+  5615d4:	44 0f 11 79 10       	movups %xmm15,0x10(%rcx)
+  5615d9:	44 0f 11 79 20       	movups %xmm15,0x20(%rcx)
+  5615de:	44 0f 11 79 30       	movups %xmm15,0x30(%rcx)
+  5615e3:	48 83 c1 40          	add    $0x40,%rcx
+  5615e7:	ff ce                	dec    %esi
+  5615e9:	75 e5                	jne    5615d0 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x5f0>
+  5615eb:	44 0f 11 39          	movups %xmm15,(%rcx)
+  5615ef:	44 0f 11 79 10       	movups %xmm15,0x10(%rcx)
+  5615f4:	48 8d 8c 24 60 04 00 	lea    0x460(%rsp),%rcx
+  5615fb:	00
+  5615fc:	be 07 00 00 00       	mov    $0x7,%esi
+  561601:	44 0f 11 39          	movups %xmm15,(%rcx)
+  561605:	44 0f 11 79 10       	movups %xmm15,0x10(%rcx)
+  56160a:	44 0f 11 79 20       	movups %xmm15,0x20(%rcx)
+  56160f:	44 0f 11 79 30       	movups %xmm15,0x30(%rcx)
+  561614:	48 83 c1 40          	add    $0x40,%rcx
+  561618:	ff ce                	dec    %esi
+  56161a:	75 e5                	jne    561601 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x621>
+  56161c:	44 0f 11 39          	movups %xmm15,(%rcx)
+  561620:	44 0f 11 79 10       	movups %xmm15,0x10(%rcx)
+  561625:	48 85 d2             	test   %rdx,%rdx
+  561628:	0f 84 1a 03 00 00    	je     561948 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x968>
+  56162e:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561635:	00
+  561636:	e8 25 09 00 00       	call   561f60 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).doubleStep>
+  56163b:	48 8b 8c 24 00 0a 00 	mov    0xa00(%rsp),%rcx
+  561642:	00
+  561643:	48 8d 51 30          	lea    0x30(%rcx),%rdx
+  561647:	48 89 94 24 20 0a 00 	mov    %rdx,0xa20(%rsp)
+  56164e:	00
+  56164f:	90                   	nop
+  561650:	48 8d 94 24 10 02 00 	lea    0x210(%rsp),%rdx
+  561657:	00
+  561658:	48 8d b4 24 70 07 00 	lea    0x770(%rsp),%rsi
+  56165f:	00
+  561660:	44 0f 10 36          	movups (%rsi),%xmm14
+  561664:	44 0f 11 32          	movups %xmm14,(%rdx)
+  561668:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  56166d:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  561672:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  561677:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  56167c:	48 8d 94 24 40 02 00 	lea    0x240(%rsp),%rdx
+  561683:	00
+  561684:	48 8d b4 24 a0 07 00 	lea    0x7a0(%rsp),%rsi
+  56168b:	00
+  56168c:	44 0f 10 36          	movups (%rsi),%xmm14
+  561690:	44 0f 11 32          	movups %xmm14,(%rdx)
+  561694:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  561699:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  56169e:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  5616a3:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  5616a8:	48 8d 84 24 70 02 00 	lea    0x270(%rsp),%rax
+  5616af:	00
+  5616b0:	48 8d 9c 24 d0 07 00 	lea    0x7d0(%rsp),%rbx
+  5616b7:	00
+  5616b8:	e8 c3 2c ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  5616bd:	48 8d 84 24 90 03 00 	lea    0x390(%rsp),%rax
+  5616c4:	00
+  5616c5:	48 8d 9c 24 30 08 00 	lea    0x830(%rsp),%rbx
+  5616cc:	00
+  5616cd:	48 8b 8c 24 20 0a 00 	mov    0xa20(%rsp),%rcx
+  5616d4:	00
+  5616d5:	e8 a6 2c ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  5616da:	48 8b 8c 24 50 04 00 	mov    0x450(%rsp),%rcx
+  5616e1:	00
+  5616e2:	48 85 c9             	test   %rcx,%rcx
+  5616e5:	0f 86 fa 07 00 00    	jbe    561ee5 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xf05>
+  5616eb:	48 8b 84 24 30 0a 00 	mov    0xa30(%rsp),%rax
+  5616f2:	00
+  5616f3:	48 8d 9c 24 50 06 00 	lea    0x650(%rsp),%rbx
+  5616fa:	00
+  5616fb:	48 8b 8c 24 f8 09 00 	mov    0x9f8(%rsp),%rcx
+  561702:	00
+  561703:	e8 f8 0f 00 00       	call   562700 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).addMixedStep>
+  561708:	48 8d 84 24 b0 06 00 	lea    0x6b0(%rsp),%rax
+  56170f:	00
+  561710:	48 89 c3             	mov    %rax,%rbx
+  561713:	48 8b 8c 24 00 0a 00 	mov    0xa00(%rsp),%rcx
+  56171a:	00
+  56171b:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+  561720:	e8 5b 2c ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561725:	48 8d 84 24 10 07 00 	lea    0x710(%rsp),%rax
+  56172c:	00
+  56172d:	48 89 c3             	mov    %rax,%rbx
+  561730:	48 8b 8c 24 20 0a 00 	mov    0xa20(%rsp),%rcx
+  561737:	00
+  561738:	e8 43 2c ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  56173d:	48 8d 84 24 50 06 00 	lea    0x650(%rsp),%rax
+  561744:	00
+  561745:	48 8d 9c 24 b0 06 00 	lea    0x6b0(%rsp),%rbx
+  56174c:	00
+  56174d:	48 8d 8c 24 10 07 00 	lea    0x710(%rsp),%rcx
+  561754:	00
+  561755:	48 8d bc 24 10 02 00 	lea    0x210(%rsp),%rdi
+  56175c:	00
+  56175d:	48 8d b4 24 70 02 00 	lea    0x270(%rsp),%rsi
+  561764:	00
+  561765:	4c 8d 84 24 90 03 00 	lea    0x390(%rsp),%r8
+  56176c:	00
+  56176d:	e8 ae 1c ff ff       	call   553420 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.Mul014By014>
+  561772:	48 8d 94 24 60 04 00 	lea    0x460(%rsp),%rdx
+  561779:	00
+  56177a:	48 89 e6             	mov    %rsp,%rsi
+  56177d:	bf 07 00 00 00       	mov    $0x7,%edi
+  561782:	44 0f 10 36          	movups (%rsi),%xmm14
+  561786:	44 0f 11 32          	movups %xmm14,(%rdx)
+  56178a:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  56178f:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  561794:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  561799:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  56179e:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  5617a3:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  5617a8:	48 83 c6 40          	add    $0x40,%rsi
+  5617ac:	48 83 c2 40          	add    $0x40,%rdx
+  5617b0:	ff cf                	dec    %edi
+  5617b2:	75 ce                	jne    561782 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x7a2>
+  5617b4:	44 0f 10 36          	movups (%rsi),%xmm14
+  5617b8:	44 0f 11 32          	movups %xmm14,(%rdx)
+  5617bc:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  5617c1:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  5617c6:	48 8d 94 24 10 02 00 	lea    0x210(%rsp),%rdx
+  5617cd:	00
+  5617ce:	48 8d b4 24 60 04 00 	lea    0x460(%rsp),%rsi
+  5617d5:	00
+  5617d6:	44 0f 10 36          	movups (%rsi),%xmm14
+  5617da:	44 0f 11 32          	movups %xmm14,(%rdx)
+  5617de:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  5617e3:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  5617e8:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  5617ed:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  5617f2:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  5617f7:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  5617fc:	44 0f 10 76 40       	movups 0x40(%rsi),%xmm14
+  561801:	44 0f 11 72 40       	movups %xmm14,0x40(%rdx)
+  561806:	44 0f 10 76 50       	movups 0x50(%rsi),%xmm14
+  56180b:	44 0f 11 72 50       	movups %xmm14,0x50(%rdx)
+  561810:	48 8d 94 24 70 02 00 	lea    0x270(%rsp),%rdx
+  561817:	00
+  561818:	48 8d b4 24 c0 04 00 	lea    0x4c0(%rsp),%rsi
+  56181f:	00
+  561820:	44 0f 10 36          	movups (%rsi),%xmm14
+  561824:	44 0f 11 32          	movups %xmm14,(%rdx)
+  561828:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  56182d:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  561832:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  561837:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  56183c:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  561841:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  561846:	44 0f 10 76 40       	movups 0x40(%rsi),%xmm14
+  56184b:	44 0f 11 72 40       	movups %xmm14,0x40(%rdx)
+  561850:	44 0f 10 76 50       	movups 0x50(%rsi),%xmm14
+  561855:	44 0f 11 72 50       	movups %xmm14,0x50(%rdx)
+  56185a:	48 8d 94 24 d0 02 00 	lea    0x2d0(%rsp),%rdx
+  561861:	00
+  561862:	48 8d b4 24 20 05 00 	lea    0x520(%rsp),%rsi
+  561869:	00
+  56186a:	44 0f 10 36          	movups (%rsi),%xmm14
+  56186e:	44 0f 11 32          	movups %xmm14,(%rdx)
+  561872:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  561877:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  56187c:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  561881:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  561886:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  56188b:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  561890:	44 0f 10 76 40       	movups 0x40(%rsi),%xmm14
+  561895:	44 0f 11 72 40       	movups %xmm14,0x40(%rdx)
+  56189a:	44 0f 10 76 50       	movups 0x50(%rsi),%xmm14
+  56189f:	44 0f 11 72 50       	movups %xmm14,0x50(%rdx)
+  5618a4:	48 8d 94 24 90 03 00 	lea    0x390(%rsp),%rdx
+  5618ab:	00
+  5618ac:	48 8d b4 24 80 05 00 	lea    0x580(%rsp),%rsi
+  5618b3:	00
+  5618b4:	44 0f 10 36          	movups (%rsi),%xmm14
+  5618b8:	44 0f 11 32          	movups %xmm14,(%rdx)
+  5618bc:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  5618c1:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  5618c6:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  5618cb:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  5618d0:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  5618d5:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  5618da:	44 0f 10 76 40       	movups 0x40(%rsi),%xmm14
+  5618df:	44 0f 11 72 40       	movups %xmm14,0x40(%rdx)
+  5618e4:	44 0f 10 76 50       	movups 0x50(%rsi),%xmm14
+  5618e9:	44 0f 11 72 50       	movups %xmm14,0x50(%rdx)
+  5618ee:	48 8d 94 24 f0 03 00 	lea    0x3f0(%rsp),%rdx
+  5618f5:	00
+  5618f6:	48 8d b4 24 e0 05 00 	lea    0x5e0(%rsp),%rsi
+  5618fd:	00
+  5618fe:	44 0f 10 36          	movups (%rsi),%xmm14
+  561902:	44 0f 11 32          	movups %xmm14,(%rdx)
+  561906:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  56190b:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  561910:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  561915:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  56191a:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  56191f:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  561924:	44 0f 10 76 40       	movups 0x40(%rsi),%xmm14
+  561929:	44 0f 11 72 40       	movups %xmm14,0x40(%rdx)
+  56192e:	44 0f 10 76 50       	movups 0x50(%rsi),%xmm14
+  561933:	44 0f 11 72 50       	movups %xmm14,0x50(%rdx)
+  561938:	48 8b 84 24 30 0a 00 	mov    0xa30(%rsp),%rax
+  56193f:	00
+  561940:	48 8b 94 24 40 06 00 	mov    0x640(%rsp),%rdx
+  561947:	00
+  561948:	b9 01 00 00 00       	mov    $0x1,%ecx
+  56194d:	e9 17 01 00 00       	jmp    561a69 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xa89>
+  561952:	48 8b 94 24 d0 08 00 	mov    0x8d0(%rsp),%rdx
+  561959:	00
+  56195a:	48 c1 e2 06          	shl    $0x6,%rdx
+  56195e:	48 8b b4 24 f8 09 00 	mov    0x9f8(%rsp),%rsi
+  561965:	00
+  561966:	48 8d 0c 32          	lea    (%rdx,%rsi,1),%rcx
+  56196a:	48 8b 84 24 18 0a 00 	mov    0xa18(%rsp),%rax
+  561971:	00
+  561972:	48 8d 9c 24 50 06 00 	lea    0x650(%rsp),%rbx
+  561979:	00
+  56197a:	e8 81 0d 00 00       	call   562700 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).addMixedStep>
+  56197f:	48 8d 84 24 b0 06 00 	lea    0x6b0(%rsp),%rax
+  561986:	00
+  561987:	48 89 c3             	mov    %rax,%rbx
+  56198a:	48 8b 8c 24 20 0a 00 	mov    0xa20(%rsp),%rcx
+  561991:	00
+  561992:	e8 e9 29 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561997:	48 8d 84 24 10 07 00 	lea    0x710(%rsp),%rax
+  56199e:	00
+  56199f:	48 89 c3             	mov    %rax,%rbx
+  5619a2:	48 8b 8c 24 10 0a 00 	mov    0xa10(%rsp),%rcx
+  5619a9:	00
+  5619aa:	e8 d1 29 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  5619af:	48 8d 84 24 50 06 00 	lea    0x650(%rsp),%rax
+  5619b6:	00
+  5619b7:	48 8d 9c 24 b0 06 00 	lea    0x6b0(%rsp),%rbx
+  5619be:	00
+  5619bf:	48 8d 8c 24 10 07 00 	lea    0x710(%rsp),%rcx
+  5619c6:	00
+  5619c7:	48 8d bc 24 70 07 00 	lea    0x770(%rsp),%rdi
+  5619ce:	00
+  5619cf:	48 8d b4 24 d0 07 00 	lea    0x7d0(%rsp),%rsi
+  5619d6:	00
+  5619d7:	4c 8d 84 24 30 08 00 	lea    0x830(%rsp),%r8
+  5619de:	00
+  5619df:	90                   	nop
+  5619e0:	e8 3b 1a ff ff       	call   553420 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.Mul014By014>
+  5619e5:	48 8d 9c 24 60 04 00 	lea    0x460(%rsp),%rbx
+  5619ec:	00
+  5619ed:	48 89 e2             	mov    %rsp,%rdx
+  5619f0:	be 07 00 00 00       	mov    $0x7,%esi
+  5619f5:	44 0f 10 32          	movups (%rdx),%xmm14
+  5619f9:	44 0f 11 33          	movups %xmm14,(%rbx)
+  5619fd:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  561a02:	44 0f 11 73 10       	movups %xmm14,0x10(%rbx)
+  561a07:	44 0f 10 72 20       	movups 0x20(%rdx),%xmm14
+  561a0c:	44 0f 11 73 20       	movups %xmm14,0x20(%rbx)
+  561a11:	44 0f 10 72 30       	movups 0x30(%rdx),%xmm14
+  561a16:	44 0f 11 73 30       	movups %xmm14,0x30(%rbx)
+  561a1b:	48 83 c2 40          	add    $0x40,%rdx
+  561a1f:	48 83 c3 40          	add    $0x40,%rbx
+  561a23:	ff ce                	dec    %esi
+  561a25:	75 ce                	jne    5619f5 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xa15>
+  561a27:	44 0f 10 32          	movups (%rdx),%xmm14
+  561a2b:	44 0f 11 33          	movups %xmm14,(%rbx)
+  561a2f:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  561a34:	44 0f 11 73 10       	movups %xmm14,0x10(%rbx)
+  561a39:	48 8d 84 24 10 02 00 	lea    0x210(%rsp),%rax
+  561a40:	00
+  561a41:	48 8d 9c 24 60 04 00 	lea    0x460(%rsp),%rbx
+  561a48:	00
+  561a49:	e8 92 21 ff ff       	call   553be0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).MulBy01245>
+  561a4e:	48 8b 8c 24 a0 08 00 	mov    0x8a0(%rsp),%rcx
+  561a55:	00
+  561a56:	48 ff c1             	inc    %rcx
+  561a59:	48 8b 84 24 30 0a 00 	mov    0xa30(%rsp),%rax
+  561a60:	00
+  561a61:	48 8b 94 24 40 06 00 	mov    0x640(%rsp),%rdx
+  561a68:	00
+  561a69:	48 39 d1             	cmp    %rdx,%rcx
+  561a6c:	0f 8d bc 00 00 00    	jge    561b2e <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xb4e>
+  561a72:	48 89 8c 24 a0 08 00 	mov    %rcx,0x8a0(%rsp)
+  561a79:	00
+  561a7a:	48 8d 0c c9          	lea    (%rcx,%rcx,8),%rcx
+  561a7e:	48 c1 e1 05          	shl    $0x5,%rcx
+  561a82:	48 01 c8             	add    %rcx,%rax
+  561a85:	48 89 84 24 18 0a 00 	mov    %rax,0xa18(%rsp)
+  561a8c:	00
+  561a8d:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561a94:	00
+  561a95:	e8 c6 04 00 00       	call   561f60 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).doubleStep>
+  561a9a:	48 8b 8c 24 a0 08 00 	mov    0x8a0(%rsp),%rcx
+  561aa1:	00
+  561aa2:	48 8d 0c 49          	lea    (%rcx,%rcx,2),%rcx
+  561aa6:	48 89 8c 24 d0 08 00 	mov    %rcx,0x8d0(%rsp)
+  561aad:	00
+  561aae:	48 c1 e1 05          	shl    $0x5,%rcx
+  561ab2:	48 89 8c 24 c8 08 00 	mov    %rcx,0x8c8(%rsp)
+  561ab9:	00
+  561aba:	48 8b 94 24 00 0a 00 	mov    0xa00(%rsp),%rdx
+  561ac1:	00
+  561ac2:	48 01 d1             	add    %rdx,%rcx
+  561ac5:	48 89 8c 24 20 0a 00 	mov    %rcx,0xa20(%rsp)
+  561acc:	00
+  561acd:	48 8d 84 24 d0 07 00 	lea    0x7d0(%rsp),%rax
+  561ad4:	00
+  561ad5:	48 89 c3             	mov    %rax,%rbx
+  561ad8:	e8 a3 28 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561add:	48 8b 8c 24 00 0a 00 	mov    0xa00(%rsp),%rcx
+  561ae4:	00
+  561ae5:	48 8b 94 24 c8 08 00 	mov    0x8c8(%rsp),%rdx
+  561aec:	00
+  561aed:	48 8d 0c 0a          	lea    (%rdx,%rcx,1),%rcx
+  561af1:	48 8d 49 30          	lea    0x30(%rcx),%rcx
+  561af5:	48 89 8c 24 10 0a 00 	mov    %rcx,0xa10(%rsp)
+  561afc:	00
+  561afd:	48 8d 84 24 30 08 00 	lea    0x830(%rsp),%rax
+  561b04:	00
+  561b05:	48 89 c3             	mov    %rax,%rbx
+  561b08:	e8 73 28 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561b0d:	48 8b 8c 24 a0 08 00 	mov    0x8a0(%rsp),%rcx
+  561b14:	00
+  561b15:	48 8b 94 24 50 04 00 	mov    0x450(%rsp),%rdx
+  561b1c:	00
+  561b1d:	0f 1f 00             	nopl   (%rax)
+  561b20:	48 39 d1             	cmp    %rdx,%rcx
+  561b23:	0f 82 29 fe ff ff    	jb     561952 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0x972>
+  561b29:	e9 b0 03 00 00       	jmp    561ede <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xefe>
+  561b2e:	b9 3d 00 00 00       	mov    $0x3d,%ecx
+  561b33:	eb 19                	jmp    561b4e <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xb6e>
+  561b35:	48 8b b4 24 b8 08 00 	mov    0x8b8(%rsp),%rsi
+  561b3c:	00
+  561b3d:	48 ff ce             	dec    %rsi
+  561b40:	48 8b 84 24 30 0a 00 	mov    0xa30(%rsp),%rax
+  561b47:	00
+  561b48:	48 89 ca             	mov    %rcx,%rdx
+  561b4b:	48 89 f1             	mov    %rsi,%rcx
+  561b4e:	48 85 c9             	test   %rcx,%rcx
+  561b51:	0f 8e 3d 02 00 00    	jle    561d94 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xdb4>
+  561b57:	48 89 8c 24 b8 08 00 	mov    %rcx,0x8b8(%rsp)
+  561b5e:	00
+  561b5f:	48 8d 84 24 10 02 00 	lea    0x210(%rsp),%rax
+  561b66:	00
+  561b67:	48 89 c3             	mov    %rax,%rbx
+  561b6a:	e8 11 f2 fe ff       	call   550d80 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Square>
+  561b6f:	31 c0                	xor    %eax,%eax
+  561b71:	eb 0b                	jmp    561b7e <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xb9e>
+  561b73:	48 8b 84 24 98 08 00 	mov    0x898(%rsp),%rax
+  561b7a:	00
+  561b7b:	48 ff c0             	inc    %rax
+  561b7e:	48 8b 8c 24 40 06 00 	mov    0x640(%rsp),%rcx
+  561b85:	00
+  561b86:	48 39 c8             	cmp    %rcx,%rax
+  561b89:	7d aa                	jge    561b35 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xb55>
+  561b8b:	48 89 84 24 98 08 00 	mov    %rax,0x898(%rsp)
+  561b92:	00
+  561b93:	48 8d 0c c0          	lea    (%rax,%rax,8),%rcx
+  561b97:	48 c1 e1 05          	shl    $0x5,%rcx
+  561b9b:	48 8b 94 24 30 0a 00 	mov    0xa30(%rsp),%rdx
+  561ba2:	00
+  561ba3:	48 8d 04 0a          	lea    (%rdx,%rcx,1),%rax
+  561ba7:	48 89 84 24 18 0a 00 	mov    %rax,0xa18(%rsp)
+  561bae:	00
+  561baf:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561bb6:	00
+  561bb7:	e8 a4 03 00 00       	call   561f60 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).doubleStep>
+  561bbc:	48 8b 8c 24 98 08 00 	mov    0x898(%rsp),%rcx
+  561bc3:	00
+  561bc4:	48 8d 0c 49          	lea    (%rcx,%rcx,2),%rcx
+  561bc8:	48 89 8c 24 d0 08 00 	mov    %rcx,0x8d0(%rsp)
+  561bcf:	00
+  561bd0:	48 c1 e1 05          	shl    $0x5,%rcx
+  561bd4:	48 89 8c 24 c8 08 00 	mov    %rcx,0x8c8(%rsp)
+  561bdb:	00
+  561bdc:	48 8b 94 24 00 0a 00 	mov    0xa00(%rsp),%rdx
+  561be3:	00
+  561be4:	48 01 d1             	add    %rdx,%rcx
+  561be7:	48 89 8c 24 20 0a 00 	mov    %rcx,0xa20(%rsp)
+  561bee:	00
+  561bef:	48 8d 84 24 d0 07 00 	lea    0x7d0(%rsp),%rax
+  561bf6:	00
+  561bf7:	48 89 c3             	mov    %rax,%rbx
+  561bfa:	e8 81 27 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561bff:	48 8b 8c 24 00 0a 00 	mov    0xa00(%rsp),%rcx
+  561c06:	00
+  561c07:	48 8b 94 24 c8 08 00 	mov    0x8c8(%rsp),%rdx
+  561c0e:	00
+  561c0f:	48 8d 0c 0a          	lea    (%rdx,%rcx,1),%rcx
+  561c13:	48 8d 49 30          	lea    0x30(%rcx),%rcx
+  561c17:	48 89 8c 24 10 0a 00 	mov    %rcx,0xa10(%rsp)
+  561c1e:	00
+  561c1f:	48 8d 84 24 30 08 00 	lea    0x830(%rsp),%rax
+  561c26:	00
+  561c27:	48 89 c3             	mov    %rax,%rbx
+  561c2a:	e8 51 27 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561c2f:	48 8b 8c 24 b8 08 00 	mov    0x8b8(%rsp),%rcx
+  561c36:	00
+  561c37:	48 8d 15 22 ce 22 00 	lea    0x22ce22(%rip),%rdx        # 78ea60 <github.com/consensys/gnark-crypto/ecc/bls12-381.LoopCounter>
+  561c3e:	0f b6 14 0a          	movzbl (%rdx,%rcx,1),%edx
+  561c42:	84 d2                	test   %dl,%dl
+  561c44:	0f 84 20 01 00 00    	je     561d6a <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xd8a>
+  561c4a:	48 8b 94 24 98 08 00 	mov    0x898(%rsp),%rdx
+  561c51:	00
+  561c52:	48 8b b4 24 50 04 00 	mov    0x450(%rsp),%rsi
+  561c59:	00
+  561c5a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+  561c60:	48 39 f2             	cmp    %rsi,%rdx
+  561c63:	0f 83 70 02 00 00    	jae    561ed9 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xef9>
+  561c69:	48 8b 94 24 d0 08 00 	mov    0x8d0(%rsp),%rdx
+  561c70:	00
+  561c71:	48 c1 e2 06          	shl    $0x6,%rdx
+  561c75:	48 8b b4 24 f8 09 00 	mov    0x9f8(%rsp),%rsi
+  561c7c:	00
+  561c7d:	48 8d 0c 32          	lea    (%rdx,%rsi,1),%rcx
+  561c81:	48 8b 84 24 18 0a 00 	mov    0xa18(%rsp),%rax
+  561c88:	00
+  561c89:	48 8d 9c 24 50 06 00 	lea    0x650(%rsp),%rbx
+  561c90:	00
+  561c91:	e8 6a 0a 00 00       	call   562700 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).addMixedStep>
+  561c96:	48 8d 84 24 b0 06 00 	lea    0x6b0(%rsp),%rax
+  561c9d:	00
+  561c9e:	48 89 c3             	mov    %rax,%rbx
+  561ca1:	48 8b 8c 24 20 0a 00 	mov    0xa20(%rsp),%rcx
+  561ca8:	00
+  561ca9:	e8 d2 26 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561cae:	48 8d 84 24 10 07 00 	lea    0x710(%rsp),%rax
+  561cb5:	00
+  561cb6:	48 89 c3             	mov    %rax,%rbx
+  561cb9:	48 8b 8c 24 10 0a 00 	mov    0xa10(%rsp),%rcx
+  561cc0:	00
+  561cc1:	e8 ba 26 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561cc6:	48 8d 84 24 50 06 00 	lea    0x650(%rsp),%rax
+  561ccd:	00
+  561cce:	48 8d 9c 24 b0 06 00 	lea    0x6b0(%rsp),%rbx
+  561cd5:	00
+  561cd6:	48 8d 8c 24 10 07 00 	lea    0x710(%rsp),%rcx
+  561cdd:	00
+  561cde:	48 8d bc 24 70 07 00 	lea    0x770(%rsp),%rdi
+  561ce5:	00
+  561ce6:	48 8d b4 24 d0 07 00 	lea    0x7d0(%rsp),%rsi
+  561ced:	00
+  561cee:	4c 8d 84 24 30 08 00 	lea    0x830(%rsp),%r8
+  561cf5:	00
+  561cf6:	e8 25 17 ff ff       	call   553420 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.Mul014By014>
+  561cfb:	48 8d 9c 24 60 04 00 	lea    0x460(%rsp),%rbx
+  561d02:	00
+  561d03:	48 89 e2             	mov    %rsp,%rdx
+  561d06:	be 07 00 00 00       	mov    $0x7,%esi
+  561d0b:	44 0f 10 32          	movups (%rdx),%xmm14
+  561d0f:	44 0f 11 33          	movups %xmm14,(%rbx)
+  561d13:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  561d18:	44 0f 11 73 10       	movups %xmm14,0x10(%rbx)
+  561d1d:	44 0f 10 72 20       	movups 0x20(%rdx),%xmm14
+  561d22:	44 0f 11 73 20       	movups %xmm14,0x20(%rbx)
+  561d27:	44 0f 10 72 30       	movups 0x30(%rdx),%xmm14
+  561d2c:	44 0f 11 73 30       	movups %xmm14,0x30(%rbx)
+  561d31:	48 83 c2 40          	add    $0x40,%rdx
+  561d35:	48 83 c3 40          	add    $0x40,%rbx
+  561d39:	ff ce                	dec    %esi
+  561d3b:	75 ce                	jne    561d0b <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xd2b>
+  561d3d:	44 0f 10 32          	movups (%rdx),%xmm14
+  561d41:	44 0f 11 33          	movups %xmm14,(%rbx)
+  561d45:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  561d4a:	44 0f 11 73 10       	movups %xmm14,0x10(%rbx)
+  561d4f:	48 8d 84 24 10 02 00 	lea    0x210(%rsp),%rax
+  561d56:	00
+  561d57:	48 8d 9c 24 60 04 00 	lea    0x460(%rsp),%rbx
+  561d5e:	00
+  561d5f:	90                   	nop
+  561d60:	e8 7b 1e ff ff       	call   553be0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).MulBy01245>
+  561d65:	e9 09 fe ff ff       	jmp    561b73 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xb93>
+  561d6a:	48 8d 84 24 10 02 00 	lea    0x210(%rsp),%rax
+  561d71:	00
+  561d72:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561d79:	00
+  561d7a:	48 8d 8c 24 d0 07 00 	lea    0x7d0(%rsp),%rcx
+  561d81:	00
+  561d82:	48 8d bc 24 30 08 00 	lea    0x830(%rsp),%rdi
+  561d89:	00
+  561d8a:	e8 b1 12 ff ff       	call   553040 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).MulBy014>
+  561d8f:	e9 df fd ff ff       	jmp    561b73 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xb93>
+  561d94:	48 8d 84 24 10 02 00 	lea    0x210(%rsp),%rax
+  561d9b:	00
+  561d9c:	48 89 c3             	mov    %rax,%rbx
+  561d9f:	90                   	nop
+  561da0:	e8 db ef fe ff       	call   550d80 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Square>
+  561da5:	31 c0                	xor    %eax,%eax
+  561da7:	e9 b4 00 00 00       	jmp    561e60 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xe80>
+  561dac:	48 89 84 24 90 08 00 	mov    %rax,0x890(%rsp)
+  561db3:	00
+  561db4:	48 8d 0c c0          	lea    (%rax,%rax,8),%rcx
+  561db8:	48 c1 e1 05          	shl    $0x5,%rcx
+  561dbc:	48 8b 94 24 30 0a 00 	mov    0xa30(%rsp),%rdx
+  561dc3:	00
+  561dc4:	48 8d 04 11          	lea    (%rcx,%rdx,1),%rax
+  561dc8:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561dcf:	00
+  561dd0:	e8 0b 11 00 00       	call   562ee0 <github.com/consensys/gnark-crypto/ecc/bls12-381.(*g2Proj).tangentLine>
+  561dd5:	48 8b 8c 24 90 08 00 	mov    0x890(%rsp),%rcx
+  561ddc:	00
+  561ddd:	48 8d 0c 49          	lea    (%rcx,%rcx,2),%rcx
+  561de1:	48 c1 e1 05          	shl    $0x5,%rcx
+  561de5:	48 89 8c 24 d0 08 00 	mov    %rcx,0x8d0(%rsp)
+  561dec:	00
+  561ded:	48 8b 94 24 00 0a 00 	mov    0xa00(%rsp),%rdx
+  561df4:	00
+  561df5:	48 01 d1             	add    %rdx,%rcx
+  561df8:	48 8d 84 24 d0 07 00 	lea    0x7d0(%rsp),%rax
+  561dff:	00
+  561e00:	48 89 c3             	mov    %rax,%rbx
+  561e03:	e8 78 25 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561e08:	48 8b 8c 24 00 0a 00 	mov    0xa00(%rsp),%rcx
+  561e0f:	00
+  561e10:	48 8b 94 24 d0 08 00 	mov    0x8d0(%rsp),%rdx
+  561e17:	00
+  561e18:	48 8d 0c 0a          	lea    (%rdx,%rcx,1),%rcx
+  561e1c:	48 8d 49 30          	lea    0x30(%rcx),%rcx
+  561e20:	48 8d 84 24 30 08 00 	lea    0x830(%rsp),%rax
+  561e27:	00
+  561e28:	48 89 c3             	mov    %rax,%rbx
+  561e2b:	e8 50 25 ff ff       	call   554380 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E2).MulByElement>
+  561e30:	48 8d 84 24 10 02 00 	lea    0x210(%rsp),%rax
+  561e37:	00
+  561e38:	48 8d 9c 24 70 07 00 	lea    0x770(%rsp),%rbx
+  561e3f:	00
+  561e40:	48 8d 8c 24 d0 07 00 	lea    0x7d0(%rsp),%rcx
+  561e47:	00
+  561e48:	48 8d bc 24 30 08 00 	lea    0x830(%rsp),%rdi
+  561e4f:	00
+  561e50:	e8 eb 11 ff ff       	call   553040 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).MulBy014>
+  561e55:	48 8b 84 24 90 08 00 	mov    0x890(%rsp),%rax
+  561e5c:	00
+  561e5d:	48 ff c0             	inc    %rax
+  561e60:	48 8b 8c 24 40 06 00 	mov    0x640(%rsp),%rcx
+  561e67:	00
+  561e68:	48 39 c8             	cmp    %rcx,%rax
+  561e6b:	0f 8c 3b ff ff ff    	jl     561dac <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xdcc>
+  561e71:	90                   	nop
+  561e72:	48 8d 84 24 30 03 00 	lea    0x330(%rsp),%rax
+  561e79:	00
+  561e7a:	48 89 c3             	mov    %rax,%rbx
+  561e7d:	0f 1f 00             	nopl   (%rax)
+  561e80:	e8 1b 35 ff ff       	call   5553a0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E6).Neg>
+  561e85:	48 8d 8c 24 48 0a 00 	lea    0xa48(%rsp),%rcx
+  561e8c:	00
+  561e8d:	48 8d 94 24 10 02 00 	lea    0x210(%rsp),%rdx
+  561e94:	00
+  561e95:	be 09 00 00 00       	mov    $0x9,%esi
+  561e9a:	44 0f 10 32          	movups (%rdx),%xmm14
+  561e9e:	44 0f 11 31          	movups %xmm14,(%rcx)
+  561ea2:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  561ea7:	44 0f 11 71 10       	movups %xmm14,0x10(%rcx)
+  561eac:	44 0f 10 72 20       	movups 0x20(%rdx),%xmm14
+  561eb1:	44 0f 11 71 20       	movups %xmm14,0x20(%rcx)
+  561eb6:	44 0f 10 72 30       	movups 0x30(%rdx),%xmm14
+  561ebb:	44 0f 11 71 30       	movups %xmm14,0x30(%rcx)
+  561ec0:	48 83 c2 40          	add    $0x40,%rdx
+  561ec4:	48 83 c1 40          	add    $0x40,%rcx
+  561ec8:	ff ce                	dec    %esi
+  561eca:	75 ce                	jne    561e9a <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop+0xeba>
+  561ecc:	31 c0                	xor    %eax,%eax
+  561ece:	31 db                	xor    %ebx,%ebx
+  561ed0:	48 81 c4 38 0a 00 00 	add    $0xa38,%rsp
+  561ed7:	5d                   	pop    %rbp
+  561ed8:	c3                   	ret
+  561ed9:	e8 62 6d f2 ff       	call   488c40 <runtime.panicBounds>
+  561ede:	66 90                	xchg   %ax,%ax
+  561ee0:	e8 5b 6d f2 ff       	call   488c40 <runtime.panicBounds>
+  561ee5:	e8 56 6d f2 ff       	call   488c40 <runtime.panicBounds>
+  561eea:	e8 51 6d f2 ff       	call   488c40 <runtime.panicBounds>
+  561eef:	90                   	nop
+  561ef0:	48 89 84 24 48 02 00 	mov    %rax,0x248(%rsp)
+  561ef7:	00
+  561ef8:	48 89 9c 24 50 02 00 	mov    %rbx,0x250(%rsp)
+  561eff:	00
+  561f00:	48 89 8c 24 58 02 00 	mov    %rcx,0x258(%rsp)
+  561f07:	00
+  561f08:	48 89 bc 24 60 02 00 	mov    %rdi,0x260(%rsp)
+  561f0f:	00
+  561f10:	48 89 b4 24 68 02 00 	mov    %rsi,0x268(%rsp)
+  561f17:	00
+  561f18:	4c 89 84 24 70 02 00 	mov    %r8,0x270(%rsp)
+  561f1f:	00
+  561f20:	e8 7b 4f f2 ff       	call   486ea0 <runtime.morestack_noctxt.abi0>
+  561f25:	48 8b 84 24 48 02 00 	mov    0x248(%rsp),%rax
+  561f2c:	00
+  561f2d:	48 8b 9c 24 50 02 00 	mov    0x250(%rsp),%rbx
+  561f34:	00
+  561f35:	48 8b 8c 24 58 02 00 	mov    0x258(%rsp),%rcx
+  561f3c:	00
+  561f3d:	48 8b bc 24 60 02 00 	mov    0x260(%rsp),%rdi
+  561f44:	00
+  561f45:	48 8b b4 24 68 02 00 	mov    0x268(%rsp),%rsi
+  561f4c:	00
+  561f4d:	4c 8b 84 24 70 02 00 	mov    0x270(%rsp),%r8
+  561f54:	00
+  561f55:	e9 86 f0 ff ff       	jmp    560fe0 <github.com/consensys/gnark-crypto/ecc/bls12-381.MillerLoop>
+
+Disassembly of section .fini:

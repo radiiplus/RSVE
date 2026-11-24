@@ -1,0 +1,758 @@
+
+/tmp/bor-batch5a-default:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+Disassembly of section .plt:
+
+Disassembly of section .text:
+
+000000000055a860 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.squareAdxE2.abi0>:
+  55a860:	64 4c 8b 34 25 f8 ff 	mov    %fs:0xfffffffffffffff8,%r14
+  55a867:	ff ff
+  55a869:	49 3b 66 10          	cmp    0x10(%r14),%rsp
+  55a86d:	0f 86 d2 0e 00 00    	jbe    55b745 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.squareAdxE2.abi0+0xee5>
+  55a873:	55                   	push   %rbp
+  55a874:	48 89 e5             	mov    %rsp,%rbp
+  55a877:	48 83 ec 60          	sub    $0x60,%rsp
+  55a87b:	80 3d ca 3a 23 00 01 	cmpb   $0x1,0x233aca(%rip)        # 78e34c <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.supportAdx>
+  55a882:	0f 85 9f 0e 00 00    	jne    55b727 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.squareAdxE2.abi0+0xec7>
+  55a888:	48 b8 ab aa ff ff ff 	movabs $0xb9feffffffffaaab,%rax
+  55a88f:	ff fe b9
+  55a892:	48 89 44 24 58       	mov    %rax,0x58(%rsp)
+  55a897:	48 b8 ff ff 53 b1 fe 	movabs $0x1eabfffeb153ffff,%rax
+  55a89e:	ff ab 1e
+  55a8a1:	48 89 44 24 50       	mov    %rax,0x50(%rsp)
+  55a8a6:	48 b8 24 f6 b0 f6 a0 	movabs $0x6730d2a0f6b0f624,%rax
+  55a8ad:	d2 30 67
+  55a8b0:	48 89 44 24 48       	mov    %rax,0x48(%rsp)
+  55a8b5:	48 b8 bf 12 85 f3 84 	movabs $0x64774b84f38512bf,%rax
+  55a8bc:	4b 77 64
+  55a8bf:	48 89 44 24 40       	mov    %rax,0x40(%rsp)
+  55a8c4:	48 b8 d7 ac 4b 43 b6 	movabs $0x4b1ba7b6434bacd7,%rax
+  55a8cb:	a7 1b 4b
+  55a8ce:	48 89 44 24 38       	mov    %rax,0x38(%rsp)
+  55a8d3:	48 b8 9a e6 7f 39 ea 	movabs $0x1a0111ea397fe69a,%rax
+  55a8da:	11 01 1a
+  55a8dd:	48 89 44 24 30       	mov    %rax,0x30(%rsp)
+  55a8e2:	48 8b 44 24 78       	mov    0x78(%rsp),%rax
+  55a8e7:	4c 8b 68 30          	mov    0x30(%rax),%r13
+  55a8eb:	4c 8b 70 38          	mov    0x38(%rax),%r14
+  55a8ef:	48 8b 48 40          	mov    0x40(%rax),%rcx
+  55a8f3:	48 8b 58 48          	mov    0x48(%rax),%rbx
+  55a8f7:	48 8b 70 50          	mov    0x50(%rax),%rsi
+  55a8fb:	48 8b 78 58          	mov    0x58(%rax),%rdi
+  55a8ff:	4d 01 ed             	add    %r13,%r13
+  55a902:	4d 11 f6             	adc    %r14,%r14
+  55a905:	48 11 c9             	adc    %rcx,%rcx
+  55a908:	48 11 db             	adc    %rbx,%rbx
+  55a90b:	48 11 f6             	adc    %rsi,%rsi
+  55a90e:	48 11 ff             	adc    %rdi,%rdi
+  55a911:	48 8b 54 24 78       	mov    0x78(%rsp),%rdx
+  55a916:	48 8b 12             	mov    (%rdx),%rdx
+  55a919:	48 31 c0             	xor    %rax,%rax
+  55a91c:	c4 42 bb f6 cd       	mulx   %r13,%r8,%r9
+  55a921:	c4 42 fb f6 d6       	mulx   %r14,%rax,%r10
+  55a926:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55a92c:	c4 62 fb f6 d9       	mulx   %rcx,%rax,%r11
+  55a931:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55a937:	c4 62 fb f6 e3       	mulx   %rbx,%rax,%r12
+  55a93c:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55a942:	c4 62 fb f6 fe       	mulx   %rsi,%rax,%r15
+  55a947:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55a94d:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55a952:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55a958:	b8 00 00 00 00       	mov    $0x0,%eax
+  55a95d:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55a963:	55                   	push   %rbp
+  55a964:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55a96b:	ff f3 89
+  55a96e:	49 0f af d0          	imul   %r8,%rdx
+  55a972:	48 31 c0             	xor    %rax,%rax
+  55a975:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55a97c:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55a982:	49 89 e8             	mov    %rbp,%r8
+  55a985:	5d                   	pop    %rbp
+  55a986:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55a98c:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55a993:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55a999:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55a99f:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55a9a6:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55a9ac:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55a9b2:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55a9b9:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55a9bf:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55a9c5:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55a9cc:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55a9d2:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55a9d8:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55a9df:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55a9e5:	b8 00 00 00 00       	mov    $0x0,%eax
+  55a9ea:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55a9f0:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55a9f6:	48 8b 54 24 78       	mov    0x78(%rsp),%rdx
+  55a9fb:	48 8b 52 08          	mov    0x8(%rdx),%rdx
+  55a9ff:	48 31 c0             	xor    %rax,%rax
+  55aa02:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55aa07:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55aa0d:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55aa13:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55aa18:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55aa1e:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55aa24:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55aa29:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55aa2f:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55aa35:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55aa3a:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55aa40:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55aa46:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55aa4b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55aa51:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55aa57:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55aa5c:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55aa62:	b8 00 00 00 00       	mov    $0x0,%eax
+  55aa67:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55aa6d:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55aa73:	55                   	push   %rbp
+  55aa74:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55aa7b:	ff f3 89
+  55aa7e:	49 0f af d0          	imul   %r8,%rdx
+  55aa82:	48 31 c0             	xor    %rax,%rax
+  55aa85:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55aa8c:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55aa92:	49 89 e8             	mov    %rbp,%r8
+  55aa95:	5d                   	pop    %rbp
+  55aa96:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55aa9c:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55aaa3:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55aaa9:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55aaaf:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55aab6:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55aabc:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55aac2:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55aac9:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55aacf:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55aad5:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55aadc:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55aae2:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55aae8:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55aaef:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55aaf5:	b8 00 00 00 00       	mov    $0x0,%eax
+  55aafa:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55ab00:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55ab06:	48 8b 54 24 78       	mov    0x78(%rsp),%rdx
+  55ab0b:	48 8b 52 10          	mov    0x10(%rdx),%rdx
+  55ab0f:	48 31 c0             	xor    %rax,%rax
+  55ab12:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55ab17:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55ab1d:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55ab23:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55ab28:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55ab2e:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55ab34:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55ab39:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55ab3f:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55ab45:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55ab4a:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55ab50:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55ab56:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55ab5b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ab61:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55ab67:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55ab6c:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55ab72:	b8 00 00 00 00       	mov    $0x0,%eax
+  55ab77:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55ab7d:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55ab83:	55                   	push   %rbp
+  55ab84:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55ab8b:	ff f3 89
+  55ab8e:	49 0f af d0          	imul   %r8,%rdx
+  55ab92:	48 31 c0             	xor    %rax,%rax
+  55ab95:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55ab9c:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55aba2:	49 89 e8             	mov    %rbp,%r8
+  55aba5:	5d                   	pop    %rbp
+  55aba6:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55abac:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55abb3:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55abb9:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55abbf:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55abc6:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55abcc:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55abd2:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55abd9:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55abdf:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55abe5:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55abec:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55abf2:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55abf8:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55abff:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ac05:	b8 00 00 00 00       	mov    $0x0,%eax
+  55ac0a:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55ac10:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55ac16:	48 8b 54 24 78       	mov    0x78(%rsp),%rdx
+  55ac1b:	48 8b 52 18          	mov    0x18(%rdx),%rdx
+  55ac1f:	48 31 c0             	xor    %rax,%rax
+  55ac22:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55ac27:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55ac2d:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55ac33:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55ac38:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55ac3e:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55ac44:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55ac49:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55ac4f:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55ac55:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55ac5a:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55ac60:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55ac66:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55ac6b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ac71:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55ac77:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55ac7c:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55ac82:	b8 00 00 00 00       	mov    $0x0,%eax
+  55ac87:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55ac8d:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55ac93:	55                   	push   %rbp
+  55ac94:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55ac9b:	ff f3 89
+  55ac9e:	49 0f af d0          	imul   %r8,%rdx
+  55aca2:	48 31 c0             	xor    %rax,%rax
+  55aca5:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55acac:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55acb2:	49 89 e8             	mov    %rbp,%r8
+  55acb5:	5d                   	pop    %rbp
+  55acb6:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55acbc:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55acc3:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55acc9:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55accf:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55acd6:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55acdc:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55ace2:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55ace9:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55acef:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55acf5:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55acfc:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55ad02:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55ad08:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55ad0f:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ad15:	b8 00 00 00 00       	mov    $0x0,%eax
+  55ad1a:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55ad20:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55ad26:	48 8b 54 24 78       	mov    0x78(%rsp),%rdx
+  55ad2b:	48 8b 52 20          	mov    0x20(%rdx),%rdx
+  55ad2f:	48 31 c0             	xor    %rax,%rax
+  55ad32:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55ad37:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55ad3d:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55ad43:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55ad48:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55ad4e:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55ad54:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55ad59:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55ad5f:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55ad65:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55ad6a:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55ad70:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55ad76:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55ad7b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ad81:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55ad87:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55ad8c:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55ad92:	b8 00 00 00 00       	mov    $0x0,%eax
+  55ad97:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55ad9d:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55ada3:	55                   	push   %rbp
+  55ada4:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55adab:	ff f3 89
+  55adae:	49 0f af d0          	imul   %r8,%rdx
+  55adb2:	48 31 c0             	xor    %rax,%rax
+  55adb5:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55adbc:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55adc2:	49 89 e8             	mov    %rbp,%r8
+  55adc5:	5d                   	pop    %rbp
+  55adc6:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55adcc:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55add3:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55add9:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55addf:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55ade6:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55adec:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55adf2:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55adf9:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55adff:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55ae05:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55ae0c:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55ae12:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55ae18:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55ae1f:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ae25:	b8 00 00 00 00       	mov    $0x0,%eax
+  55ae2a:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55ae30:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55ae36:	48 8b 54 24 78       	mov    0x78(%rsp),%rdx
+  55ae3b:	48 8b 52 28          	mov    0x28(%rdx),%rdx
+  55ae3f:	48 31 c0             	xor    %rax,%rax
+  55ae42:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55ae47:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55ae4d:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55ae53:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55ae58:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55ae5e:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55ae64:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55ae69:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55ae6f:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55ae75:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55ae7a:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55ae80:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55ae86:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55ae8b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55ae91:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55ae97:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55ae9c:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55aea2:	b8 00 00 00 00       	mov    $0x0,%eax
+  55aea7:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55aead:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55aeb3:	55                   	push   %rbp
+  55aeb4:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55aebb:	ff f3 89
+  55aebe:	49 0f af d0          	imul   %r8,%rdx
+  55aec2:	48 31 c0             	xor    %rax,%rax
+  55aec5:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55aecc:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55aed2:	49 89 e8             	mov    %rbp,%r8
+  55aed5:	5d                   	pop    %rbp
+  55aed6:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55aedc:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55aee3:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55aee9:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55aeef:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55aef6:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55aefc:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55af02:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55af09:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55af0f:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55af15:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55af1c:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55af22:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55af28:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55af2f:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55af35:	b8 00 00 00 00       	mov    $0x0,%eax
+  55af3a:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55af40:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55af46:	4d 89 c5             	mov    %r8,%r13
+  55af49:	4c 2b 44 24 58       	sub    0x58(%rsp),%r8
+  55af4e:	4d 89 ce             	mov    %r9,%r14
+  55af51:	4c 1b 4c 24 50       	sbb    0x50(%rsp),%r9
+  55af56:	4c 89 d1             	mov    %r10,%rcx
+  55af59:	4c 1b 54 24 48       	sbb    0x48(%rsp),%r10
+  55af5e:	4c 89 db             	mov    %r11,%rbx
+  55af61:	4c 1b 5c 24 40       	sbb    0x40(%rsp),%r11
+  55af66:	4c 89 e6             	mov    %r12,%rsi
+  55af69:	4c 1b 64 24 38       	sbb    0x38(%rsp),%r12
+  55af6e:	4c 89 ff             	mov    %r15,%rdi
+  55af71:	4c 1b 7c 24 30       	sbb    0x30(%rsp),%r15
+  55af76:	4d 0f 42 c5          	cmovb  %r13,%r8
+  55af7a:	4d 0f 42 ce          	cmovb  %r14,%r9
+  55af7e:	4c 0f 42 d1          	cmovb  %rcx,%r10
+  55af82:	4c 0f 42 db          	cmovb  %rbx,%r11
+  55af86:	4c 0f 42 e6          	cmovb  %rsi,%r12
+  55af8a:	4c 0f 42 ff          	cmovb  %rdi,%r15
+  55af8e:	48 8b 44 24 78       	mov    0x78(%rsp),%rax
+  55af93:	4c 8b 68 30          	mov    0x30(%rax),%r13
+  55af97:	4c 8b 70 38          	mov    0x38(%rax),%r14
+  55af9b:	48 8b 48 40          	mov    0x40(%rax),%rcx
+  55af9f:	48 8b 58 48          	mov    0x48(%rax),%rbx
+  55afa3:	48 8b 70 50          	mov    0x50(%rax),%rsi
+  55afa7:	48 8b 78 58          	mov    0x58(%rax),%rdi
+  55afab:	48 8b 54 24 70       	mov    0x70(%rsp),%rdx
+  55afb0:	4c 89 42 30          	mov    %r8,0x30(%rdx)
+  55afb4:	4c 89 4a 38          	mov    %r9,0x38(%rdx)
+  55afb8:	4c 89 52 40          	mov    %r10,0x40(%rdx)
+  55afbc:	4c 89 5a 48          	mov    %r11,0x48(%rdx)
+  55afc0:	4c 89 62 50          	mov    %r12,0x50(%rdx)
+  55afc4:	4c 89 7a 58          	mov    %r15,0x58(%rdx)
+  55afc8:	4d 89 e8             	mov    %r13,%r8
+  55afcb:	4d 89 f1             	mov    %r14,%r9
+  55afce:	49 89 ca             	mov    %rcx,%r10
+  55afd1:	49 89 db             	mov    %rbx,%r11
+  55afd4:	49 89 f4             	mov    %rsi,%r12
+  55afd7:	49 89 ff             	mov    %rdi,%r15
+  55afda:	4c 03 28             	add    (%rax),%r13
+  55afdd:	4c 13 70 08          	adc    0x8(%rax),%r14
+  55afe1:	48 13 48 10          	adc    0x10(%rax),%rcx
+  55afe5:	48 13 58 18          	adc    0x18(%rax),%rbx
+  55afe9:	48 13 70 20          	adc    0x20(%rax),%rsi
+  55afed:	48 13 78 28          	adc    0x28(%rax),%rdi
+  55aff1:	4c 89 6c 24 28       	mov    %r13,0x28(%rsp)
+  55aff6:	4c 89 74 24 20       	mov    %r14,0x20(%rsp)
+  55affb:	48 89 4c 24 18       	mov    %rcx,0x18(%rsp)
+  55b000:	48 89 5c 24 10       	mov    %rbx,0x10(%rsp)
+  55b005:	48 89 74 24 08       	mov    %rsi,0x8(%rsp)
+  55b00a:	48 89 3c 24          	mov    %rdi,(%rsp)
+  55b00e:	48 31 d2             	xor    %rdx,%rdx
+  55b011:	4c 8b 28             	mov    (%rax),%r13
+  55b014:	4c 8b 70 08          	mov    0x8(%rax),%r14
+  55b018:	48 8b 48 10          	mov    0x10(%rax),%rcx
+  55b01c:	48 8b 58 18          	mov    0x18(%rax),%rbx
+  55b020:	48 8b 70 20          	mov    0x20(%rax),%rsi
+  55b024:	48 8b 78 28          	mov    0x28(%rax),%rdi
+  55b028:	4d 29 c5             	sub    %r8,%r13
+  55b02b:	4d 19 ce             	sbb    %r9,%r14
+  55b02e:	4c 19 d1             	sbb    %r10,%rcx
+  55b031:	4c 19 db             	sbb    %r11,%rbx
+  55b034:	4c 19 e6             	sbb    %r12,%rsi
+  55b037:	4c 19 ff             	sbb    %r15,%rdi
+  55b03a:	49 b8 ab aa ff ff ff 	movabs $0xb9feffffffffaaab,%r8
+  55b041:	ff fe b9
+  55b044:	49 b9 ff ff 53 b1 fe 	movabs $0x1eabfffeb153ffff,%r9
+  55b04b:	ff ab 1e
+  55b04e:	49 ba 24 f6 b0 f6 a0 	movabs $0x6730d2a0f6b0f624,%r10
+  55b055:	d2 30 67
+  55b058:	49 bb bf 12 85 f3 84 	movabs $0x64774b84f38512bf,%r11
+  55b05f:	4b 77 64
+  55b062:	49 bc d7 ac 4b 43 b6 	movabs $0x4b1ba7b6434bacd7,%r12
+  55b069:	a7 1b 4b
+  55b06c:	49 bf 9a e6 7f 39 ea 	movabs $0x1a0111ea397fe69a,%r15
+  55b073:	11 01 1a
+  55b076:	4c 0f 43 c2          	cmovae %rdx,%r8
+  55b07a:	4c 0f 43 ca          	cmovae %rdx,%r9
+  55b07e:	4c 0f 43 d2          	cmovae %rdx,%r10
+  55b082:	4c 0f 43 da          	cmovae %rdx,%r11
+  55b086:	4c 0f 43 e2          	cmovae %rdx,%r12
+  55b08a:	4c 0f 43 fa          	cmovae %rdx,%r15
+  55b08e:	4d 01 c5             	add    %r8,%r13
+  55b091:	4d 11 ce             	adc    %r9,%r14
+  55b094:	4c 11 d1             	adc    %r10,%rcx
+  55b097:	4c 11 db             	adc    %r11,%rbx
+  55b09a:	4c 11 e6             	adc    %r12,%rsi
+  55b09d:	4c 11 ff             	adc    %r15,%rdi
+  55b0a0:	48 8b 54 24 28       	mov    0x28(%rsp),%rdx
+  55b0a5:	48 31 c0             	xor    %rax,%rax
+  55b0a8:	c4 42 bb f6 cd       	mulx   %r13,%r8,%r9
+  55b0ad:	c4 42 fb f6 d6       	mulx   %r14,%rax,%r10
+  55b0b2:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b0b8:	c4 62 fb f6 d9       	mulx   %rcx,%rax,%r11
+  55b0bd:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b0c3:	c4 62 fb f6 e3       	mulx   %rbx,%rax,%r12
+  55b0c8:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b0ce:	c4 62 fb f6 fe       	mulx   %rsi,%rax,%r15
+  55b0d3:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b0d9:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55b0de:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55b0e4:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b0e9:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55b0ef:	55                   	push   %rbp
+  55b0f0:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55b0f7:	ff f3 89
+  55b0fa:	49 0f af d0          	imul   %r8,%rdx
+  55b0fe:	48 31 c0             	xor    %rax,%rax
+  55b101:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55b108:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55b10e:	49 89 e8             	mov    %rbp,%r8
+  55b111:	5d                   	pop    %rbp
+  55b112:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55b118:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55b11f:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b125:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55b12b:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55b132:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b138:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55b13e:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55b145:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b14b:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55b151:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55b158:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b15e:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55b164:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55b16b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b171:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b176:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55b17c:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55b182:	48 8b 54 24 20       	mov    0x20(%rsp),%rdx
+  55b187:	48 31 c0             	xor    %rax,%rax
+  55b18a:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55b18f:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b195:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55b19b:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55b1a0:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b1a6:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55b1ac:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55b1b1:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b1b7:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55b1bd:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55b1c2:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b1c8:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55b1ce:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55b1d3:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b1d9:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55b1df:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55b1e4:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55b1ea:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b1ef:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55b1f5:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55b1fb:	55                   	push   %rbp
+  55b1fc:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55b203:	ff f3 89
+  55b206:	49 0f af d0          	imul   %r8,%rdx
+  55b20a:	48 31 c0             	xor    %rax,%rax
+  55b20d:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55b214:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55b21a:	49 89 e8             	mov    %rbp,%r8
+  55b21d:	5d                   	pop    %rbp
+  55b21e:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55b224:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55b22b:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b231:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55b237:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55b23e:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b244:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55b24a:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55b251:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b257:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55b25d:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55b264:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b26a:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55b270:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55b277:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b27d:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b282:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55b288:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55b28e:	48 8b 54 24 18       	mov    0x18(%rsp),%rdx
+  55b293:	48 31 c0             	xor    %rax,%rax
+  55b296:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55b29b:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b2a1:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55b2a7:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55b2ac:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b2b2:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55b2b8:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55b2bd:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b2c3:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55b2c9:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55b2ce:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b2d4:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55b2da:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55b2df:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b2e5:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55b2eb:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55b2f0:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55b2f6:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b2fb:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55b301:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55b307:	55                   	push   %rbp
+  55b308:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55b30f:	ff f3 89
+  55b312:	49 0f af d0          	imul   %r8,%rdx
+  55b316:	48 31 c0             	xor    %rax,%rax
+  55b319:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55b320:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55b326:	49 89 e8             	mov    %rbp,%r8
+  55b329:	5d                   	pop    %rbp
+  55b32a:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55b330:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55b337:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b33d:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55b343:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55b34a:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b350:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55b356:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55b35d:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b363:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55b369:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55b370:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b376:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55b37c:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55b383:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b389:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b38e:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55b394:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55b39a:	48 8b 54 24 10       	mov    0x10(%rsp),%rdx
+  55b39f:	48 31 c0             	xor    %rax,%rax
+  55b3a2:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55b3a7:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b3ad:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55b3b3:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55b3b8:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b3be:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55b3c4:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55b3c9:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b3cf:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55b3d5:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55b3da:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b3e0:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55b3e6:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55b3eb:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b3f1:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55b3f7:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55b3fc:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55b402:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b407:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55b40d:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55b413:	55                   	push   %rbp
+  55b414:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55b41b:	ff f3 89
+  55b41e:	49 0f af d0          	imul   %r8,%rdx
+  55b422:	48 31 c0             	xor    %rax,%rax
+  55b425:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55b42c:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55b432:	49 89 e8             	mov    %rbp,%r8
+  55b435:	5d                   	pop    %rbp
+  55b436:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55b43c:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55b443:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b449:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55b44f:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55b456:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b45c:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55b462:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55b469:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b46f:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55b475:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55b47c:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b482:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55b488:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55b48f:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b495:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b49a:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55b4a0:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55b4a6:	48 8b 54 24 08       	mov    0x8(%rsp),%rdx
+  55b4ab:	48 31 c0             	xor    %rax,%rax
+  55b4ae:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55b4b3:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b4b9:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55b4bf:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55b4c4:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b4ca:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55b4d0:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55b4d5:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b4db:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55b4e1:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55b4e6:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b4ec:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55b4f2:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55b4f7:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b4fd:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55b503:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55b508:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55b50e:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b513:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55b519:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55b51f:	55                   	push   %rbp
+  55b520:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55b527:	ff f3 89
+  55b52a:	49 0f af d0          	imul   %r8,%rdx
+  55b52e:	48 31 c0             	xor    %rax,%rax
+  55b531:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55b538:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55b53e:	49 89 e8             	mov    %rbp,%r8
+  55b541:	5d                   	pop    %rbp
+  55b542:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55b548:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55b54f:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b555:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55b55b:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55b562:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b568:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55b56e:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55b575:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b57b:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55b581:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55b588:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b58e:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55b594:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55b59b:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b5a1:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b5a6:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55b5ac:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55b5b2:	48 8b 14 24          	mov    (%rsp),%rdx
+  55b5b6:	48 31 c0             	xor    %rax,%rax
+  55b5b9:	c4 c2 fb f6 ed       	mulx   %r13,%rax,%rbp
+  55b5be:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b5c4:	66 4c 0f 38 f6 cd    	adcx   %rbp,%r9
+  55b5ca:	c4 c2 fb f6 ee       	mulx   %r14,%rax,%rbp
+  55b5cf:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b5d5:	66 4c 0f 38 f6 d5    	adcx   %rbp,%r10
+  55b5db:	c4 e2 fb f6 e9       	mulx   %rcx,%rax,%rbp
+  55b5e0:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b5e6:	66 4c 0f 38 f6 dd    	adcx   %rbp,%r11
+  55b5ec:	c4 e2 fb f6 eb       	mulx   %rbx,%rax,%rbp
+  55b5f1:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b5f7:	66 4c 0f 38 f6 e5    	adcx   %rbp,%r12
+  55b5fd:	c4 e2 fb f6 ee       	mulx   %rsi,%rax,%rbp
+  55b602:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b608:	66 4c 0f 38 f6 fd    	adcx   %rbp,%r15
+  55b60e:	c4 e2 fb f6 ef       	mulx   %rdi,%rax,%rbp
+  55b613:	f3 4c 0f 38 f6 f8    	adox   %rax,%r15
+  55b619:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b61e:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55b624:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55b62a:	55                   	push   %rbp
+  55b62b:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55b632:	ff f3 89
+  55b635:	49 0f af d0          	imul   %r8,%rdx
+  55b639:	48 31 c0             	xor    %rax,%rax
+  55b63c:	c4 e2 fb f6 6c 24 60 	mulx   0x60(%rsp),%rax,%rbp
+  55b643:	66 49 0f 38 f6 c0    	adcx   %r8,%rax
+  55b649:	49 89 e8             	mov    %rbp,%r8
+  55b64c:	5d                   	pop    %rbp
+  55b64d:	66 4d 0f 38 f6 c1    	adcx   %r9,%r8
+  55b653:	c4 62 fb f6 4c 24 50 	mulx   0x50(%rsp),%rax,%r9
+  55b65a:	f3 4c 0f 38 f6 c0    	adox   %rax,%r8
+  55b660:	66 4d 0f 38 f6 ca    	adcx   %r10,%r9
+  55b666:	c4 62 fb f6 54 24 48 	mulx   0x48(%rsp),%rax,%r10
+  55b66d:	f3 4c 0f 38 f6 c8    	adox   %rax,%r9
+  55b673:	66 4d 0f 38 f6 d3    	adcx   %r11,%r10
+  55b679:	c4 62 fb f6 5c 24 40 	mulx   0x40(%rsp),%rax,%r11
+  55b680:	f3 4c 0f 38 f6 d0    	adox   %rax,%r10
+  55b686:	66 4d 0f 38 f6 dc    	adcx   %r12,%r11
+  55b68c:	c4 62 fb f6 64 24 38 	mulx   0x38(%rsp),%rax,%r12
+  55b693:	f3 4c 0f 38 f6 d8    	adox   %rax,%r11
+  55b699:	66 4d 0f 38 f6 e7    	adcx   %r15,%r12
+  55b69f:	c4 62 fb f6 7c 24 30 	mulx   0x30(%rsp),%rax,%r15
+  55b6a6:	f3 4c 0f 38 f6 e0    	adox   %rax,%r12
+  55b6ac:	b8 00 00 00 00       	mov    $0x0,%eax
+  55b6b1:	66 4c 0f 38 f6 f8    	adcx   %rax,%r15
+  55b6b7:	f3 4c 0f 38 f6 fd    	adox   %rbp,%r15
+  55b6bd:	4d 89 c5             	mov    %r8,%r13
+  55b6c0:	4c 2b 44 24 58       	sub    0x58(%rsp),%r8
+  55b6c5:	4d 89 ce             	mov    %r9,%r14
+  55b6c8:	4c 1b 4c 24 50       	sbb    0x50(%rsp),%r9
+  55b6cd:	4c 89 d1             	mov    %r10,%rcx
+  55b6d0:	4c 1b 54 24 48       	sbb    0x48(%rsp),%r10
+  55b6d5:	4c 89 db             	mov    %r11,%rbx
+  55b6d8:	4c 1b 5c 24 40       	sbb    0x40(%rsp),%r11
+  55b6dd:	4c 89 e6             	mov    %r12,%rsi
+  55b6e0:	4c 1b 64 24 38       	sbb    0x38(%rsp),%r12
+  55b6e5:	4c 89 ff             	mov    %r15,%rdi
+  55b6e8:	4c 1b 7c 24 30       	sbb    0x30(%rsp),%r15
+  55b6ed:	4d 0f 42 c5          	cmovb  %r13,%r8
+  55b6f1:	4d 0f 42 ce          	cmovb  %r14,%r9
+  55b6f5:	4c 0f 42 d1          	cmovb  %rcx,%r10
+  55b6f9:	4c 0f 42 db          	cmovb  %rbx,%r11
+  55b6fd:	4c 0f 42 e6          	cmovb  %rsi,%r12
+  55b701:	4c 0f 42 ff          	cmovb  %rdi,%r15
+  55b705:	48 8b 44 24 70       	mov    0x70(%rsp),%rax
+  55b70a:	4c 89 00             	mov    %r8,(%rax)
+  55b70d:	4c 89 48 08          	mov    %r9,0x8(%rax)
+  55b711:	4c 89 50 10          	mov    %r10,0x10(%rax)
+  55b715:	4c 89 58 18          	mov    %r11,0x18(%rax)
+  55b719:	4c 89 60 20          	mov    %r12,0x20(%rax)
+  55b71d:	4c 89 78 28          	mov    %r15,0x28(%rax)
+  55b721:	48 83 c4 60          	add    $0x60,%rsp
+  55b725:	5d                   	pop    %rbp
+  55b726:	c3                   	ret
+  55b727:	48 8b 44 24 70       	mov    0x70(%rsp),%rax
+  55b72c:	48 89 04 24          	mov    %rax,(%rsp)
+  55b730:	48 8b 44 24 78       	mov    0x78(%rsp),%rax
+  55b735:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+  55b73a:	e8 61 00 00 00       	call   55b7a0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.squareGenericE2.abi0>
+  55b73f:	48 83 c4 60          	add    $0x60,%rsp
+  55b743:	5d                   	pop    %rbp
+  55b744:	c3                   	ret
+  55b745:	e8 56 b7 f2 ff       	call   486ea0 <runtime.morestack_noctxt.abi0>
+  55b74a:	e9 11 f1 ff ff       	jmp    55a860 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.squareAdxE2.abi0>
+
+Disassembly of section .fini:

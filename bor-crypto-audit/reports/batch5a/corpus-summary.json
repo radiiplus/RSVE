@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "seed": "bor-crypto-audit/bls12-381/batch5a-pairing-products/v1",
+  "prng": "SHA-256 counter stream derives a 64-scalar nonzero pool from seed || /scalar-pool; per-case streams independently select from the pool; expected exponents are reduced modulo r",
+  "subgroup_order_hex": "73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001",
+  "case_count": 91,
+  "total_tuples": 5032,
+  "tuple_count_distribution": {
+    "1": 22,
+    "127": 6,
+    "128": 6,
+    "129": 9,
+    "16": 6,
+    "2": 6,
+    "256": 6,
+    "3": 9,
+    "32": 6,
+    "64": 6,
+    "8": 9
+  },
+  "category_counts": {
+    "boundary-scalars": 16,
+    "exact-cancellation": 11,
+    "infinity-mixed-with-ordinary": 3,
+    "near-identity": 22,
+    "ordered-identity": 3,
+    "random-identity": 11,
+    "random-nonidentity": 11,
+    "reordered-identity": 3,
+    "repeated-pair": 11
+  },
+  "mathematical_identity_cases": 35,
+  "mathematical_nonidentity_cases": 56,
+  "validated_g1_point_occurrences": 5032,
+  "validated_g2_point_occurrences": 5032,
+  "unique_g1_point_encodings": 72,
+  "unique_g2_point_encodings": 85
+}

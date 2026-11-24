@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "question": "Do CPU-specific and generic gnark arithmetic paths produce different BLS12-381 pairing outcomes for the Batch 5A valid-point corpus?",
+  "result": "NO OUTPUT DIFFERENCE IN TESTED BUILD VARIANTS",
+  "host": {
+    "os": "linux",
+    "architecture": "amd64",
+    "go_version": "go1.27.3",
+    "cpu_model": "Intel Xeon Platinum 8370C",
+    "hypervisor": "Microsoft",
+    "gnark_runtime_support_adx": true,
+    "gnark_runtime_support_avx512": true
+  },
+  "scope": {
+    "corpus_seed": "bor-crypto-audit/bls12-381/batch5a-pairing-products/v1",
+    "cases": 91,
+    "tuple_executions": 5032,
+    "largest_batch": 256,
+    "metamorphic_backend_relations": 24,
+    "bor_errors": 0,
+    "false_acceptances": 0,
+    "backend_disagreements": 0,
+    "metamorphic_failures": 0
+  },
+  "artifacts": {
+    "corpus_sha256": "c0704a882922f0e6227f90fb23a4cbaa172c2ddc83f671b7b2a22e04a0ea6a54",
+    "differential_results_sha256": "9d2bfadff0fe4e9787414d73335ccd32494bc69fae1462aeb2d6b884dc61a907",
+    "metamorphic_results_sha256": "d215e923505efa808ac19a411bd13f8cba9a567cd1821e2b705437c285ac0f29"
+  },
+  "variants": [
+    {
+      "name": "amd64-default-runtime-dispatch",
+      "build": "go build; GOAMD64=v1 default",
+      "differential_sha256": "9d2bfadff0fe4e9787414d73335ccd32494bc69fae1462aeb2d6b884dc61a907",
+      "metamorphic_sha256": "d215e923505efa808ac19a411bd13f8cba9a567cd1821e2b705437c285ac0f29",
+      "matches_baseline": true
+    },
+    {
+      "name": "amd64-noadx-tower-fallback",
+      "build": "go build -tags noadx",
+      "differential_sha256": "9d2bfadff0fe4e9787414d73335ccd32494bc69fae1462aeb2d6b884dc61a907",
+      "metamorphic_sha256": "d215e923505efa808ac19a411bd13f8cba9a567cd1821e2b705437c285ac0f29",
+      "matches_baseline": true
+    },
+    {
+      "name": "amd64-purego-field",
+      "build": "go build -tags purego; Fp2 tower assembly remains CPUID-dispatched",
+      "differential_sha256": "9d2bfadff0fe4e9787414d73335ccd32494bc69fae1462aeb2d6b884dc61a907",
+      "metamorphic_sha256": "d215e923505efa808ac19a411bd13f8cba9a567cd1821e2b705437c285ac0f29",
+      "matches_baseline": true
+    },
+    {
+      "name": "amd64-purego-noadx",
+      "build": "go build -tags 'purego noadx'; generic base field and non-ADX Fp2 tower path",
+      "differential_sha256": "9d2bfadff0fe4e9787414d73335ccd32494bc69fae1462aeb2d6b884dc61a907",
+      "metamorphic_sha256": "d215e923505efa808ac19a411bd13f8cba9a567cd1821e2b705437c285ac0f29",
+      "matches_baseline": true
+    },
+    {
+      "name": "amd64-goamd64-v3",
+      "build": "GOAMD64=v3 go build",
+      "differential_sha256": "9d2bfadff0fe4e9787414d73335ccd32494bc69fae1462aeb2d6b884dc61a907",
+      "metamorphic_sha256": "d215e923505efa808ac19a411bd13f8cba9a567cd1821e2b705437c285ac0f29",
+      "matches_baseline": true
+    }
+  ],
+  "disassembly_directory": "reports/batch5a/disassembly",
+  "limitations": [
+    "All variants ran on the same amd64 VM host; this does not establish equality across independent CPUs or architectures.",
+    "The purego tag selects generic base-field arithmetic but does not by itself disable the separate Fp2 tower assembly; the combined purego,noadx variant covers both generic choices.",
+    "This is a deterministic output audit, not an assessment of timing side channels, gas differences, or microarchitectural leakage."
+  ]
+}

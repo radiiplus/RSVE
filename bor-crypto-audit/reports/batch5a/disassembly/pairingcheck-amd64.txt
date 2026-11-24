@@ -1,0 +1,128 @@
+
+/tmp/bor-batch5a-default:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+Disassembly of section .plt:
+
+Disassembly of section .text:
+
+0000000000560880 <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck>:
+  560880:	4c 8d a4 24 48 f7 ff 	lea    -0x8b8(%rsp),%r12
+  560887:	ff
+  560888:	4d 3b 66 10          	cmp    0x10(%r14),%r12
+  56088c:	0f 86 80 01 00 00    	jbe    560a12 <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck+0x192>
+  560892:	55                   	push   %rbp
+  560893:	48 89 e5             	mov    %rsp,%rbp
+  560896:	48 81 ec 30 09 00 00 	sub    $0x930,%rsp
+  56089d:	48 89 84 24 40 09 00 	mov    %rax,0x940(%rsp)
+  5608a4:	00
+  5608a5:	48 89 bc 24 58 09 00 	mov    %rdi,0x958(%rsp)
+  5608ac:	00
+  5608ad:	e8 8e fd ff ff       	call   560640 <github.com/consensys/gnark-crypto/ecc/bls12-381.Pair>
+  5608b2:	48 8d 94 24 f0 06 00 	lea    0x6f0(%rsp),%rdx
+  5608b9:	00
+  5608ba:	49 89 e1             	mov    %rsp,%r9
+  5608bd:	41 ba 09 00 00 00    	mov    $0x9,%r10d
+  5608c3:	45 0f 10 31          	movups (%r9),%xmm14
+  5608c7:	44 0f 11 32          	movups %xmm14,(%rdx)
+  5608cb:	45 0f 10 71 10       	movups 0x10(%r9),%xmm14
+  5608d0:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  5608d5:	45 0f 10 71 20       	movups 0x20(%r9),%xmm14
+  5608da:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  5608df:	45 0f 10 71 30       	movups 0x30(%r9),%xmm14
+  5608e4:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  5608e9:	49 83 c1 40          	add    $0x40,%r9
+  5608ed:	48 83 c2 40          	add    $0x40,%rdx
+  5608f1:	41 ff ca             	dec    %r10d
+  5608f4:	75 cd                	jne    5608c3 <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck+0x43>
+  5608f6:	48 8d 94 24 b0 04 00 	lea    0x4b0(%rsp),%rdx
+  5608fd:	00
+  5608fe:	4c 8d 8c 24 f0 06 00 	lea    0x6f0(%rsp),%r9
+  560905:	00
+  560906:	41 ba 09 00 00 00    	mov    $0x9,%r10d
+  56090c:	45 0f 10 31          	movups (%r9),%xmm14
+  560910:	44 0f 11 32          	movups %xmm14,(%rdx)
+  560914:	45 0f 10 71 10       	movups 0x10(%r9),%xmm14
+  560919:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  56091e:	45 0f 10 71 20       	movups 0x20(%r9),%xmm14
+  560923:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  560928:	45 0f 10 71 30       	movups 0x30(%r9),%xmm14
+  56092d:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  560932:	49 83 c1 40          	add    $0x40,%r9
+  560936:	48 83 c2 40          	add    $0x40,%rdx
+  56093a:	41 ff ca             	dec    %r10d
+  56093d:	75 cd                	jne    56090c <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck+0x8c>
+  56093f:	90                   	nop
+  560940:	48 85 c0             	test   %rax,%rax
+  560943:	74 11                	je     560956 <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck+0xd6>
+  560945:	48 89 d9             	mov    %rbx,%rcx
+  560948:	48 89 c3             	mov    %rax,%rbx
+  56094b:	31 c0                	xor    %eax,%eax
+  56094d:	48 81 c4 30 09 00 00 	add    $0x930,%rsp
+  560954:	5d                   	pop    %rbp
+  560955:	c3                   	ret
+  560956:	48 8d 9c 24 70 02 00 	lea    0x270(%rsp),%rbx
+  56095d:	00
+  56095e:	b9 09 00 00 00       	mov    $0x9,%ecx
+  560963:	44 0f 11 3b          	movups %xmm15,(%rbx)
+  560967:	44 0f 11 7b 10       	movups %xmm15,0x10(%rbx)
+  56096c:	44 0f 11 7b 20       	movups %xmm15,0x20(%rbx)
+  560971:	44 0f 11 7b 30       	movups %xmm15,0x30(%rbx)
+  560976:	48 83 c3 40          	add    $0x40,%rbx
+  56097a:	ff c9                	dec    %ecx
+  56097c:	75 e5                	jne    560963 <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck+0xe3>
+  56097e:	90                   	nop
+  56097f:	90                   	nop
+  560980:	48 b9 fd ff 02 00 00 	movabs $0x760900000002fffd,%rcx
+  560987:	00 09 76
+  56098a:	48 89 8c 24 70 02 00 	mov    %rcx,0x270(%rsp)
+  560991:	00
+  560992:	48 b9 02 00 0c c4 0b 	movabs $0xebf4000bc40c0002,%rcx
+  560999:	00 f4 eb
+  56099c:	48 89 8c 24 78 02 00 	mov    %rcx,0x278(%rsp)
+  5609a3:	00
+  5609a4:	48 b9 ba 58 c7 53 57 	movabs $0x5f48985753c758ba,%rcx
+  5609ab:	98 48 5f
+  5609ae:	48 89 8c 24 80 02 00 	mov    %rcx,0x280(%rsp)
+  5609b5:	00
+  5609b6:	48 b9 45 57 52 70 53 	movabs $0x77ce585370525745,%rcx
+  5609bd:	58 ce 77
+  5609c0:	48 89 8c 24 88 02 00 	mov    %rcx,0x288(%rsp)
+  5609c7:	00
+  5609c8:	48 b9 6d ec 56 a2 97 	movabs $0x5c071a97a256ec6d,%rcx
+  5609cf:	1a 07 5c
+  5609d2:	48 89 8c 24 90 02 00 	mov    %rcx,0x290(%rsp)
+  5609d9:	00
+  5609da:	48 b9 93 e4 80 fa c3 	movabs $0x15f65ec3fa80e493,%rcx
+  5609e1:	5e f6 15
+  5609e4:	48 89 8c 24 98 02 00 	mov    %rcx,0x298(%rsp)
+  5609eb:	00
+  5609ec:	48 8d 84 24 b0 04 00 	lea    0x4b0(%rsp),%rax
+  5609f3:	00
+  5609f4:	48 8d 9c 24 70 02 00 	lea    0x270(%rsp),%rbx
+  5609fb:	00
+  5609fc:	0f 1f 40 00          	nopl   0x0(%rax)
+  560a00:	e8 db 00 ff ff       	call   550ae0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Equal>
+  560a05:	31 db                	xor    %ebx,%ebx
+  560a07:	31 c9                	xor    %ecx,%ecx
+  560a09:	48 81 c4 30 09 00 00 	add    $0x930,%rsp
+  560a10:	5d                   	pop    %rbp
+  560a11:	c3                   	ret
+  560a12:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+  560a17:	48 89 5c 24 10       	mov    %rbx,0x10(%rsp)
+  560a1c:	48 89 4c 24 18       	mov    %rcx,0x18(%rsp)
+  560a21:	48 89 7c 24 20       	mov    %rdi,0x20(%rsp)
+  560a26:	48 89 74 24 28       	mov    %rsi,0x28(%rsp)
+  560a2b:	4c 89 44 24 30       	mov    %r8,0x30(%rsp)
+  560a30:	e8 6b 64 f2 ff       	call   486ea0 <runtime.morestack_noctxt.abi0>
+  560a35:	48 8b 44 24 08       	mov    0x8(%rsp),%rax
+  560a3a:	48 8b 5c 24 10       	mov    0x10(%rsp),%rbx
+  560a3f:	48 8b 4c 24 18       	mov    0x18(%rsp),%rcx
+  560a44:	48 8b 7c 24 20       	mov    0x20(%rsp),%rdi
+  560a49:	48 8b 74 24 28       	mov    0x28(%rsp),%rsi
+  560a4e:	4c 8b 44 24 30       	mov    0x30(%rsp),%r8
+  560a53:	e9 28 fe ff ff       	jmp    560880 <github.com/consensys/gnark-crypto/ecc/bls12-381.PairingCheck>
+
+Disassembly of section .fini:

@@ -1,0 +1,356 @@
+
+/tmp/bor-batch5a-default:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+Disassembly of section .plt:
+
+Disassembly of section .text:
+
+0000000000560a60 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation>:
+  560a60:	4c 8d a4 24 18 f5 ff 	lea    -0xae8(%rsp),%r12
+  560a67:	ff
+  560a68:	4d 3b 66 10          	cmp    0x10(%r14),%r12
+  560a6c:	0f 86 12 05 00 00    	jbe    560f84 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x524>
+  560a72:	55                   	push   %rbp
+  560a73:	48 89 e5             	mov    %rsp,%rbp
+  560a76:	48 81 ec 60 0b 00 00 	sub    $0xb60,%rsp
+  560a7d:	48 89 8c 24 c0 0d 00 	mov    %rcx,0xdc0(%rsp)
+  560a84:	00
+  560a85:	48 89 9c 24 b8 0d 00 	mov    %rbx,0xdb8(%rsp)
+  560a8c:	00
+  560a8d:	48 8d 94 24 70 0b 00 	lea    0xb70(%rsp),%rdx
+  560a94:	00
+  560a95:	be 09 00 00 00       	mov    $0x9,%esi
+  560a9a:	44 0f 11 3a          	movups %xmm15,(%rdx)
+  560a9e:	44 0f 11 7a 10       	movups %xmm15,0x10(%rdx)
+  560aa3:	44 0f 11 7a 20       	movups %xmm15,0x20(%rdx)
+  560aa8:	44 0f 11 7a 30       	movups %xmm15,0x30(%rdx)
+  560aad:	48 83 c2 40          	add    $0x40,%rdx
+  560ab1:	ff ce                	dec    %esi
+  560ab3:	75 e5                	jne    560a9a <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x3a>
+  560ab5:	48 8d 94 24 d8 06 00 	lea    0x6d8(%rsp),%rdx
+  560abc:	00
+  560abd:	be 09 00 00 00       	mov    $0x9,%esi
+  560ac2:	44 0f 11 3a          	movups %xmm15,(%rdx)
+  560ac6:	44 0f 11 7a 10       	movups %xmm15,0x10(%rdx)
+  560acb:	44 0f 11 7a 20       	movups %xmm15,0x20(%rdx)
+  560ad0:	44 0f 11 7a 30       	movups %xmm15,0x30(%rdx)
+  560ad5:	48 83 c2 40          	add    $0x40,%rdx
+  560ad9:	ff ce                	dec    %esi
+  560adb:	75 e5                	jne    560ac2 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x62>
+  560add:	48 8d 90 20 01 00 00 	lea    0x120(%rax),%rdx
+  560ae4:	90                   	nop
+  560ae5:	48 8d b4 24 d8 06 00 	lea    0x6d8(%rsp),%rsi
+  560aec:	00
+  560aed:	41 b8 04 00 00 00    	mov    $0x4,%r8d
+  560af3:	44 0f 10 30          	movups (%rax),%xmm14
+  560af7:	44 0f 11 36          	movups %xmm14,(%rsi)
+  560afb:	44 0f 10 70 10       	movups 0x10(%rax),%xmm14
+  560b00:	44 0f 11 76 10       	movups %xmm14,0x10(%rsi)
+  560b05:	44 0f 10 70 20       	movups 0x20(%rax),%xmm14
+  560b0a:	44 0f 11 76 20       	movups %xmm14,0x20(%rsi)
+  560b0f:	44 0f 10 70 30       	movups 0x30(%rax),%xmm14
+  560b14:	44 0f 11 76 30       	movups %xmm14,0x30(%rsi)
+  560b19:	48 83 c0 40          	add    $0x40,%rax
+  560b1d:	48 83 c6 40          	add    $0x40,%rsi
+  560b21:	41 ff c8             	dec    %r8d
+  560b24:	75 cd                	jne    560af3 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x93>
+  560b26:	44 0f 10 30          	movups (%rax),%xmm14
+  560b2a:	44 0f 11 36          	movups %xmm14,(%rsi)
+  560b2e:	44 0f 10 70 10       	movups 0x10(%rax),%xmm14
+  560b33:	44 0f 11 76 10       	movups %xmm14,0x10(%rsi)
+  560b38:	48 8d b4 24 f8 07 00 	lea    0x7f8(%rsp),%rsi
+  560b3f:	00
+  560b40:	41 b8 04 00 00 00    	mov    $0x4,%r8d
+  560b46:	44 0f 10 32          	movups (%rdx),%xmm14
+  560b4a:	44 0f 11 36          	movups %xmm14,(%rsi)
+  560b4e:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  560b53:	44 0f 11 76 10       	movups %xmm14,0x10(%rsi)
+  560b58:	44 0f 10 72 20       	movups 0x20(%rdx),%xmm14
+  560b5d:	44 0f 11 76 20       	movups %xmm14,0x20(%rsi)
+  560b62:	44 0f 10 72 30       	movups 0x30(%rdx),%xmm14
+  560b67:	44 0f 11 76 30       	movups %xmm14,0x30(%rsi)
+  560b6c:	48 83 c2 40          	add    $0x40,%rdx
+  560b70:	48 83 c6 40          	add    $0x40,%rsi
+  560b74:	41 ff c8             	dec    %r8d
+  560b77:	75 cd                	jne    560b46 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0xe6>
+  560b79:	44 0f 10 32          	movups (%rdx),%xmm14
+  560b7d:	44 0f 11 36          	movups %xmm14,(%rsi)
+  560b81:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  560b86:	44 0f 11 76 10       	movups %xmm14,0x10(%rsi)
+  560b8b:	31 c0                	xor    %eax,%eax
+  560b8d:	eb 37                	jmp    560bc6 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x166>
+  560b8f:	48 89 84 24 58 0b 00 	mov    %rax,0xb58(%rsp)
+  560b96:	00
+  560b97:	48 8b 0c c3          	mov    (%rbx,%rax,8),%rcx
+  560b9b:	48 8d 84 24 d8 06 00 	lea    0x6d8(%rsp),%rax
+  560ba2:	00
+  560ba3:	48 89 c3             	mov    %rax,%rbx
+  560ba6:	e8 b5 ff fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560bab:	48 8b 84 24 58 0b 00 	mov    0xb58(%rsp),%rax
+  560bb2:	00
+  560bb3:	48 ff c0             	inc    %rax
+  560bb6:	48 8b 8c 24 c0 0d 00 	mov    0xdc0(%rsp),%rcx
+  560bbd:	00
+  560bbe:	48 8b 9c 24 b8 0d 00 	mov    0xdb8(%rsp),%rbx
+  560bc5:	00
+  560bc6:	48 39 c1             	cmp    %rax,%rcx
+  560bc9:	7f c4                	jg     560b8f <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x12f>
+  560bcb:	48 8d 7c 24 18       	lea    0x18(%rsp),%rdi
+  560bd0:	b9 d8 00 00 00       	mov    $0xd8,%ecx
+  560bd5:	31 c0                	xor    %eax,%eax
+  560bd7:	f3 48 ab             	rep stos %rax,%es:(%rdi)
+  560bda:	90                   	nop
+  560bdb:	48 8d 54 24 18       	lea    0x18(%rsp),%rdx
+  560be0:	48 8d b4 24 d8 06 00 	lea    0x6d8(%rsp),%rsi
+  560be7:	00
+  560be8:	41 b8 09 00 00 00    	mov    $0x9,%r8d
+  560bee:	44 0f 10 36          	movups (%rsi),%xmm14
+  560bf2:	44 0f 11 32          	movups %xmm14,(%rdx)
+  560bf6:	44 0f 10 76 10       	movups 0x10(%rsi),%xmm14
+  560bfb:	44 0f 11 72 10       	movups %xmm14,0x10(%rdx)
+  560c00:	44 0f 10 76 20       	movups 0x20(%rsi),%xmm14
+  560c05:	44 0f 11 72 20       	movups %xmm14,0x20(%rdx)
+  560c0a:	44 0f 10 76 30       	movups 0x30(%rsi),%xmm14
+  560c0f:	44 0f 11 72 30       	movups %xmm14,0x30(%rdx)
+  560c14:	48 83 c6 40          	add    $0x40,%rsi
+  560c18:	48 83 c2 40          	add    $0x40,%rdx
+  560c1c:	0f 1f 40 00          	nopl   0x0(%rax)
+  560c20:	41 ff c8             	dec    %r8d
+  560c23:	75 c9                	jne    560bee <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x18e>
+  560c25:	48 8d 84 24 38 01 00 	lea    0x138(%rsp),%rax
+  560c2c:	00
+  560c2d:	48 89 c3             	mov    %rax,%rbx
+  560c30:	e8 6b 47 ff ff       	call   5553a0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E6).Neg>
+  560c35:	48 8d 84 24 d8 06 00 	lea    0x6d8(%rsp),%rax
+  560c3c:	00
+  560c3d:	48 89 c3             	mov    %rax,%rbx
+  560c40:	e8 fb 1b ff ff       	call   552840 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Inverse>
+  560c45:	48 8d 44 24 18       	lea    0x18(%rsp),%rax
+  560c4a:	48 89 c3             	mov    %rax,%rbx
+  560c4d:	48 8d 8c 24 d8 06 00 	lea    0x6d8(%rsp),%rcx
+  560c54:	00
+  560c55:	e8 06 ff fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560c5a:	48 8d 84 24 d8 06 00 	lea    0x6d8(%rsp),%rax
+  560c61:	00
+  560c62:	48 8d 5c 24 18       	lea    0x18(%rsp),%rbx
+  560c67:	e8 14 72 ff ff       	call   557e80 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).FrobeniusSquare>
+  560c6c:	48 8d 9c 24 d8 06 00 	lea    0x6d8(%rsp),%rbx
+  560c73:	00
+  560c74:	48 8d 4c 24 18       	lea    0x18(%rsp),%rcx
+  560c79:	e8 e2 fe fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560c7e:	48 8d 9c 24 18 09 00 	lea    0x918(%rsp),%rbx
+  560c85:	00
+  560c86:	ba 09 00 00 00       	mov    $0x9,%edx
+  560c8b:	44 0f 11 3b          	movups %xmm15,(%rbx)
+  560c8f:	44 0f 11 7b 10       	movups %xmm15,0x10(%rbx)
+  560c94:	44 0f 11 7b 20       	movups %xmm15,0x20(%rbx)
+  560c99:	44 0f 11 7b 30       	movups %xmm15,0x30(%rbx)
+  560c9e:	48 83 c3 40          	add    $0x40,%rbx
+  560ca2:	ff ca                	dec    %edx
+  560ca4:	75 e5                	jne    560c8b <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x22b>
+  560ca6:	90                   	nop
+  560ca7:	90                   	nop
+  560ca8:	48 ba fd ff 02 00 00 	movabs $0x760900000002fffd,%rdx
+  560caf:	00 09 76
+  560cb2:	48 89 94 24 18 09 00 	mov    %rdx,0x918(%rsp)
+  560cb9:	00
+  560cba:	48 ba 02 00 0c c4 0b 	movabs $0xebf4000bc40c0002,%rdx
+  560cc1:	00 f4 eb
+  560cc4:	48 89 94 24 20 09 00 	mov    %rdx,0x920(%rsp)
+  560ccb:	00
+  560ccc:	48 ba ba 58 c7 53 57 	movabs $0x5f48985753c758ba,%rdx
+  560cd3:	98 48 5f
+  560cd6:	48 89 94 24 28 09 00 	mov    %rdx,0x928(%rsp)
+  560cdd:	00
+  560cde:	48 ba 45 57 52 70 53 	movabs $0x77ce585370525745,%rdx
+  560ce5:	58 ce 77
+  560ce8:	48 89 94 24 30 09 00 	mov    %rdx,0x930(%rsp)
+  560cef:	00
+  560cf0:	48 ba 6d ec 56 a2 97 	movabs $0x5c071a97a256ec6d,%rdx
+  560cf7:	1a 07 5c
+  560cfa:	48 89 94 24 38 09 00 	mov    %rdx,0x938(%rsp)
+  560d01:	00
+  560d02:	48 ba 93 e4 80 fa c3 	movabs $0x15f65ec3fa80e493,%rdx
+  560d09:	5e f6 15
+  560d0c:	48 89 94 24 40 09 00 	mov    %rdx,0x940(%rsp)
+  560d13:	00
+  560d14:	48 8d 84 24 d8 06 00 	lea    0x6d8(%rsp),%rax
+  560d1b:	00
+  560d1c:	48 8d 9c 24 18 09 00 	lea    0x918(%rsp),%rbx
+  560d23:	00
+  560d24:	e8 b7 fd fe ff       	call   550ae0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Equal>
+  560d29:	84 c0                	test   %al,%al
+  560d2b:	74 50                	je     560d7d <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x31d>
+  560d2d:	48 8d 84 24 70 0b 00 	lea    0xb70(%rsp),%rax
+  560d34:	00
+  560d35:	48 8d 8c 24 d8 06 00 	lea    0x6d8(%rsp),%rcx
+  560d3c:	00
+  560d3d:	ba 09 00 00 00       	mov    $0x9,%edx
+  560d42:	44 0f 10 31          	movups (%rcx),%xmm14
+  560d46:	44 0f 11 30          	movups %xmm14,(%rax)
+  560d4a:	44 0f 10 71 10       	movups 0x10(%rcx),%xmm14
+  560d4f:	44 0f 11 70 10       	movups %xmm14,0x10(%rax)
+  560d54:	44 0f 10 71 20       	movups 0x20(%rcx),%xmm14
+  560d59:	44 0f 11 70 20       	movups %xmm14,0x20(%rax)
+  560d5e:	44 0f 10 71 30       	movups 0x30(%rcx),%xmm14
+  560d63:	44 0f 11 70 30       	movups %xmm14,0x30(%rax)
+  560d68:	48 83 c1 40          	add    $0x40,%rcx
+  560d6c:	48 83 c0 40          	add    $0x40,%rax
+  560d70:	ff ca                	dec    %edx
+  560d72:	75 ce                	jne    560d42 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x2e2>
+  560d74:	48 81 c4 60 0b 00 00 	add    $0xb60,%rsp
+  560d7b:	5d                   	pop    %rbp
+  560d7c:	c3                   	ret
+  560d7d:	48 8d 44 24 18       	lea    0x18(%rsp),%rax
+  560d82:	48 8d 9c 24 d8 06 00 	lea    0x6d8(%rsp),%rbx
+  560d89:	00
+  560d8a:	e8 d1 11 ff ff       	call   551f60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).CyclotomicSquare>
+  560d8f:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560d96:	00
+  560d97:	48 8d 5c 24 18       	lea    0x18(%rsp),%rbx
+  560d9c:	0f 1f 40 00          	nopl   0x0(%rax)
+  560da0:	e8 5b 1c ff ff       	call   552a00 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).ExptHalf>
+  560da5:	90                   	nop
+  560da6:	90                   	nop
+  560da7:	48 8d 8c 24 98 04 00 	lea    0x498(%rsp),%rcx
+  560dae:	00
+  560daf:	48 8d 94 24 d8 06 00 	lea    0x6d8(%rsp),%rdx
+  560db6:	00
+  560db7:	be 09 00 00 00       	mov    $0x9,%esi
+  560dbc:	44 0f 10 32          	movups (%rdx),%xmm14
+  560dc0:	44 0f 11 31          	movups %xmm14,(%rcx)
+  560dc4:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  560dc9:	44 0f 11 71 10       	movups %xmm14,0x10(%rcx)
+  560dce:	44 0f 10 72 20       	movups 0x20(%rdx),%xmm14
+  560dd3:	44 0f 11 71 20       	movups %xmm14,0x20(%rcx)
+  560dd8:	44 0f 10 72 30       	movups 0x30(%rdx),%xmm14
+  560ddd:	44 0f 11 71 30       	movups %xmm14,0x30(%rcx)
+  560de2:	48 83 c2 40          	add    $0x40,%rdx
+  560de6:	48 83 c1 40          	add    $0x40,%rcx
+  560dea:	ff ce                	dec    %esi
+  560dec:	75 ce                	jne    560dbc <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x35c>
+  560dee:	48 8d 84 24 b8 05 00 	lea    0x5b8(%rsp),%rax
+  560df5:	00
+  560df6:	48 89 c3             	mov    %rax,%rbx
+  560df9:	e8 a2 45 ff ff       	call   5553a0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E6).Neg>
+  560dfe:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560e05:	00
+  560e06:	48 89 c3             	mov    %rax,%rbx
+  560e09:	48 8d 8c 24 98 04 00 	lea    0x498(%rsp),%rcx
+  560e10:	00
+  560e11:	e8 4a fd fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560e16:	48 8d 84 24 98 04 00 	lea    0x498(%rsp),%rax
+  560e1d:	00
+  560e1e:	48 8d 9c 24 58 02 00 	lea    0x258(%rsp),%rbx
+  560e25:	00
+  560e26:	e8 75 21 ff ff       	call   552fa0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Expt>
+  560e2b:	90                   	nop
+  560e2c:	90                   	nop
+  560e2d:	48 8d 84 24 78 03 00 	lea    0x378(%rsp),%rax
+  560e34:	00
+  560e35:	48 89 c3             	mov    %rax,%rbx
+  560e38:	e8 63 45 ff ff       	call   5553a0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E6).Neg>
+  560e3d:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560e44:	00
+  560e45:	48 89 c3             	mov    %rax,%rbx
+  560e48:	48 8d 8c 24 98 04 00 	lea    0x498(%rsp),%rcx
+  560e4f:	00
+  560e50:	e8 0b fd fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560e55:	48 8d 84 24 98 04 00 	lea    0x498(%rsp),%rax
+  560e5c:	00
+  560e5d:	48 8d 9c 24 58 02 00 	lea    0x258(%rsp),%rbx
+  560e64:	00
+  560e65:	e8 36 21 ff ff       	call   552fa0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Expt>
+  560e6a:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560e71:	00
+  560e72:	48 89 c3             	mov    %rax,%rbx
+  560e75:	e8 86 6b ff ff       	call   557a00 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Frobenius>
+  560e7a:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560e81:	00
+  560e82:	48 89 c3             	mov    %rax,%rbx
+  560e85:	48 8d 8c 24 98 04 00 	lea    0x498(%rsp),%rcx
+  560e8c:	00
+  560e8d:	e8 ce fc fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560e92:	48 8d 84 24 d8 06 00 	lea    0x6d8(%rsp),%rax
+  560e99:	00
+  560e9a:	48 89 c3             	mov    %rax,%rbx
+  560e9d:	48 8d 4c 24 18       	lea    0x18(%rsp),%rcx
+  560ea2:	e8 b9 fc fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560ea7:	48 8d 44 24 18       	lea    0x18(%rsp),%rax
+  560eac:	48 8d 9c 24 58 02 00 	lea    0x258(%rsp),%rbx
+  560eb3:	00
+  560eb4:	e8 e7 20 ff ff       	call   552fa0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Expt>
+  560eb9:	48 8d 84 24 98 04 00 	lea    0x498(%rsp),%rax
+  560ec0:	00
+  560ec1:	48 8d 5c 24 18       	lea    0x18(%rsp),%rbx
+  560ec6:	e8 d5 20 ff ff       	call   552fa0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Expt>
+  560ecb:	48 8d 44 24 18       	lea    0x18(%rsp),%rax
+  560ed0:	48 8d 9c 24 58 02 00 	lea    0x258(%rsp),%rbx
+  560ed7:	00
+  560ed8:	e8 a3 6f ff ff       	call   557e80 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).FrobeniusSquare>
+  560edd:	90                   	nop
+  560ede:	90                   	nop
+  560edf:	48 8d 84 24 78 03 00 	lea    0x378(%rsp),%rax
+  560ee6:	00
+  560ee7:	48 89 c3             	mov    %rax,%rbx
+  560eea:	e8 b1 44 ff ff       	call   5553a0 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E6).Neg>
+  560eef:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560ef6:	00
+  560ef7:	48 89 c3             	mov    %rax,%rbx
+  560efa:	48 8d 8c 24 98 04 00 	lea    0x498(%rsp),%rcx
+  560f01:	00
+  560f02:	e8 59 fc fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560f07:	48 8d 84 24 58 02 00 	lea    0x258(%rsp),%rax
+  560f0e:	00
+  560f0f:	48 89 c3             	mov    %rax,%rbx
+  560f12:	48 8d 4c 24 18       	lea    0x18(%rsp),%rcx
+  560f17:	e8 44 fc fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560f1c:	48 8d 84 24 d8 06 00 	lea    0x6d8(%rsp),%rax
+  560f23:	00
+  560f24:	48 89 c3             	mov    %rax,%rbx
+  560f27:	48 8d 8c 24 58 02 00 	lea    0x258(%rsp),%rcx
+  560f2e:	00
+  560f2f:	e8 2c fc fe ff       	call   550b60 <github.com/consensys/gnark-crypto/ecc/bls12-381/internal/fptower.(*E12).Mul>
+  560f34:	48 8d 8c 24 70 0b 00 	lea    0xb70(%rsp),%rcx
+  560f3b:	00
+  560f3c:	48 8d 94 24 d8 06 00 	lea    0x6d8(%rsp),%rdx
+  560f43:	00
+  560f44:	be 09 00 00 00       	mov    $0x9,%esi
+  560f49:	44 0f 10 32          	movups (%rdx),%xmm14
+  560f4d:	44 0f 11 31          	movups %xmm14,(%rcx)
+  560f51:	44 0f 10 72 10       	movups 0x10(%rdx),%xmm14
+  560f56:	44 0f 11 71 10       	movups %xmm14,0x10(%rcx)
+  560f5b:	44 0f 10 72 20       	movups 0x20(%rdx),%xmm14
+  560f60:	44 0f 11 71 20       	movups %xmm14,0x20(%rcx)
+  560f65:	44 0f 10 72 30       	movups 0x30(%rdx),%xmm14
+  560f6a:	44 0f 11 71 30       	movups %xmm14,0x30(%rcx)
+  560f6f:	48 83 c2 40          	add    $0x40,%rdx
+  560f73:	48 83 c1 40          	add    $0x40,%rcx
+  560f77:	ff ce                	dec    %esi
+  560f79:	75 ce                	jne    560f49 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation+0x4e9>
+  560f7b:	48 81 c4 60 0b 00 00 	add    $0xb60,%rsp
+  560f82:	5d                   	pop    %rbp
+  560f83:	c3                   	ret
+  560f84:	48 89 84 24 48 02 00 	mov    %rax,0x248(%rsp)
+  560f8b:	00
+  560f8c:	48 89 9c 24 50 02 00 	mov    %rbx,0x250(%rsp)
+  560f93:	00
+  560f94:	48 89 8c 24 58 02 00 	mov    %rcx,0x258(%rsp)
+  560f9b:	00
+  560f9c:	48 89 bc 24 60 02 00 	mov    %rdi,0x260(%rsp)
+  560fa3:	00
+  560fa4:	e8 f7 5e f2 ff       	call   486ea0 <runtime.morestack_noctxt.abi0>
+  560fa9:	48 8b 84 24 48 02 00 	mov    0x248(%rsp),%rax
+  560fb0:	00
+  560fb1:	48 8b 9c 24 50 02 00 	mov    0x250(%rsp),%rbx
+  560fb8:	00
+  560fb9:	48 8b 8c 24 58 02 00 	mov    0x258(%rsp),%rcx
+  560fc0:	00
+  560fc1:	48 8b bc 24 60 02 00 	mov    0x260(%rsp),%rdi
+  560fc8:	00
+  560fc9:	e9 92 fa ff ff       	jmp    560a60 <github.com/consensys/gnark-crypto/ecc/bls12-381.FinalExponentiation>
+
+Disassembly of section .fini:

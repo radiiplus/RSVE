@@ -1,0 +1,377 @@
+
+/tmp/bor-batch5a-default:     file format elf64-x86-64
+
+
+Disassembly of section .init:
+
+Disassembly of section .plt:
+
+Disassembly of section .text:
+
+00000000005502c0 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0>:
+  5502c0:	64 4c 8b 34 25 f8 ff 	mov    %fs:0xfffffffffffffff8,%r14
+  5502c7:	ff ff
+  5502c9:	49 3b 66 10          	cmp    0x10(%r14),%rsp
+  5502cd:	0f 86 35 07 00 00    	jbe    550a08 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0+0x748>
+  5502d3:	55                   	push   %rbp
+  5502d4:	48 89 e5             	mov    %rsp,%rbp
+  5502d7:	48 83 ec 18          	sub    $0x18,%rsp
+  5502db:	80 3d 63 e0 23 00 01 	cmpb   $0x1,0x23e063(%rip)        # 78e345 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.supportAdx>
+  5502e2:	0f 85 f8 06 00 00    	jne    5509e0 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0+0x720>
+  5502e8:	4c 8b 44 24 30       	mov    0x30(%rsp),%r8
+  5502ed:	4d 8b 10             	mov    (%r8),%r10
+  5502f0:	4d 8b 58 08          	mov    0x8(%r8),%r11
+  5502f4:	4c 8b 64 24 38       	mov    0x38(%rsp),%r12
+  5502f9:	49 8b 14 24          	mov    (%r12),%rdx
+  5502fd:	48 31 c0             	xor    %rax,%rax
+  550300:	c4 42 8b f6 ea       	mulx   %r10,%r14,%r13
+  550305:	c4 c2 fb f6 cb       	mulx   %r11,%rax,%rcx
+  55030a:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  550310:	c4 c2 fb f6 58 10    	mulx   0x10(%r8),%rax,%rbx
+  550316:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  55031c:	c4 c2 fb f6 70 18    	mulx   0x18(%r8),%rax,%rsi
+  550322:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  550328:	c4 c2 fb f6 78 20    	mulx   0x20(%r8),%rax,%rdi
+  55032e:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  550334:	c4 c2 fb f6 68 28    	mulx   0x28(%r8),%rax,%rbp
+  55033a:	f3 48 0f 38 f6 f8    	adox   %rax,%rdi
+  550340:	b8 00 00 00 00       	mov    $0x0,%eax
+  550345:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55034b:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  550352:	ff f3 89
+  550355:	49 0f af d6          	imul   %r14,%rdx
+  550359:	48 31 c0             	xor    %rax,%rax
+  55035c:	c4 62 fb f6 0d bb 00 	mulx   0x2100bb(%rip),%rax,%r9        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  550363:	21 00
+  550365:	66 49 0f 38 f6 c6    	adcx   %r14,%rax
+  55036b:	4d 89 ce             	mov    %r9,%r14
+  55036e:	66 4d 0f 38 f6 f5    	adcx   %r13,%r14
+  550374:	c4 62 fb f6 2d ab 00 	mulx   0x2100ab(%rip),%rax,%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  55037b:	21 00
+  55037d:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  550383:	66 4c 0f 38 f6 e9    	adcx   %rcx,%r13
+  550389:	c4 e2 fb f6 0d 9e 00 	mulx   0x21009e(%rip),%rax,%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  550390:	21 00
+  550392:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  550398:	66 48 0f 38 f6 cb    	adcx   %rbx,%rcx
+  55039e:	c4 e2 fb f6 1d 91 00 	mulx   0x210091(%rip),%rax,%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  5503a5:	21 00
+  5503a7:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  5503ad:	66 48 0f 38 f6 de    	adcx   %rsi,%rbx
+  5503b3:	c4 e2 fb f6 35 84 00 	mulx   0x210084(%rip),%rax,%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  5503ba:	21 00
+  5503bc:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  5503c2:	66 48 0f 38 f6 f7    	adcx   %rdi,%rsi
+  5503c8:	c4 e2 fb f6 3d 77 00 	mulx   0x210077(%rip),%rax,%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  5503cf:	21 00
+  5503d1:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  5503d7:	b8 00 00 00 00       	mov    $0x0,%eax
+  5503dc:	66 48 0f 38 f6 f8    	adcx   %rax,%rdi
+  5503e2:	f3 48 0f 38 f6 fd    	adox   %rbp,%rdi
+  5503e8:	49 8b 54 24 08       	mov    0x8(%r12),%rdx
+  5503ed:	48 31 c0             	xor    %rax,%rax
+  5503f0:	c4 c2 fb f6 ea       	mulx   %r10,%rax,%rbp
+  5503f5:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  5503fb:	66 4c 0f 38 f6 ed    	adcx   %rbp,%r13
+  550401:	c4 c2 fb f6 eb       	mulx   %r11,%rax,%rbp
+  550406:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  55040c:	66 48 0f 38 f6 cd    	adcx   %rbp,%rcx
+  550412:	c4 c2 fb f6 68 10    	mulx   0x10(%r8),%rax,%rbp
+  550418:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  55041e:	66 48 0f 38 f6 dd    	adcx   %rbp,%rbx
+  550424:	c4 c2 fb f6 68 18    	mulx   0x18(%r8),%rax,%rbp
+  55042a:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  550430:	66 48 0f 38 f6 f5    	adcx   %rbp,%rsi
+  550436:	c4 c2 fb f6 68 20    	mulx   0x20(%r8),%rax,%rbp
+  55043c:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  550442:	66 48 0f 38 f6 fd    	adcx   %rbp,%rdi
+  550448:	c4 c2 fb f6 68 28    	mulx   0x28(%r8),%rax,%rbp
+  55044e:	f3 48 0f 38 f6 f8    	adox   %rax,%rdi
+  550454:	b8 00 00 00 00       	mov    $0x0,%eax
+  550459:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  55045f:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  550465:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  55046c:	ff f3 89
+  55046f:	49 0f af d6          	imul   %r14,%rdx
+  550473:	48 31 c0             	xor    %rax,%rax
+  550476:	c4 62 fb f6 0d a1 ff 	mulx   0x20ffa1(%rip),%rax,%r9        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  55047d:	20 00
+  55047f:	66 49 0f 38 f6 c6    	adcx   %r14,%rax
+  550485:	4d 89 ce             	mov    %r9,%r14
+  550488:	66 4d 0f 38 f6 f5    	adcx   %r13,%r14
+  55048e:	c4 62 fb f6 2d 91 ff 	mulx   0x20ff91(%rip),%rax,%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  550495:	20 00
+  550497:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  55049d:	66 4c 0f 38 f6 e9    	adcx   %rcx,%r13
+  5504a3:	c4 e2 fb f6 0d 84 ff 	mulx   0x20ff84(%rip),%rax,%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  5504aa:	20 00
+  5504ac:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  5504b2:	66 48 0f 38 f6 cb    	adcx   %rbx,%rcx
+  5504b8:	c4 e2 fb f6 1d 77 ff 	mulx   0x20ff77(%rip),%rax,%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  5504bf:	20 00
+  5504c1:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  5504c7:	66 48 0f 38 f6 de    	adcx   %rsi,%rbx
+  5504cd:	c4 e2 fb f6 35 6a ff 	mulx   0x20ff6a(%rip),%rax,%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  5504d4:	20 00
+  5504d6:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  5504dc:	66 48 0f 38 f6 f7    	adcx   %rdi,%rsi
+  5504e2:	c4 e2 fb f6 3d 5d ff 	mulx   0x20ff5d(%rip),%rax,%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  5504e9:	20 00
+  5504eb:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  5504f1:	b8 00 00 00 00       	mov    $0x0,%eax
+  5504f6:	66 48 0f 38 f6 f8    	adcx   %rax,%rdi
+  5504fc:	f3 48 0f 38 f6 fd    	adox   %rbp,%rdi
+  550502:	49 8b 54 24 10       	mov    0x10(%r12),%rdx
+  550507:	48 31 c0             	xor    %rax,%rax
+  55050a:	c4 c2 fb f6 ea       	mulx   %r10,%rax,%rbp
+  55050f:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  550515:	66 4c 0f 38 f6 ed    	adcx   %rbp,%r13
+  55051b:	c4 c2 fb f6 eb       	mulx   %r11,%rax,%rbp
+  550520:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  550526:	66 48 0f 38 f6 cd    	adcx   %rbp,%rcx
+  55052c:	c4 c2 fb f6 68 10    	mulx   0x10(%r8),%rax,%rbp
+  550532:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  550538:	66 48 0f 38 f6 dd    	adcx   %rbp,%rbx
+  55053e:	c4 c2 fb f6 68 18    	mulx   0x18(%r8),%rax,%rbp
+  550544:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  55054a:	66 48 0f 38 f6 f5    	adcx   %rbp,%rsi
+  550550:	c4 c2 fb f6 68 20    	mulx   0x20(%r8),%rax,%rbp
+  550556:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  55055c:	66 48 0f 38 f6 fd    	adcx   %rbp,%rdi
+  550562:	c4 c2 fb f6 68 28    	mulx   0x28(%r8),%rax,%rbp
+  550568:	f3 48 0f 38 f6 f8    	adox   %rax,%rdi
+  55056e:	b8 00 00 00 00       	mov    $0x0,%eax
+  550573:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  550579:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  55057f:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  550586:	ff f3 89
+  550589:	49 0f af d6          	imul   %r14,%rdx
+  55058d:	48 31 c0             	xor    %rax,%rax
+  550590:	c4 62 fb f6 0d 87 fe 	mulx   0x20fe87(%rip),%rax,%r9        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  550597:	20 00
+  550599:	66 49 0f 38 f6 c6    	adcx   %r14,%rax
+  55059f:	4d 89 ce             	mov    %r9,%r14
+  5505a2:	66 4d 0f 38 f6 f5    	adcx   %r13,%r14
+  5505a8:	c4 62 fb f6 2d 77 fe 	mulx   0x20fe77(%rip),%rax,%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  5505af:	20 00
+  5505b1:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  5505b7:	66 4c 0f 38 f6 e9    	adcx   %rcx,%r13
+  5505bd:	c4 e2 fb f6 0d 6a fe 	mulx   0x20fe6a(%rip),%rax,%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  5505c4:	20 00
+  5505c6:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  5505cc:	66 48 0f 38 f6 cb    	adcx   %rbx,%rcx
+  5505d2:	c4 e2 fb f6 1d 5d fe 	mulx   0x20fe5d(%rip),%rax,%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  5505d9:	20 00
+  5505db:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  5505e1:	66 48 0f 38 f6 de    	adcx   %rsi,%rbx
+  5505e7:	c4 e2 fb f6 35 50 fe 	mulx   0x20fe50(%rip),%rax,%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  5505ee:	20 00
+  5505f0:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  5505f6:	66 48 0f 38 f6 f7    	adcx   %rdi,%rsi
+  5505fc:	c4 e2 fb f6 3d 43 fe 	mulx   0x20fe43(%rip),%rax,%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  550603:	20 00
+  550605:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  55060b:	b8 00 00 00 00       	mov    $0x0,%eax
+  550610:	66 48 0f 38 f6 f8    	adcx   %rax,%rdi
+  550616:	f3 48 0f 38 f6 fd    	adox   %rbp,%rdi
+  55061c:	49 8b 54 24 18       	mov    0x18(%r12),%rdx
+  550621:	48 31 c0             	xor    %rax,%rax
+  550624:	c4 c2 fb f6 ea       	mulx   %r10,%rax,%rbp
+  550629:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  55062f:	66 4c 0f 38 f6 ed    	adcx   %rbp,%r13
+  550635:	c4 c2 fb f6 eb       	mulx   %r11,%rax,%rbp
+  55063a:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  550640:	66 48 0f 38 f6 cd    	adcx   %rbp,%rcx
+  550646:	c4 c2 fb f6 68 10    	mulx   0x10(%r8),%rax,%rbp
+  55064c:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  550652:	66 48 0f 38 f6 dd    	adcx   %rbp,%rbx
+  550658:	c4 c2 fb f6 68 18    	mulx   0x18(%r8),%rax,%rbp
+  55065e:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  550664:	66 48 0f 38 f6 f5    	adcx   %rbp,%rsi
+  55066a:	c4 c2 fb f6 68 20    	mulx   0x20(%r8),%rax,%rbp
+  550670:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  550676:	66 48 0f 38 f6 fd    	adcx   %rbp,%rdi
+  55067c:	c4 c2 fb f6 68 28    	mulx   0x28(%r8),%rax,%rbp
+  550682:	f3 48 0f 38 f6 f8    	adox   %rax,%rdi
+  550688:	b8 00 00 00 00       	mov    $0x0,%eax
+  55068d:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  550693:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  550699:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  5506a0:	ff f3 89
+  5506a3:	49 0f af d6          	imul   %r14,%rdx
+  5506a7:	48 31 c0             	xor    %rax,%rax
+  5506aa:	c4 62 fb f6 0d 6d fd 	mulx   0x20fd6d(%rip),%rax,%r9        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  5506b1:	20 00
+  5506b3:	66 49 0f 38 f6 c6    	adcx   %r14,%rax
+  5506b9:	4d 89 ce             	mov    %r9,%r14
+  5506bc:	66 4d 0f 38 f6 f5    	adcx   %r13,%r14
+  5506c2:	c4 62 fb f6 2d 5d fd 	mulx   0x20fd5d(%rip),%rax,%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  5506c9:	20 00
+  5506cb:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  5506d1:	66 4c 0f 38 f6 e9    	adcx   %rcx,%r13
+  5506d7:	c4 e2 fb f6 0d 50 fd 	mulx   0x20fd50(%rip),%rax,%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  5506de:	20 00
+  5506e0:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  5506e6:	66 48 0f 38 f6 cb    	adcx   %rbx,%rcx
+  5506ec:	c4 e2 fb f6 1d 43 fd 	mulx   0x20fd43(%rip),%rax,%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  5506f3:	20 00
+  5506f5:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  5506fb:	66 48 0f 38 f6 de    	adcx   %rsi,%rbx
+  550701:	c4 e2 fb f6 35 36 fd 	mulx   0x20fd36(%rip),%rax,%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  550708:	20 00
+  55070a:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  550710:	66 48 0f 38 f6 f7    	adcx   %rdi,%rsi
+  550716:	c4 e2 fb f6 3d 29 fd 	mulx   0x20fd29(%rip),%rax,%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  55071d:	20 00
+  55071f:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  550725:	b8 00 00 00 00       	mov    $0x0,%eax
+  55072a:	66 48 0f 38 f6 f8    	adcx   %rax,%rdi
+  550730:	f3 48 0f 38 f6 fd    	adox   %rbp,%rdi
+  550736:	49 8b 54 24 20       	mov    0x20(%r12),%rdx
+  55073b:	48 31 c0             	xor    %rax,%rax
+  55073e:	c4 c2 fb f6 ea       	mulx   %r10,%rax,%rbp
+  550743:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  550749:	66 4c 0f 38 f6 ed    	adcx   %rbp,%r13
+  55074f:	c4 c2 fb f6 eb       	mulx   %r11,%rax,%rbp
+  550754:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  55075a:	66 48 0f 38 f6 cd    	adcx   %rbp,%rcx
+  550760:	c4 c2 fb f6 68 10    	mulx   0x10(%r8),%rax,%rbp
+  550766:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  55076c:	66 48 0f 38 f6 dd    	adcx   %rbp,%rbx
+  550772:	c4 c2 fb f6 68 18    	mulx   0x18(%r8),%rax,%rbp
+  550778:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  55077e:	66 48 0f 38 f6 f5    	adcx   %rbp,%rsi
+  550784:	c4 c2 fb f6 68 20    	mulx   0x20(%r8),%rax,%rbp
+  55078a:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  550790:	66 48 0f 38 f6 fd    	adcx   %rbp,%rdi
+  550796:	c4 c2 fb f6 68 28    	mulx   0x28(%r8),%rax,%rbp
+  55079c:	f3 48 0f 38 f6 f8    	adox   %rax,%rdi
+  5507a2:	b8 00 00 00 00       	mov    $0x0,%eax
+  5507a7:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  5507ad:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  5507b3:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  5507ba:	ff f3 89
+  5507bd:	49 0f af d6          	imul   %r14,%rdx
+  5507c1:	48 31 c0             	xor    %rax,%rax
+  5507c4:	c4 62 fb f6 0d 53 fc 	mulx   0x20fc53(%rip),%rax,%r9        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  5507cb:	20 00
+  5507cd:	66 49 0f 38 f6 c6    	adcx   %r14,%rax
+  5507d3:	4d 89 ce             	mov    %r9,%r14
+  5507d6:	66 4d 0f 38 f6 f5    	adcx   %r13,%r14
+  5507dc:	c4 62 fb f6 2d 43 fc 	mulx   0x20fc43(%rip),%rax,%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  5507e3:	20 00
+  5507e5:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  5507eb:	66 4c 0f 38 f6 e9    	adcx   %rcx,%r13
+  5507f1:	c4 e2 fb f6 0d 36 fc 	mulx   0x20fc36(%rip),%rax,%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  5507f8:	20 00
+  5507fa:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  550800:	66 48 0f 38 f6 cb    	adcx   %rbx,%rcx
+  550806:	c4 e2 fb f6 1d 29 fc 	mulx   0x20fc29(%rip),%rax,%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  55080d:	20 00
+  55080f:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  550815:	66 48 0f 38 f6 de    	adcx   %rsi,%rbx
+  55081b:	c4 e2 fb f6 35 1c fc 	mulx   0x20fc1c(%rip),%rax,%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  550822:	20 00
+  550824:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  55082a:	66 48 0f 38 f6 f7    	adcx   %rdi,%rsi
+  550830:	c4 e2 fb f6 3d 0f fc 	mulx   0x20fc0f(%rip),%rax,%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  550837:	20 00
+  550839:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  55083f:	b8 00 00 00 00       	mov    $0x0,%eax
+  550844:	66 48 0f 38 f6 f8    	adcx   %rax,%rdi
+  55084a:	f3 48 0f 38 f6 fd    	adox   %rbp,%rdi
+  550850:	49 8b 54 24 28       	mov    0x28(%r12),%rdx
+  550855:	48 31 c0             	xor    %rax,%rax
+  550858:	c4 c2 fb f6 ea       	mulx   %r10,%rax,%rbp
+  55085d:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  550863:	66 4c 0f 38 f6 ed    	adcx   %rbp,%r13
+  550869:	c4 c2 fb f6 eb       	mulx   %r11,%rax,%rbp
+  55086e:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  550874:	66 48 0f 38 f6 cd    	adcx   %rbp,%rcx
+  55087a:	c4 c2 fb f6 68 10    	mulx   0x10(%r8),%rax,%rbp
+  550880:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  550886:	66 48 0f 38 f6 dd    	adcx   %rbp,%rbx
+  55088c:	c4 c2 fb f6 68 18    	mulx   0x18(%r8),%rax,%rbp
+  550892:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  550898:	66 48 0f 38 f6 f5    	adcx   %rbp,%rsi
+  55089e:	c4 c2 fb f6 68 20    	mulx   0x20(%r8),%rax,%rbp
+  5508a4:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  5508aa:	66 48 0f 38 f6 fd    	adcx   %rbp,%rdi
+  5508b0:	c4 c2 fb f6 68 28    	mulx   0x28(%r8),%rax,%rbp
+  5508b6:	f3 48 0f 38 f6 f8    	adox   %rax,%rdi
+  5508bc:	b8 00 00 00 00       	mov    $0x0,%eax
+  5508c1:	66 48 0f 38 f6 e8    	adcx   %rax,%rbp
+  5508c7:	f3 48 0f 38 f6 e8    	adox   %rax,%rbp
+  5508cd:	48 ba fd ff fc ff fc 	movabs $0x89f3fffcfffcfffd,%rdx
+  5508d4:	ff f3 89
+  5508d7:	49 0f af d6          	imul   %r14,%rdx
+  5508db:	48 31 c0             	xor    %rax,%rax
+  5508de:	c4 62 fb f6 0d 39 fb 	mulx   0x20fb39(%rip),%rax,%r9        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  5508e5:	20 00
+  5508e7:	66 49 0f 38 f6 c6    	adcx   %r14,%rax
+  5508ed:	4d 89 ce             	mov    %r9,%r14
+  5508f0:	66 4d 0f 38 f6 f5    	adcx   %r13,%r14
+  5508f6:	c4 62 fb f6 2d 29 fb 	mulx   0x20fb29(%rip),%rax,%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  5508fd:	20 00
+  5508ff:	f3 4c 0f 38 f6 f0    	adox   %rax,%r14
+  550905:	66 4c 0f 38 f6 e9    	adcx   %rcx,%r13
+  55090b:	c4 e2 fb f6 0d 1c fb 	mulx   0x20fb1c(%rip),%rax,%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  550912:	20 00
+  550914:	f3 4c 0f 38 f6 e8    	adox   %rax,%r13
+  55091a:	66 48 0f 38 f6 cb    	adcx   %rbx,%rcx
+  550920:	c4 e2 fb f6 1d 0f fb 	mulx   0x20fb0f(%rip),%rax,%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  550927:	20 00
+  550929:	f3 48 0f 38 f6 c8    	adox   %rax,%rcx
+  55092f:	66 48 0f 38 f6 de    	adcx   %rsi,%rbx
+  550935:	c4 e2 fb f6 35 02 fb 	mulx   0x20fb02(%rip),%rax,%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  55093c:	20 00
+  55093e:	f3 48 0f 38 f6 d8    	adox   %rax,%rbx
+  550944:	66 48 0f 38 f6 f7    	adcx   %rdi,%rsi
+  55094a:	c4 e2 fb f6 3d f5 fa 	mulx   0x20faf5(%rip),%rax,%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  550951:	20 00
+  550953:	f3 48 0f 38 f6 f0    	adox   %rax,%rsi
+  550959:	b8 00 00 00 00       	mov    $0x0,%eax
+  55095e:	66 48 0f 38 f6 f8    	adcx   %rax,%rdi
+  550964:	f3 48 0f 38 f6 fd    	adox   %rbp,%rdi
+  55096a:	4d 89 f1             	mov    %r14,%r9
+  55096d:	4c 2b 35 ac fa 20 00 	sub    0x20faac(%rip),%r14        # 760420 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement>
+  550974:	4d 89 e8             	mov    %r13,%r8
+  550977:	4c 1b 2d aa fa 20 00 	sbb    0x20faaa(%rip),%r13        # 760428 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x8>
+  55097e:	49 89 cc             	mov    %rcx,%r12
+  550981:	48 1b 0d a8 fa 20 00 	sbb    0x20faa8(%rip),%rcx        # 760430 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x10>
+  550988:	49 89 da             	mov    %rbx,%r10
+  55098b:	48 1b 1d a6 fa 20 00 	sbb    0x20faa6(%rip),%rbx        # 760438 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x18>
+  550992:	49 89 f3             	mov    %rsi,%r11
+  550995:	48 1b 35 a4 fa 20 00 	sbb    0x20faa4(%rip),%rsi        # 760440 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x20>
+  55099c:	48 89 f8             	mov    %rdi,%rax
+  55099f:	48 1b 3d a2 fa 20 00 	sbb    0x20faa2(%rip),%rdi        # 760448 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.qElement+0x28>
+  5509a6:	4d 0f 42 f1          	cmovb  %r9,%r14
+  5509aa:	4d 0f 42 e8          	cmovb  %r8,%r13
+  5509ae:	49 0f 42 cc          	cmovb  %r12,%rcx
+  5509b2:	49 0f 42 da          	cmovb  %r10,%rbx
+  5509b6:	49 0f 42 f3          	cmovb  %r11,%rsi
+  5509ba:	48 0f 42 f8          	cmovb  %rax,%rdi
+  5509be:	48 8b 44 24 28       	mov    0x28(%rsp),%rax
+  5509c3:	4c 89 30             	mov    %r14,(%rax)
+  5509c6:	4c 89 68 08          	mov    %r13,0x8(%rax)
+  5509ca:	48 89 48 10          	mov    %rcx,0x10(%rax)
+  5509ce:	48 89 58 18          	mov    %rbx,0x18(%rax)
+  5509d2:	48 89 70 20          	mov    %rsi,0x20(%rax)
+  5509d6:	48 89 78 28          	mov    %rdi,0x28(%rax)
+  5509da:	48 83 c4 18          	add    $0x18,%rsp
+  5509de:	5d                   	pop    %rbp
+  5509df:	c3                   	ret
+  5509e0:	48 8b 44 24 28       	mov    0x28(%rsp),%rax
+  5509e5:	48 89 04 24          	mov    %rax,(%rsp)
+  5509e9:	48 8b 44 24 30       	mov    0x30(%rsp),%rax
+  5509ee:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+  5509f3:	48 8b 44 24 38       	mov    0x38(%rsp),%rax
+  5509f8:	48 89 44 24 10       	mov    %rax,0x10(%rsp)
+  5509fd:	e8 1e 00 00 00       	call   550a20 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp._mulGeneric.abi0>
+  550a02:	48 83 c4 18          	add    $0x18,%rsp
+  550a06:	5d                   	pop    %rbp
+  550a07:	c3                   	ret
+  550a08:	e8 93 64 f3 ff       	call   486ea0 <runtime.morestack_noctxt.abi0>
+  550a0d:	e9 ae f8 ff ff       	jmp    5502c0 <github.com/consensys/gnark-crypto/ecc/bls12-381/fp.mul.abi0>
+
+Disassembly of section .fini:

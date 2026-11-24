@@ -17,6 +17,10 @@ The independent `math/big` oracle defines subgroup membership by ordinary double
 
 The original corpus plus deterministic full-curve and curve-aware mutation sweeps contain 372 unique canonical on-curve off-subgroup points. Bor decodes them and rejects them at the relevant subgroup check. The pairing cross-check found no disagreement for the valid pairing vectors. No credible false pairing acceptance was demonstrated, so the Batch 6 escrow/EVM witness was not run; see `reports/batch6-gate.json`.
 
+Batch 5A checked 91 bilinearity-derived pairing products across 5,032 tuples, including batches through 256 tuples. The independent scalar-product oracle, Bor production path, direct gnark, and blst agreed on every tested identity result; no false acceptance or backend disagreement was found. Eight algebraic metamorphic relations were also checked within each backend, covering tuple order, term splitting, scalar transfer, cancellation, and infinity. Details are in `reports/batch5a/`.
+
+An amd64 build-path follow-up compared default dispatch, `noadx`, `purego`, `purego,noadx`, and `GOAMD64=v3`; corpus, differential, and metamorphic report hashes were identical. GNU objdump artifacts for the pairing and field-arithmetic symbols are in `reports/batch5a/disassembly/`. These runs used one VM host and do not establish cross-architecture equivalence.
+
 The set differences, intersections, and tuple-order probes are in `reports/blindspot-analysis.json`. The mathematical reference-group definition and backward trace from pairing output `1` are in `reports/reference-group-backtrace.md`.
 
 ## Reproduction
@@ -32,6 +36,7 @@ go run ./cmd/curve-mutation-sweep -max-delta 16
 go run ./cmd/differential -corpus testdata/off-subgroup-sweep.json -out reports/off-subgroup-sweep-report.json
 go run ./cmd/differential -corpus testdata/curve-mutation-sweep.json -out reports/curve-mutation-sweep-report.json
 go run ./cmd/blindspots
+go run ./cmd/batch5a
 ```
 
 The existing reports also include the original differential corpus and independent pairing comparisons. Zero discrepancies describe the tested cases; they are not a proof over every possible input.
