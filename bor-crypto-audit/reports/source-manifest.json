@@ -1,0 +1,104 @@
+{
+  "project": "bor-crypto-audit",
+  "bor_repository": "https://github.com/0xPolygon/bor",
+  "snapshots": {
+    "develop": {
+      "commit": "cefbcfd4078e7a6cdb8e7642bc26e3589e05e7ab",
+      "go_directive": "1.26.11",
+      "dependencies": {
+        "github.com/consensys/gnark-crypto": "v0.19.2"
+      },
+      "files": [
+        {
+          "upstream_path": "core/vm/contracts.go",
+          "local_path": "source/develop/contracts.go",
+          "git_blob": "abe998c1f9effa8037c961c5a07d9b317bf92ba5",
+          "expected_git_blob": "abe998c1f9effa8037c961c5a07d9b317bf92ba5",
+          "sha256": "8846881fff58750fa38e68be916ac16e7e390b180ed6d835d6aa2d41f55b4716",
+          "verified_against_commit_tree": true
+        },
+        {
+          "upstream_path": "params/config.go",
+          "local_path": "source/develop/config.go",
+          "git_blob": "dd15eb861db7e24074cf0d893f92417eb5eac807",
+          "expected_git_blob": "dd15eb861db7e24074cf0d893f92417eb5eac807",
+          "sha256": "d7df4db32ff7f166331706bf77aa4945a717349e84cdf1d3a83cac8cc7bc73a7",
+          "verified_against_commit_tree": true
+        },
+        {
+          "upstream_path": "go.mod",
+          "local_path": "source/develop/go.mod",
+          "git_blob": "0577ac7dc473a4e8a032ec7c2e86eddfacd8d8c0",
+          "expected_git_blob": "0577ac7dc473a4e8a032ec7c2e86eddfacd8d8c0",
+          "sha256": "e0150130938c79dd0f03d70cc595c6345f90b6ab66c7386cdca6205fbf2bd84c",
+          "verified_against_commit_tree": true
+        },
+        {
+          "upstream_path": "go.sum",
+          "local_path": "source/develop/go.sum",
+          "git_blob": "e6b57871e13f60a2de42782b9807942cd19e4328",
+          "expected_git_blob": "e6b57871e13f60a2de42782b9807942cd19e4328",
+          "sha256": "29e56ad72203187efa1dce54989b68f9434aeeb884c03f8840c0ee4d7909486e",
+          "verified_against_commit_tree": true
+        }
+      ]
+    },
+    "v2.11.0": {
+      "commit": "3a018e38467594508ca31ebeaf804837fb92834a",
+      "go_directive": "1.26.10",
+      "dependencies": {
+        "github.com/consensys/gnark-crypto": "v0.19.2"
+      },
+      "files": [
+        {
+          "upstream_path": "core/vm/contracts.go",
+          "local_path": "source/v2.11.0/contracts.go",
+          "git_blob": "abe998c1f9effa8037c961c5a07d9b317bf92ba5",
+          "expected_git_blob": "abe998c1f9effa8037c961c5a07d9b317bf92ba5",
+          "sha256": "8846881fff58750fa38e68be916ac16e7e390b180ed6d835d6aa2d41f55b4716",
+          "verified_against_commit_tree": true
+        },
+        {
+          "upstream_path": "params/config.go",
+          "local_path": "source/v2.11.0/config.go",
+          "git_blob": "2c6076d98c902ff9a68a97a539a8eaf1b3605cdf",
+          "expected_git_blob": "2c6076d98c902ff9a68a97a539a8eaf1b3605cdf",
+          "sha256": "6d8d4cf9c69b0dfa0ffa67521a6b03985c7b6fa921f7bb15dafe3a57ae3c6423",
+          "verified_against_commit_tree": true
+        },
+        {
+          "upstream_path": "go.mod",
+          "local_path": "source/v2.11.0/go.mod",
+          "git_blob": "747475d3fb60370ff8c236674fc5b01c45331071",
+          "expected_git_blob": "747475d3fb60370ff8c236674fc5b01c45331071",
+          "sha256": "abd25422c7ee5515c114907ec2cf1c74efded34ddad4cfe263841fef4e9464aa",
+          "verified_against_commit_tree": true
+        },
+        {
+          "upstream_path": "go.sum",
+          "local_path": "source/v2.11.0/go.sum",
+          "git_blob": "4f9cac590105ad88a67deed3502f8736149c7a8a",
+          "expected_git_blob": "4f9cac590105ad88a67deed3502f8736149c7a8a",
+          "sha256": "8764edc80ba00ea7b95160cd836c521d1e95aa2bb05178ed4fe5541c3d610cbe",
+          "verified_against_commit_tree": true
+        }
+      ]
+    }
+  },
+  "audit_module": {
+    "module": "bor-crypto-audit",
+    "go_directive": "1.26.11",
+    "dependencies": {
+      "github.com/consensys/gnark-crypto": "v0.19.2",
+      "github.com/supranational/blst": "v0.3.17"
+    },
+    "go_mod_sha256": "d9a7d53e02d79839e23b5fdce6d373097fd49afc6c854d2182d9960fe16fc9c4",
+    "go_sum_sha256": "8b597771540198d808d0a76115e164ba21e27de351eeee183adebe91f39ea824"
+  },
+  "verification": {
+    "method": "git hash-object over each downloaded file, compared with the blob SHA reported by the GitHub commit tree API",
+    "develop_expected_blob_ids_match": true,
+    "release_tag": "v2.11.0",
+    "release_tag_resolves_to_pinned_commit": true
+  }
+}

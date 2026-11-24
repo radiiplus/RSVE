@@ -1,0 +1,82 @@
+{
+  "batch": 6,
+  "status": "not-entered",
+  "candidate_credible_false_pairing_acceptance": false,
+  "failed_chain_link": "Bor production pairing Run accepts a mathematically false off-subgroup proof",
+  "evidence_scope": "The original deterministic corpus, 256 deterministic full-curve off-subgroup samples, 114 curve-aware generator mutations, and the Batch 5 pairing vectors",
+  "batch4": {
+    "report": "reports/differential/report.json",
+    "findings": 0,
+    "accepted_off_subgroup_inputs": 0,
+    "off_subgroup_cases": [
+      {
+        "name": "g1-deterministic-full-curve-sample-2",
+        "reference_on_curve": true,
+        "reference_in_subgroup": false,
+        "bor_decoder_accepted": true,
+        "bor_pairing_run_accepted": false,
+        "bor_error": "g1 point is not on correct subgroup"
+      },
+      {
+        "name": "g2-deterministic-full-curve-sample-0",
+        "reference_on_curve": true,
+        "reference_in_subgroup": false,
+        "bor_decoder_accepted": true,
+        "bor_pairing_run_accepted": false,
+        "bor_error": "g2 point is not on correct subgroup"
+      }
+    ]
+  },
+  "counter_search": {
+    "approach": "Expand directly sampled on-curve points and add coordinate-aware mutations of standard generators. Recover y from the curve equation, retain only canonical points classified outside the subgroup by ordinary [r]P, and submit the exact encodings to Bor's production pairing Run.",
+    "full_curve_sweep": {
+      "corpus": "testdata/off-subgroup-sweep.json",
+      "report": "reports/off-subgroup-sweep-report.json",
+      "seed": "bor-crypto-audit/bls12-381/off-subgroup-sweep/v1",
+      "total": 256,
+      "g1": 128,
+      "g2": 128,
+      "decoder_accepted": 256,
+      "pairing_run_accepted": 0,
+      "differential_findings": 0
+    },
+    "curve_aware_mutations": {
+      "corpus": "testdata/curve-mutation-sweep.json",
+      "report": "reports/curve-mutation-sweep-report.json",
+      "seed": "bor-crypto-audit/bls12-381/curve-mutation-sweep/v1",
+      "coordinate_delta_range": "-16..-1, 1..16",
+      "total": 114,
+      "g1": 40,
+      "g2": 74,
+      "decoder_accepted": 114,
+      "pairing_run_accepted": 0,
+      "differential_findings": 0
+    },
+    "result": "All 370 expanded on-curve off-subgroup inputs were decoder-accepted and rejected by production Run with the corresponding G1 or G2 subgroup error. The original two off-subgroup points were also rejected."
+  },
+  "set_and_tuple_analysis": {
+    "report": "reports/blindspot-analysis.json",
+    "unique_comparable_encodings": 401,
+    "reference_mathematical_domain": 14,
+    "gnark_optimized_domain": 14,
+    "bor_pairing_run_acceptance": 14,
+    "gnark_only_vs_reference": 0,
+    "reference_only_vs_gnark": 0,
+    "production_only_vs_reference": 0,
+    "decoder_acceptance_outside_reference_domain": 372,
+    "tuple_probes": "Production Run returned subgroup errors for G1 and G2 off-subgroup tuples both before and after a valid tuple, and when both invalid group points shared one tuple. The valid finite single pair returned without error with a 32-byte zero result; acceptance and pairing result are reported separately."
+  },
+  "batch5": {
+    "report": "reports/pairing-differential.json",
+    "valid_pairing_cases": 14,
+    "valid_case_disagreements": 0,
+    "bor_accepted_off_subgroup_cases": 0
+  },
+  "economic_witness": {
+    "local_evm_execution": "not run",
+    "escrow_and_token_deployment": "not run",
+    "transaction_and_state_root": "not produced",
+    "reason": "The prerequisite false pairing acceptance was not established. The expanded search preserved the same rejection at production subgroup validation, so an escrow execution would not exercise a false pairing acceptance."
+  },
+  "conclusion": "No credible false pairing acceptance was demonstrated. Across the original corpus and 370 additional on-curve off-subgroup inputs, the chain stops at production subgroup validation. Batch 6 remains gated; this is evidence about the tested inputs, not a proof over every possible encoding. No economic vulnerability conclusion is made."
+}

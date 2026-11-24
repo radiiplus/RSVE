@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "deterministic_tests_completed_first": true,
+  "seed": "bor-crypto-audit/bls12-381/corpus/v1",
+  "targets": [
+    {
+      "name": "FuzzG1SubgroupDifferential",
+      "command": "go test ./internal/analysis -run '^$' -fuzz '^FuzzG1SubgroupDifferential$' -fuzztime=3s",
+      "baseline_inputs": 32,
+      "workers": 2,
+      "executions": 61651,
+      "new_interesting_inputs": 5,
+      "result": "passed"
+    },
+    {
+      "name": "FuzzG2SubgroupDifferential",
+      "command": "go test ./internal/analysis -run '^$' -fuzz '^FuzzG2SubgroupDifferential$' -fuzztime=3s",
+      "baseline_inputs": 27,
+      "workers": 2,
+      "executions": 35027,
+      "new_interesting_inputs": 1,
+      "result": "passed"
+    }
+  ],
+  "targeted_areas": [
+    "valid subgroup points and scalar multiples",
+    "on-curve points outside the subgroup",
+    "field encoding boundaries",
+    "point at infinity encodings",
+    "small coordinate mutations of standard generators"
+  ],
+  "discrepancies_found": 0,
+  "minimized_inputs_written": 0
+}

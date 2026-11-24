@@ -1,0 +1,1844 @@
+{
+  "schema_version": 1,
+  "seed": "bor-crypto-audit/bls12-381/corpus/v1",
+  "source": "Bor develop cefbcfd4078e7a6cdb8e7642bc26e3589e05e7ab; extracted declarations in internal/boradapter",
+  "fuzz_results_path": "reports/differential/fuzz-results.json",
+  "scope_note": "Differential results only; absence of a discrepancy is not an exploitability determination.",
+  "cases": [
+    {
+      "name": "field-zero",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "canonical-infinity",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": true
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000001",
+        "output_is_true": true,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-one",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-p-minus-1",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-p",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-p-plus-1",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-max-384-bit",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-nonzero-leading-16-bytes",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid field element top bytes",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid field element top bytes"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid field element top bytes"
+      },
+      "pairing": {
+        "input_hex": "010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid field element top bytes",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-invalid-length-0",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 128 bytes, got 64"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g1 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g1 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g1 point length"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-invalid-length-63",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 128 bytes, got 127"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g1 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g1 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g1 point length"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "field-invalid-length-65",
+      "corpus_curve": "Fp",
+      "kind": "field-element",
+      "corpus_input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 128 bytes, got 129"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g1 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g1 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g1 point length"
+      },
+      "pairing": {
+        "input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-x-zero",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-x-c0-zero",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-x-one",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-x-c0-one",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-x-p-minus-1",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-x-c0-p-minus-1",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaaa0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-x-p",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-x-c0-p",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-x-p-plus-1",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-x-c0-p-plus-1",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000001a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaac0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-x-max-384-bit",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-x-c0-max-384-bit",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "noncanonical-coordinate-field-element",
+        "coordinate_field_elements_canonical": false,
+        "reason": "coordinate is greater than or equal to p"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid fp.Element encoding",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid fp.Element encoding"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid fp.Element encoding"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid fp.Element encoding",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-invalid-point-length-127",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 128 bytes, got 127"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g1 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g1 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g1 point length"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e700000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-invalid-point-length-129",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 128 bytes, got 129"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g1 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g1 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g1 point length"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e10000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-invalid-point-length-255",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 256 bytes, got 255"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g2 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g2 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g2 point length"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-invalid-point-length-257",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be00",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be00",
+      "reference": {
+        "applicable": false,
+        "label": "malformed-point-length",
+        "reason": "expected 256 bytes, got 257"
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid g2 point length",
+        "gnark_coordinates_valid": false,
+        "gnark_field_error": "invalid g2 point length"
+      },
+      "gnark": {
+        "coordinates_valid": false,
+        "field_error": "invalid g2 point length"
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be00",
+        "accepted": false,
+        "error": "invalid input length",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-degenerate-zero-one",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-degenerate-one-zero",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-degenerate-zero-one",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-degenerate-one-zero",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-canonical-infinity",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "canonical-infinity",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": true
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000001",
+        "output_is_true": true,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-canonical-infinity",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "canonical-infinity",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": true
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000001",
+        "output_is_true": true,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-standard-generator",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-standard-generator",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-0",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "canonical-infinity",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": true
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000001",
+        "output_is_true": true,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-0",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reference": {
+        "applicable": true,
+        "label": "canonical-infinity",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": true
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000001",
+        "output_is_true": true,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-1",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-1",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-2",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000000572cbea904d67468808c8eb50a9450c9721db309128012543902d0ac358a62ae28f75bb8f1c7c42c39a8c5529bf0f4e00000000000000000000000000000000166a9d8cabc673a322fda673779d8e3822ba3ecb8670e461f73bb9021d5fd76a4c56d9d4cd16bd1bba86881979749d28",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000000572cbea904d67468808c8eb50a9450c9721db309128012543902d0ac358a62ae28f75bb8f1c7c42c39a8c5529bf0f4e00000000000000000000000000000000166a9d8cabc673a322fda673779d8e3822ba3ecb8670e461f73bb9021d5fd76a4c56d9d4cd16bd1bba86881979749d28",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000000572cbea904d67468808c8eb50a9450c9721db309128012543902d0ac358a62ae28f75bb8f1c7c42c39a8c5529bf0f4e00000000000000000000000000000000166a9d8cabc673a322fda673779d8e3822ba3ecb8670e461f73bb9021d5fd76a4c56d9d4cd16bd1bba86881979749d2800000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-2",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001638533957d540a9d2370f17cc7ed5863bc0b995b8825e0ee1ea1e1e4d00dbae81f14b0bf3611b78c952aacab827a053000000000000000000000000000000000a4edef9c1ed7f729f520e47730a124fd70662a904ba1074728114d1031e1572c6c886f6b57ec72a6178288c47c33577000000000000000000000000000000000468fb440d82b0630aeb8dca2b5256789a66da69bf91009cbfe6bd221e47aa8ae88dece9764bf3bd999d95d71e4c9899000000000000000000000000000000000f6d4552fa65dd2638b361543f887136a43253d9c66c411697003f7a13c308f5422e1aa0a59c8967acdefd8b6e36ccf3",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000001638533957d540a9d2370f17cc7ed5863bc0b995b8825e0ee1ea1e1e4d00dbae81f14b0bf3611b78c952aacab827a053000000000000000000000000000000000a4edef9c1ed7f729f520e47730a124fd70662a904ba1074728114d1031e1572c6c886f6b57ec72a6178288c47c33577000000000000000000000000000000000468fb440d82b0630aeb8dca2b5256789a66da69bf91009cbfe6bd221e47aa8ae88dece9764bf3bd999d95d71e4c9899000000000000000000000000000000000f6d4552fa65dd2638b361543f887136a43253d9c66c411697003f7a13c308f5422e1aa0a59c8967acdefd8b6e36ccf3",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000001638533957d540a9d2370f17cc7ed5863bc0b995b8825e0ee1ea1e1e4d00dbae81f14b0bf3611b78c952aacab827a053000000000000000000000000000000000a4edef9c1ed7f729f520e47730a124fd70662a904ba1074728114d1031e1572c6c886f6b57ec72a6178288c47c33577000000000000000000000000000000000468fb440d82b0630aeb8dca2b5256789a66da69bf91009cbfe6bd221e47aa8ae88dece9764bf3bd999d95d71e4c9899000000000000000000000000000000000f6d4552fa65dd2638b361543f887136a43253d9c66c411697003f7a13c308f5422e1aa0a59c8967acdefd8b6e36ccf3",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-3",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000009ece308f9d1f0131765212deca99697b112d61f9be9a5f1f3780a51335b3ff981747a0b2ca2179b96d2c0c9024e522400000000000000000000000000000000032b80d3a6f5b09f8a84623389c5f80ca69a0cddabc3097f9d9c27310fd43be6e745256c634af45ca3473b0590ae30d1",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000009ece308f9d1f0131765212deca99697b112d61f9be9a5f1f3780a51335b3ff981747a0b2ca2179b96d2c0c9024e522400000000000000000000000000000000032b80d3a6f5b09f8a84623389c5f80ca69a0cddabc3097f9d9c27310fd43be6e745256c634af45ca3473b0590ae30d1",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000009ece308f9d1f0131765212deca99697b112d61f9be9a5f1f3780a51335b3ff981747a0b2ca2179b96d2c0c9024e522400000000000000000000000000000000032b80d3a6f5b09f8a84623389c5f80ca69a0cddabc3097f9d9c27310fd43be6e745256c634af45ca3473b0590ae30d100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-3",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000122915c824a0857e2ee414a3dccb23ae691ae54329781315a0c75df1c04d6d7a50a030fc866f09d516020ef82324afae0000000000000000000000000000000009380275bbc8e5dcea7dc4dd7e0550ff2ac480905396eda55062650f8d251c96eb480673937cc6d9d6a44aaa56ca66dc000000000000000000000000000000000b21da7955969e61010c7a1abc1a6f0136961d1e3b20b1a7326ac738fef5c721479dfd948b52fdf2455e44813ecfd8920000000000000000000000000000000008f239ba329b3967fe48d718a36cfe5f62a7e42e0bf1c1ed714150a166bfbd6bcf6b3b58b975b9edea56d53f23a0e849",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000122915c824a0857e2ee414a3dccb23ae691ae54329781315a0c75df1c04d6d7a50a030fc866f09d516020ef82324afae0000000000000000000000000000000009380275bbc8e5dcea7dc4dd7e0550ff2ac480905396eda55062650f8d251c96eb480673937cc6d9d6a44aaa56ca66dc000000000000000000000000000000000b21da7955969e61010c7a1abc1a6f0136961d1e3b20b1a7326ac738fef5c721479dfd948b52fdf2455e44813ecfd8920000000000000000000000000000000008f239ba329b3967fe48d718a36cfe5f62a7e42e0bf1c1ed714150a166bfbd6bcf6b3b58b975b9edea56d53f23a0e849",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000122915c824a0857e2ee414a3dccb23ae691ae54329781315a0c75df1c04d6d7a50a030fc866f09d516020ef82324afae0000000000000000000000000000000009380275bbc8e5dcea7dc4dd7e0550ff2ac480905396eda55062650f8d251c96eb480673937cc6d9d6a44aaa56ca66dc000000000000000000000000000000000b21da7955969e61010c7a1abc1a6f0136961d1e3b20b1a7326ac738fef5c721479dfd948b52fdf2455e44813ecfd8920000000000000000000000000000000008f239ba329b3967fe48d718a36cfe5f62a7e42e0bf1c1ed714150a166bfbd6bcf6b3b58b975b9edea56d53f23a0e849",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-7",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000001928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb700000000000000000000000000000000108dadbaa4b636445639d5ae3089b3c43a8a1d47818edd1839d7383959a41c10fdc66849cfa1b08c5a11ec7e28981a1c",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "000000000000000000000000000000001928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb700000000000000000000000000000000108dadbaa4b636445639d5ae3089b3c43a8a1d47818edd1839d7383959a41c10fdc66849cfa1b08c5a11ec7e28981a1c",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "000000000000000000000000000000001928f3beb93519eecf0145da903b40a4c97dca00b21f12ac0df3be9116ef2ef27b2ae6bcd4c5bc2d54ef5a70627efcb700000000000000000000000000000000108dadbaa4b636445639d5ae3089b3c43a8a1d47818edd1839d7383959a41c10fdc66849cfa1b08c5a11ec7e28981a1c00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-7",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000049cd1dbb2d2c3581e54c088135fef36505a6823d61b859437bfc79b617030dc8b40e32bad1fa85b9c0f368af6d38d3c000000000000000000000000000000000d0273f6bf31ed37c3b8d68083ec3d8e20b5f2cc170fa24b9b5be35b34ed013f9a921f1cad1644d4bdb14674247234c80000000000000000000000000000000008b7ae4dbf802c17a6648842922c9467e460a71c88d393ee7af356da123a2f3619e80c3bdcc8e2b1da52f8cd9913ccdd0000000000000000000000000000000005ecf93654b7a1885695aaeeb7caf41b0239dc45e1022be55d37111af2aecef87799638bec572de86a7437898efa7020",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000049cd1dbb2d2c3581e54c088135fef36505a6823d61b859437bfc79b617030dc8b40e32bad1fa85b9c0f368af6d38d3c000000000000000000000000000000000d0273f6bf31ed37c3b8d68083ec3d8e20b5f2cc170fa24b9b5be35b34ed013f9a921f1cad1644d4bdb14674247234c80000000000000000000000000000000008b7ae4dbf802c17a6648842922c9467e460a71c88d393ee7af356da123a2f3619e80c3bdcc8e2b1da52f8cd9913ccdd0000000000000000000000000000000005ecf93654b7a1885695aaeeb7caf41b0239dc45e1022be55d37111af2aecef87799638bec572de86a7437898efa7020",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000049cd1dbb2d2c3581e54c088135fef36505a6823d61b859437bfc79b617030dc8b40e32bad1fa85b9c0f368af6d38d3c000000000000000000000000000000000d0273f6bf31ed37c3b8d68083ec3d8e20b5f2cc170fa24b9b5be35b34ed013f9a921f1cad1644d4bdb14674247234c80000000000000000000000000000000008b7ae4dbf802c17a6648842922c9467e460a71c88d393ee7af356da123a2f3619e80c3bdcc8e2b1da52f8cd9913ccdd0000000000000000000000000000000005ecf93654b7a1885695aaeeb7caf41b0239dc45e1022be55d37111af2aecef87799638bec572de86a7437898efa7020",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000000",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb00000000000000000000000000000000114d1d6855d545a8aa7d76c8cf2e21f267816aef1db507c96655b9d5caac42364e6f38ba0ecb751bad54dcd6b939c2ca",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb00000000000000000000000000000000114d1d6855d545a8aa7d76c8cf2e21f267816aef1db507c96655b9d5caac42364e6f38ba0ecb751bad54dcd6b939c2ca",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb00000000000000000000000000000000114d1d6855d545a8aa7d76c8cf2e21f267816aef1db507c96655b9d5caac42364e6f38ba0ecb751bad54dcd6b939c2ca00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000000",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000d1b3cc2c7027888be51d9ef691d77bcb679afda66c73f17f9ee3837a55024f78c71363275a75d75d86bab79f74782aa0000000000000000000000000000000013fa4d4a0ad8b1ce186ed5061789213d993923066dddaf1040bc3ff59f825c78df74f2d75467e25e0f55f8a00fa030ed",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000d1b3cc2c7027888be51d9ef691d77bcb679afda66c73f17f9ee3837a55024f78c71363275a75d75d86bab79f74782aa0000000000000000000000000000000013fa4d4a0ad8b1ce186ed5061789213d993923066dddaf1040bc3ff59f825c78df74f2d75467e25e0f55f8a00fa030ed",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000d1b3cc2c7027888be51d9ef691d77bcb679afda66c73f17f9ee3837a55024f78c71363275a75d75d86bab79f74782aa0000000000000000000000000000000013fa4d4a0ad8b1ce186ed5061789213d993923066dddaf1040bc3ff59f825c78df74f2d75467e25e0f55f8a00fa030ed",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-generator-scalar-3e4fd5d9739b64d48bbe084d4221179d2bb2d6e76e2d5d8e66e4ecfe4ba94c46",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000022fb9a444111e01f4930b18adff9d3a6d7b1b6bc4172e59c56771b881606c8ade0af0c6d9f56c8f6f7d39571e9b077700000000000000000000000000000000022c9120eb199a79f606f9aaa22b99b2b9db1a59468076711d599ba6ce3ba88991db3f26ce8168a7344b1b2a129ebd65",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "00000000000000000000000000000000022fb9a444111e01f4930b18adff9d3a6d7b1b6bc4172e59c56771b881606c8ade0af0c6d9f56c8f6f7d39571e9b077700000000000000000000000000000000022c9120eb199a79f606f9aaa22b99b2b9db1a59468076711d599ba6ce3ba88991db3f26ce8168a7344b1b2a129ebd65",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "00000000000000000000000000000000022fb9a444111e01f4930b18adff9d3a6d7b1b6bc4172e59c56771b881606c8ade0af0c6d9f56c8f6f7d39571e9b077700000000000000000000000000000000022c9120eb199a79f606f9aaa22b99b2b9db1a59468076711d599ba6ce3ba88991db3f26ce8168a7344b1b2a129ebd6500000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-generator-scalar-3e4fd5d9739b64d48bbe084d4221179d2bb2d6e76e2d5d8e66e4ecfe4ba94c46",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000103ae1ccac48acd45f4189d1043e77f5713c85b2f149b1d71514bdc13d165f2dda7ed86d76ef2c27b91d830af832f089000000000000000000000000000000000e893266e70be95a509e9de72deef665e615020c2d4e5b8f9c77754fed3ad032338d1a635ea633c83815cd63c8a99ba50000000000000000000000000000000001ac4137901ee3de9f029e0a9bd069ddc15649ddd806da6b48d8d0c9b5747612635d7eae367a8d3eb50145a2c89aecd9000000000000000000000000000000001944fa03275f5d36b86c7dd225ff099f67a9ce2d07f4d612f10489bb9ba44dd5e0a3fd19475c1fd401ff13b8a030356b",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000103ae1ccac48acd45f4189d1043e77f5713c85b2f149b1d71514bdc13d165f2dda7ed86d76ef2c27b91d830af832f089000000000000000000000000000000000e893266e70be95a509e9de72deef665e615020c2d4e5b8f9c77754fed3ad032338d1a635ea633c83815cd63c8a99ba50000000000000000000000000000000001ac4137901ee3de9f029e0a9bd069ddc15649ddd806da6b48d8d0c9b5747612635d7eae367a8d3eb50145a2c89aecd9000000000000000000000000000000001944fa03275f5d36b86c7dd225ff099f67a9ce2d07f4d612f10489bb9ba44dd5e0a3fd19475c1fd401ff13b8a030356b",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": true,
+        "in_subgroup": true,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": true
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": true
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000103ae1ccac48acd45f4189d1043e77f5713c85b2f149b1d71514bdc13d165f2dda7ed86d76ef2c27b91d830af832f089000000000000000000000000000000000e893266e70be95a509e9de72deef665e615020c2d4e5b8f9c77754fed3ad032338d1a635ea633c83815cd63c8a99ba50000000000000000000000000000000001ac4137901ee3de9f029e0a9bd069ddc15649ddd806da6b48d8d0c9b5747612635d7eae367a8d3eb50145a2c89aecd9000000000000000000000000000000001944fa03275f5d36b86c7dd225ff099f67a9ce2d07f4d612f10489bb9ba44dd5e0a3fd19475c1fd401ff13b8a030356b",
+        "accepted": true,
+        "output_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "output_is_true": false,
+        "expected_acceptance_from_reference": true,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-swap-x-coefficients",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e10000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-swap-y-coefficients",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-reverse-coefficients",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "0000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e10000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-swap-x-and-y",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e",
+      "reference": {
+        "applicable": true,
+        "label": "off-curve",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": false,
+        "decoder_error": "invalid point: not on curve",
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": false,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": false,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be00000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e",
+        "accepted": false,
+        "error": "invalid point: not on curve",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g1-deterministic-full-curve-sample-2",
+      "corpus_curve": "G1",
+      "kind": "point",
+      "corpus_input_hex": "0000000000000000000000000000000015d055c676eff687930d169157a571698ebf98549327488f132e17fd923f379c5fd5e6b86805e6c6f83d929e16ed183a000000000000000000000000000000001786a466fa2a45ce98c37069b05425c21e271722de938c26d42d82ddc9947e32782be8f3d93b4b61ccda05acb5161870",
+      "point_under_test_curve": "G1",
+      "point_under_test_hex": "0000000000000000000000000000000015d055c676eff687930d169157a571698ebf98549327488f132e17fd923f379c5fd5e6b86805e6c6f83d929e16ed183a000000000000000000000000000000001786a466fa2a45ce98c37069b05425c21e271722de938c26d42d82ddc9947e32782be8f3d93b4b61ccda05acb5161870",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-outside-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000015d055c676eff687930d169157a571698ebf98549327488f132e17fd923f379c5fd5e6b86805e6c6f83d929e16ed183a000000000000000000000000000000001786a466fa2a45ce98c37069b05425c21e271722de938c26d42d82ddc9947e32782be8f3d93b4b61ccda05acb516187000000000000000000000000000000000024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb80000000000000000000000000000000013e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e000000000000000000000000000000000ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801000000000000000000000000000000000606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be",
+        "accepted": false,
+        "error": "g1 point is not on correct subgroup",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    },
+    {
+      "name": "g2-deterministic-full-curve-sample-0",
+      "corpus_curve": "G2",
+      "kind": "point",
+      "corpus_input_hex": "00000000000000000000000000000000076238c037cb72fdf4dad867b605300b4afb49d5bead1c83e7715345e451579bcbeeba1fc809a6f81cf4a6152f6e2179000000000000000000000000000000001996d29f4cd1e2e80e4cd24ac2e8973929d24e168cd2523f55d2f27f89c83f12ce2d50c58fc2e158f83351344a8fd09d000000000000000000000000000000000c42d0651ef34d798b3822a72a930fd50c4882fb26903a8d8537223c31907c12407ab6174136460240180d94da3dac18000000000000000000000000000000000fb28fb9a693904067481b183461f3296e4f9792e6271091e413c53e86d4fa427b2397d392d08fe94e8568a4088fc761",
+      "point_under_test_curve": "G2",
+      "point_under_test_hex": "00000000000000000000000000000000076238c037cb72fdf4dad867b605300b4afb49d5bead1c83e7715345e451579bcbeeba1fc809a6f81cf4a6152f6e2179000000000000000000000000000000001996d29f4cd1e2e80e4cd24ac2e8973929d24e168cd2523f55d2f27f89c83f12ce2d50c58fc2e158f83351344a8fd09d000000000000000000000000000000000c42d0651ef34d798b3822a72a930fd50c4882fb26903a8d8537223c31907c12407ab6174136460240180d94da3dac18000000000000000000000000000000000fb28fb9a693904067481b183461f3296e4f9792e6271091e413c53e86d4fa427b2397d392d08fe94e8568a4088fc761",
+      "reference": {
+        "applicable": true,
+        "label": "on-curve-outside-subgroup",
+        "coordinate_field_elements_canonical": true,
+        "on_curve": true,
+        "r_times_point_is_infinity": false,
+        "in_subgroup": false,
+        "infinity": false
+      },
+      "bor_decoder": {
+        "decoder_accepted": true,
+        "gnark_coordinates_valid": true,
+        "gnark_is_on_curve": true,
+        "gnark_is_in_subgroup": false
+      },
+      "gnark": {
+        "coordinates_valid": true,
+        "is_on_curve": true,
+        "is_in_subgroup": false
+      },
+      "pairing": {
+        "input_hex": "0000000000000000000000000000000017f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e100000000000000000000000000000000076238c037cb72fdf4dad867b605300b4afb49d5bead1c83e7715345e451579bcbeeba1fc809a6f81cf4a6152f6e2179000000000000000000000000000000001996d29f4cd1e2e80e4cd24ac2e8973929d24e168cd2523f55d2f27f89c83f12ce2d50c58fc2e158f83351344a8fd09d000000000000000000000000000000000c42d0651ef34d798b3822a72a930fd50c4882fb26903a8d8537223c31907c12407ab6174136460240180d94da3dac18000000000000000000000000000000000fb28fb9a693904067481b183461f3296e4f9792e6271091e413c53e86d4fa427b2397d392d08fe94e8568a4088fc761",
+        "accepted": false,
+        "error": "g2 point is not on correct subgroup",
+        "expected_acceptance_from_reference": false,
+        "acceptance_matches_reference": true
+      }
+    }
+  ],
+  "findings": null
+}
